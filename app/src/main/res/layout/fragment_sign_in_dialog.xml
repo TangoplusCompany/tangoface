@@ -1,0 +1,116 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    tools:context=".ui.login.SignInDialogFragment">
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
+
+        <EditText
+            android:id="@+id/etSIDEmail"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="60dp"
+            android:ems="10"
+            android:hint="사용할 이메일"
+            android:inputType="textEmailAddress"
+            android:textColorHint="@color/subColor500"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintWidth_percent="0.4" />
+
+        <androidx.appcompat.widget.AppCompatButton
+            android:id="@+id/btnSIDSendCode"
+            android:layout_width="wrap_content"
+            android:layout_height="0dp"
+            android:layout_marginTop="10dp"
+            android:layout_marginBottom="10dp"
+            android:background="@drawable/effect_20"
+            android:backgroundTint="@color/black"
+            android:paddingStart="10dp"
+            android:paddingEnd="10dp"
+            android:text="인증 번호 전송"
+            android:textColor="@color/white"
+            android:textSize="16sp"
+            android:visibility="invisible"
+            app:layout_constraintBottom_toBottomOf="@+id/etSIDEmail"
+            app:layout_constraintEnd_toEndOf="@+id/etSIDEmail"
+            app:layout_constraintTop_toTopOf="@+id/etSIDEmail" />
+
+        <EditText
+            android:id="@+id/etSIDCode"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:ems="10"
+            android:hint="인증번호"
+            android:inputType="number"
+            android:textColorHint="@color/subColor500"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@+id/etSIDEmail"
+            app:layout_constraintWidth_percent="0.4"
+            tools:visibility="gone" />
+
+        <EditText
+            android:id="@+id/etSIDPassword0"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:ems="10"
+            android:hint="사용할 비밀번호"
+            android:inputType="textPassword"
+            android:textColorHint="@color/subColor500"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@+id/etSIDCode"
+            app:layout_constraintWidth_percent="0.4" />
+
+        <EditText
+            android:id="@+id/etSIDPassword1"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:ems="10"
+            android:hint="비밀번호 확인"
+            android:inputType="textPassword"
+            android:textColorHint="@color/subColor500"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@+id/etSIDPassword0"
+            app:layout_constraintWidth_percent="0.4" />
+
+        <EditText
+            android:id="@+id/etSIDRegistrationNum"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:ems="10"
+            android:hint="발급번호"
+            android:inputType="text"
+            android:textColorHint="@color/subColor500"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@+id/etSIDPassword1"
+            app:layout_constraintWidth_percent="0.4" />
+
+        <androidx.appcompat.widget.AppCompatButton
+            android:id="@+id/btnSIDSIgnIn"
+            android:layout_height="wrap_content"
+            android:background="@drawable/effect_0"
+            android:backgroundTint="@color/black"
+            android:padding="16dp"
+            android:text="회원가입"
+            android:textColor="@color/white"
+            android:textSize="24dp"
+            android:visibility="visible"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent" />
+    </androidx.constraintlayout.widget.ConstraintLayout>
+</FrameLayout>

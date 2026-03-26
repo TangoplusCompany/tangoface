@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- 검은색 배경 (선 역할) -->
+    <item>
+        <shape android:shape="rectangle">
+            <solid android:color="@color/subColor200"/>
+        </shape>
+    </item>
+
+    <!-- 흰색 배경 (top, start만 제외) -->
+    <item
+        android:right="2dp"
+        android:left="2dp">
+        <shape android:shape="rectangle">
+            <solid android:color="@color/white"/>
+        </shape>
+    </item>
+</layer-list>

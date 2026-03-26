@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    tools:context=".ui.settings.GyroDialogFragment">
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@drawable/bckgnd_20">
+
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:id="@+id/clMTD1"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:visibility="visible"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent">
+
+            <TextView
+                android:id="@+id/textView52"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:gravity="center"
+                android:text="측정 전 기기의 수직수평을 조정해주세요\n마름모를 중앙에 맞춰주세요"
+                android:textColor="@color/subColor800"
+                android:textSize="18dp"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent" />
+
+            <androidx.constraintlayout.widget.ConstraintLayout
+                android:id="@+id/constraintLayout28"
+                android:layout_width="256dp"
+                android:layout_height="256dp"
+                android:layout_marginStart="60dp"
+                android:layout_marginTop="30dp"
+                android:layout_marginEnd="60dp"
+                android:layout_marginBottom="40dp"
+                android:background="@drawable/bckgnd_stroke_2_20"
+                app:layout_constraintBottom_toTopOf="@+id/btnMSDConfirm1"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@+id/textView52">
+
+                <androidx.cardview.widget.CardView
+                    android:id="@+id/cvMTDGyro"
+                    android:layout_width="86dp"
+                    android:layout_height="86dp"
+                    android:rotation="45"
+                    app:cardBackgroundColor="@color/axis100"
+                    app:cardCornerRadius="8dp"
+                    app:cardElevation="0dp"
+                    app:layout_constraintBottom_toBottomOf="parent"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toTopOf="parent" />
+            </androidx.constraintlayout.widget.ConstraintLayout>
+
+            <androidx.cardview.widget.CardView
+                android:layout_width="0dp"
+                android:layout_height="4dp"
+                android:layout_marginStart="5dp"
+                android:layout_marginEnd="5dp"
+                app:cardBackgroundColor="@color/deleteColor"
+                app:cardElevation="0dp"
+                app:dividerColor="@color/deleteColor"
+                app:layout_constraintBottom_toBottomOf="@+id/constraintLayout28"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="@+id/constraintLayout28">
+
+            </androidx.cardview.widget.CardView>
+
+            <androidx.cardview.widget.CardView
+                android:id="@+id/cardView53"
+                android:layout_width="4dp"
+                android:layout_height="0dp"
+                android:layout_marginTop="10dp"
+                android:layout_marginBottom="10dp"
+                app:cardBackgroundColor="@color/deleteColor"
+                app:cardElevation="0dp"
+                app:dividerColor="@color/deleteColor"
+                app:layout_constraintBottom_toTopOf="@+id/btnMSDConfirm1"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@+id/textView52" />
+
+            <androidx.appcompat.widget.AppCompatButton
+                android:id="@+id/btnMSDConfirm1"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:background="@drawable/effect_0"
+                android:backgroundTint="@color/black"
+                android:padding="16dp"
+                android:stateListAnimator="@null"
+                android:text="조정 완료"
+                android:textColor="@color/whiteText"
+                android:textSize="18dp"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent" />
+        </androidx.constraintlayout.widget.ConstraintLayout>
+
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+</FrameLayout>

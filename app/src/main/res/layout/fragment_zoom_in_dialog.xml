@@ -1,0 +1,151 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/flZID"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    tools:context=".ui.info.ZoomInDialogFragment">
+
+    <androidx.core.widget.NestedScrollView
+        android:id="@+id/nsvZID"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:fillViewport="true">
+
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:id="@+id/clZID"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
+
+            <com.davemorrissey.labs.subscaleview.SubsamplingScaleImageView
+                android:id="@+id/ssivZID"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="@drawable/bckgnd_20"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent" />
+
+            <ImageButton
+                android:id="@+id/ibtnZIDExit"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:layout_marginEnd="16dp"
+                android:background="@drawable/effect_20"
+                android:backgroundTint="#00FFFFFF"
+                android:padding="4dp"
+                android:src="@drawable/ic_exit"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintTop_toTopOf="parent" />
+
+            <com.google.android.material.materialswitch.MaterialSwitch
+                android:id="@+id/msZIDLock"
+                style="@style/CustomSwitchStyle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="10dp"
+                android:background="@drawable/bckgnd_20"
+                android:backgroundTint="#19000000"
+                android:paddingStart="20dp"
+                android:paddingTop="10dp"
+                android:paddingEnd="20dp"
+                android:paddingBottom="10dp"
+                android:text="화면 잠금"
+                android:textColor="@color/white"
+                android:textSize="18dp"
+                app:layout_constraintBottom_toBottomOf="@+id/ibtnZIDExit"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="@+id/ibtnZIDExit"
+                app:trackDecorationTint="@color/tint_black_100"
+                app:trackTint="@color/tint_black_100"
+                app:useMaterialThemeColors="false" />
+
+            <com.google.android.material.materialswitch.MaterialSwitch
+                android:id="@+id/msZIDContour"
+                style="@style/CustomSwitchStyle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="10dp"
+                android:background="@drawable/bckgnd_20"
+                android:backgroundTint="#19000000"
+                android:paddingStart="20dp"
+                android:paddingTop="10dp"
+                android:paddingEnd="20dp"
+                android:paddingBottom="10dp"
+                android:text="컨투어 보기"
+                android:textColor="@color/white"
+                android:textSize="18dp"
+                android:visibility="invisible"
+                app:layout_constraintBottom_toBottomOf="@+id/ibtnZIDExit"
+                app:layout_constraintStart_toEndOf="@id/msZIDLock"
+                app:layout_constraintTop_toTopOf="@+id/ibtnZIDExit"
+                app:trackDecorationTint="@color/tint_black_100"
+                app:trackTint="@color/tint_black_100"
+                app:useMaterialThemeColors="false" />
+
+            <TextView
+                android:id="@+id/btnZIDClean"
+                android:layout_width="wrap_content"
+                android:layout_height="0dp"
+                android:layout_marginEnd="20dp"
+                android:background="@drawable/effect_20"
+                android:backgroundTint="#19000000"
+                android:gravity="center"
+                android:paddingStart="15dp"
+                android:paddingTop="6dp"
+                android:paddingEnd="15dp"
+                android:paddingBottom="6dp"
+                android:text="🔍 가이드라인 끄기"
+                android:textColor="@color/black"
+                android:textSize="18dp"
+                android:visibility="visible"
+                app:layout_constraintBottom_toBottomOf="@id/msZIDAngle"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintTop_toTopOf="@+id/msZIDAngle" />
+
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/rvZID"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="10dp"
+                android:layout_marginTop="10dp"
+                android:layout_marginEnd="10dp"
+                android:layout_marginBottom="10dp"
+                android:visibility="visible"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@+id/msZIDAngle"
+                app:layout_constraintVertical_bias="0.0" />
+
+            <com.google.android.material.materialswitch.MaterialSwitch
+                android:id="@+id/msZIDAngle"
+                style="@style/CustomSwitchStyle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="10dp"
+                android:layout_marginTop="10dp"
+                android:background="@drawable/bckgnd_20"
+                android:backgroundTint="#19000000"
+                android:paddingStart="20dp"
+                android:paddingTop="10dp"
+                android:paddingEnd="20dp"
+                android:paddingBottom="10dp"
+                android:text="전체 각도 보기"
+                android:textColor="@color/white"
+                android:textSize="18dp"
+                android:visibility="visible"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@+id/ssivZID"
+                app:trackDecorationTint="@color/tint_black_100"
+                app:trackTint="@color/tint_black_100"
+                app:useMaterialThemeColors="false" />
+
+        </androidx.constraintlayout.widget.ConstraintLayout>
+
+
+    </androidx.core.widget.NestedScrollView>
+
+</FrameLayout>

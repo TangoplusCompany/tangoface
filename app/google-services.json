@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "975609065934",
+    "project_id": "face-expert-ae569",
+    "storage_bucket": "face-expert-ae569.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:975609065934:android:877e34e497cbd9df5e3b9f",
+        "android_client_info": {
+          "package_name": "com.tangoplus.facebeautyexpert"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBvXSeMWXtiAqBtZv9Fb74cpfVUXtLgeXw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
