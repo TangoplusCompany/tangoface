@@ -12,7 +12,7 @@
         android:layout_width="wrap_content"
         android:layout_height="2dp"
         android:background="@drawable/bckgnd_12"
-        android:backgroundTint="@color/subColor200"
+        android:backgroundTint="@color/subColor100"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent" />
@@ -101,7 +101,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
                 android:layout_weight="2.0"
-                android:divider="@color/subColor400"
+                android:divider="@color/subColor300"
                 android:orientation="vertical"
                 android:showDividers="middle|beginning|end">
 
@@ -136,7 +136,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
                 android:layout_weight="1.7"
-                android:divider="@color/subColor400"
+                android:divider="@color/subColor300"
                 android:orientation="horizontal"
                 android:showDividers="middle|beginning|end"
                 android:visibility="visible">
@@ -146,7 +146,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
                     android:layout_weight="1.5"
-                    android:divider="@color/subColor400"
+                    android:divider="@color/subColor300"
                     android:orientation="vertical"
                     android:showDividers="middle|beginning|end">
 
@@ -189,7 +189,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
                     android:layout_weight="1.5"
-                    android:divider="@color/subColor400"
+                    android:divider="@color/subColor300"
                     android:orientation="vertical"
                     android:showDividers="middle|beginning|end">
 
@@ -229,7 +229,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
                 android:layout_weight="1.75"
-                android:divider="@color/subColor400"
+                android:divider="@color/subColor300"
                 android:orientation="vertical"
                 android:showDividers="middle|beginning|end"
                 android:visibility="visible">
@@ -248,7 +248,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
                     android:layout_weight="1"
-                    android:divider="@color/subColor400"
+                    android:divider="@color/subColor300"
                     android:orientation="horizontal"
                     android:showDividers="middle|beginning|end">
 
@@ -257,7 +257,7 @@
                         android:layout_width="match_parent"
                         android:layout_height="match_parent"
                         android:layout_weight="1"
-                        android:divider="@color/subColor400"
+                        android:divider="@color/subColor300"
                         android:orientation="vertical"
                         android:showDividers="middle|beginning|end"
                         android:visibility="visible">
@@ -289,7 +289,7 @@
                         android:layout_width="match_parent"
                         android:layout_height="match_parent"
                         android:layout_weight="1"
-                        android:divider="@color/subColor400"
+                        android:divider="@color/subColor300"
                         android:orientation="vertical"
                         android:showDividers="middle|beginning|end"
                         android:visibility="visible">
@@ -325,7 +325,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
                 android:layout_weight="2.0"
-                android:divider="@color/subColor400"
+                android:divider="@color/subColor300"
                 android:orientation="vertical"
                 android:showDividers="middle|beginning|end"
                 android:visibility="visible">
@@ -369,7 +369,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
                 android:layout_weight="2.0"
-                android:divider="@color/subColor400"
+                android:divider="@color/subColor300"
                 android:orientation="vertical"
                 android:showDividers="middle|beginning|end">
 
@@ -411,7 +411,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
                 android:layout_weight="1.6"
-                android:divider="@color/subColor400"
+                android:divider="@color/subColor300"
                 android:orientation="vertical"
                 android:showDividers="middle|beginning|end">
 

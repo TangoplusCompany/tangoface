@@ -25,7 +25,7 @@
         android:layout_marginTop="15dp"
         android:layout_marginEnd="5dp"
         android:layout_marginBottom="30dp"
-        android:background="@drawable/effect_44"
+        android:background="@drawable/effect_64"
         android:backgroundTint="@color/black"
         android:padding="16dp"
         android:stateListAnimator="@null"

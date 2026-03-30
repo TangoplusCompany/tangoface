@@ -30,7 +30,7 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent">
 
-        <com.tangoplus.tangoface.ui.view.CircularGuideView
+        <com.tangoplus.facebeautyexpert.ui.view.CircularGuideView
             android:id="@+id/fdgv"
             android:layout_width="0dp"
             android:layout_height="0dp"
@@ -59,7 +59,7 @@
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 
-    <com.tangoplus.tangoface.ui.view.OverlayView
+    <com.tangoplus.facebeautyexpert.ui.view.OverlayView
         android:id="@+id/overlay"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
@@ -129,7 +129,7 @@
             android:layout_height="match_parent"
             android:layout_marginEnd="10dp"
             android:layout_weight="1"
-            android:background="@drawable/effect_44"
+            android:background="@drawable/effect_64"
             android:backgroundTint="@color/black"
             android:text="↩ 이전으로"
             android:textColor="@color/white"
@@ -142,7 +142,7 @@
             android:layout_height="match_parent"
             android:layout_marginStart="10dp"
             android:layout_weight="1"
-            android:background="@drawable/effect_44"
+            android:background="@drawable/effect_64"
             android:backgroundTint="@color/black"
             android:text="촬영 "
             android:textColor="@color/white"
@@ -179,7 +179,7 @@
             android:layout_marginTop="10dp"
             android:layout_marginEnd="40dp"
             android:visibility="gone"
-            app:cardBackgroundColor="@color/deleteColor"
+            app:cardBackgroundColor="@color/red"
             app:cardCornerRadius="24dp"
             app:cardElevation="0dp"
             app:layout_constraintEnd_toEndOf="parent"

@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <item
+        android:id="@+id/nav_measure"
+        android:icon="@drawable/ic_measure"
+        android:title="측정"/>
+
+    <item
+        android:id="@+id/nav_record"
+        android:icon="@drawable/ic_record"
+        android:title="기록 확인"/>
+
+    <item
+        android:id="@+id/nav_stats"
+        android:icon="@drawable/ic_stats"
+        android:title="통계"/>
+
+</menu>

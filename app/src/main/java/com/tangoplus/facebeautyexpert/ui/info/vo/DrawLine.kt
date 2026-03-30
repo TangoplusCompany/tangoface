@@ -1,0 +1,29 @@
+package com.tangoplus.facebeautyexpert.ui.info.vo
+
+enum class DrawLine {
+	A_CANTHUS,
+	A_TIP_OF_LIPS,
+	A_CHIN,
+	A_CANTHUS_ORAL,
+	A_NASALWINGS_ORAL,
+	A_SIDE_HEAD,
+	E_CHEEKS_REST,
+	E_CHEEKBONE,
+
+	A_GLABELLA_NOSE,
+	A_NOSE_JAW,
+
+	A_BELOW_LIPS,
+	E_CHEEKS_OPENING,
+
+	A_SHOULDER,
+	A_EAR,
+	A_NECK,
+	A_FACE,
+	A_MANDIBULAR_CHIN,
+
+	A_SHOULDER_NOSE,
+	A_SHOULDER_EAR,
+
+	A_BOW
+}

@@ -11,89 +11,76 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="5dp"
         android:layout_marginBottom="5dp"
-        android:background="@drawable/effect_20"
-        android:paddingTop="20dp"
-        android:paddingBottom="20dp"
+        android:background="@drawable/color_gradation_sub100"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent">
 
-        <LinearLayout
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
+        <TextView
+            android:id="@+id/tvMVIName"
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
             android:layout_marginStart="20dp"
+            android:layout_marginTop="20dp"
+            android:layout_weight="4"
+            android:gravity="center"
+            android:text="이*휘"
+            android:textColor="@color/black"
+            android:textSize="20sp"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
+
+        <TextView
+            android:id="@+id/tvMVIGrade"
+            android:layout_width="64dp"
+            android:layout_height="0dp"
+            android:layout_gravity="center"
+            android:layout_marginTop="20dp"
             android:layout_marginEnd="20dp"
-            android:orientation="horizontal"
+            android:layout_marginBottom="20dp"
+            android:background="@drawable/effect_20"
+            android:backgroundTint="@color/bg"
+            android:gravity="center"
+            android:text="S"
+            android:textColor="@color/accent"
+            android:textSize="28sp"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="parent">
+            app:layout_constraintTop_toTopOf="parent" />
 
-            <TextView
-                android:id="@+id/tvMVIName"
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:layout_weight="4"
-                android:gravity="center"
-                android:text="이*휘"
-                android:textColor="@color/black"
-                android:textSize="20dp" />
+        <TextView
+            android:id="@+id/tvMVIAge"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="5dp"
+            android:layout_marginBottom="20dp"
+            android:layout_weight="4"
+            android:gravity="center"
+            android:text="."
+            android:textColor="@color/subColor500"
+            android:textSize="20dp"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintStart_toStartOf="@+id/tvMVIName"
+            app:layout_constraintTop_toBottomOf="@+id/tvMVIName"
+            app:layout_constraintVertical_bias="0.0" />
 
-            <TextView
-                android:id="@+id/tvMVIMobile"
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:layout_gravity="center"
-                android:layout_weight="3.25"
-                android:gravity="center"
-                android:text="."
-                android:textColor="@color/black"
-                android:textSize="20dp" />
-
-            <TextView
-                android:id="@+id/tvMVIAge"
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:layout_weight="4"
-                android:gravity="center"
-                android:text="."
-                android:textColor="@color/black"
-                android:textSize="20dp" />
-
-            <TextView
-                android:id="@+id/tvMVIGender"
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:layout_weight="4"
-                android:gravity="center"
-                android:maxLength="25"
-                android:maxLines="1"
-                android:text="남성"
-                android:textColor="@color/subColor400"
-                android:textSize="20dp" />
-
-            <TextView
-                android:id="@+id/tvMVICount"
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:layout_weight="4"
-                android:gravity="center"
-                android:text="2건"
-                android:textColor="@color/black"
-                android:textSize="20dp" />
-
-        </LinearLayout>
+        <TextView
+            android:id="@+id/tvMVIGender"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="10dp"
+            android:layout_marginTop="5dp"
+            android:layout_weight="4"
+            android:gravity="center"
+            android:maxLength="25"
+            android:maxLines="1"
+            android:text="남성"
+            android:textColor="@color/subColor500"
+            android:textSize="20dp"
+            app:layout_constraintStart_toEndOf="@+id/tvMVIAge"
+            app:layout_constraintTop_toBottomOf="@+id/tvMVIName" />
 
     </androidx.constraintlayout.widget.ConstraintLayout>
-
-    <ImageView
-        android:id="@+id/ivMVICheck"
-        android:layout_width="36dp"
-        android:layout_height="36dp"
-        android:visibility="invisible"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
-        app:srcCompat="@drawable/ic_check_true" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>
