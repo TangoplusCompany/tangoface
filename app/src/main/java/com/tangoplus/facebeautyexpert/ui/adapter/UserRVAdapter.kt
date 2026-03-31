@@ -11,10 +11,8 @@ import androidx.recyclerview.widget.RecyclerView
 import com.tangoplus.facebeautyexpert.R
 import com.tangoplus.facebeautyexpert.databinding.RvUserItemBinding
 import com.tangoplus.facebeautyexpert.ui.main.vo.UserItem
-import com.tangoplus.facebeautyexpert.ui.listener.OnMeasureClickListener
 import com.tangoplus.facebeautyexpert.domain.util.FileUtility.setOnSingleClickListener
 import com.tangoplus.facebeautyexpert.ui.listener.OnUserClickListener
-import com.tangoplus.facebeautyexpert.ui.main.vm.MainViewModel
 import java.util.Calendar
 import java.util.TimeZone
 import kotlin.text.substring
@@ -22,10 +20,8 @@ import kotlin.text.substring
 class UserRVAdapter(
 	private val context: Context,
 	private val faceResults: List<UserItem>,
-	private val mvm: MainViewModel
 ) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
-	var measureClickListener: OnMeasureClickListener? = null
-	var userClickListener: OnUserClickListener? = null
+	var onUserClickListener: OnUserClickListener? = null
 
 	inner class MeasureVerticalViewHolder(view: View) : RecyclerView.ViewHolder(view) {
 		val clMVI: ConstraintLayout = view.findViewById(R.id.clMVI)
@@ -46,24 +42,24 @@ class UserRVAdapter(
 
 		if (holder is MeasureVerticalViewHolder) {
 			holder.clMVI.background = ContextCompat.getDrawable(context, R.drawable.effect_20)
-			holder.tvMVIName.text = currentItem.userName
+			holder.tvMVIName.text = currentItem.name
 //            Log.v("mobiel", "${currentItem.userMobile.isNullOrEmpty()}, ${currentItem.userMobile}")
-			val mobile = if (currentItem.userMobile?.length == 11) {
-				currentItem.userMobile.substring(0, 3) + "-" + currentItem.userMobile.substring(
+			val mobile = if (currentItem.mobile?.length == 11) {
+				currentItem.mobile.substring(0, 3) + "-" + currentItem.mobile.substring(
 					3,
 					7
-				) + "-" + currentItem.userMobile.substring(7)
+				) + "-" + currentItem.mobile.substring(7)
 			} else {
 				""
 			}
 			holder.tvMVIGrade.text = mobile
 
-			holder.tvMVIGender.text = when (currentItem.userGender) {
+			holder.tvMVIGender.text = when (currentItem.gender) {
 				0 -> "남성"
 				else -> "여성"
 			}
 			val c = Calendar.getInstance(TimeZone.getTimeZone("Asia/Seoul"))
-			val birthday = currentItem.userBirthday
+			val birthday = currentItem.birthday
 
 			val age = if (birthday?.length == 10) {
 				try {
@@ -91,7 +87,7 @@ class UserRVAdapter(
 			holder.tvMVIAge.text = age
 
 			holder.clMVI.setOnSingleClickListener {
-				measureClickListener?.onMeasureClick(currentItem.tempServerSn)
+				onUserClickListener?.onUserClick(currentItem.tempServerSn)
 			}
 		}
 	}

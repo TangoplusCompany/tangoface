@@ -11,8 +11,8 @@ class Converters {
 	fun toFaceShape(value: String): FaceShape = FaceShape.valueOf(value)
 
 	@TypeConverter
-	fun fromSpineCurve(curve: SpineCurve): String = curve.name
+	fun fromFacialAxisShape(curve: FacialAxisShape): String = curve.name
 	@TypeConverter
-	fun toSpineCurve(value: String): SpineCurve = SpineCurve.valueOf(value)
+	fun toFacialAxisShape(value: String): FacialAxisShape = FacialAxisShape.valueOf(value)
 
 }

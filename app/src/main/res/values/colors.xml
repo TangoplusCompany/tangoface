@@ -1,13 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <color name="black">#000000</color>
-    <color name="white">#FFFFFF</color>
-    <color name="bg">#1A1014</color>
-    <color name="bg30">#4D1A1014</color>
-    <color name="bg15">#261A1014</color>
+    <color name="white">#FFFAFB</color>
+    <color name="bg">#140000</color>
+    <color name="subBg">#3D0000</color>
+    <color name="bg30">#4D140000</color>
+    <color name="bg15">#26140000</color>
 
-    <color name="accent">#FFF2FC</color>
-    <color name="subAccent">#FFA7DA</color>
+    <color name="accent">#FACEE3</color>
+    <color name="accent10">#19FACEE3</color>
+    <color name="subAccent">#FB91C5</color>
     <color name="accent_foreground">#8B8FA8</color>
 
     <color name="subColor100">#FFFAFB</color>

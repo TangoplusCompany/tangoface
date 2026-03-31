@@ -15,7 +15,6 @@ import com.tangoplus.facebeautyexpert.domain.vision.face.FaceLandmarkerHelper
 import com.tangoplus.facebeautyexpert.domain.vo.FaceResult
 import com.tangoplus.facebeautyexpert.domain.vo.Sequence
 import com.tangoplus.facebeautyexpert.ui.info.vo.DateDisplay
-import com.tangoplus.facebeautyexpert.ui.main.vo.MeasureGridItem
 import com.tangoplus.facebeautyexpert.ui.main.vo.UserItem
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -117,91 +116,33 @@ class MainViewModel : ViewModel() {
 	}
 
 	// ------------------------------------# 유저 목록 가져오기 #-------------------------------------
+	var userCount = 0
 	var currentUserItems = listOf<UserItem>()
 	private val staticDataLoad = MutableLiveData<Boolean>()
 	fun loadUserDataFromDB(context: Context) {
 		viewModelScope.launch(Dispatchers.IO) {
-			val dao = FaceDatabase.Companion.getDatabase(context).faceDao()
-			val allData: List<UserItem> = dao.getFaceDisplayList().map { it.toUserItem() }
-			val guestCount = dao.getGuestCount()
+			val dao = FaceDatabase.getDatabase(context).faceDao()
+			val allData: List<UserItem> = dao.getAllUserItem()
+			val getUserCount = dao.getUserCount()
 			withContext(Dispatchers.Main) {
-				currentGuestCount = guestCount
+				userCount = getUserCount
 			}
 			currentUserItems = listOf()
 			val collator = Collator.getInstance(Locale.KOREAN)
-			val sorted = allData.sortedWith(compareBy(collator) { it.userName })
+			val sorted = allData.sortedWith(compareBy(collator) { it.regDate })
 			currentUserItems = sorted
 			staticDataLoad.postValue(true)
 		}
 	}
-
-	// ------------------------------------# 게스트 목록 가져오기 #------------------------------------
-	val currentGuestItems = mutableListOf<MeasureGridItem>()
-	fun loadGuestDataFromDB(context: Context) {
-		viewModelScope.launch(Dispatchers.IO) {
-			val dao = FaceDatabase.Companion.getDatabase(context).faceDao()
-			val allData = dao.getGuestData()
-
-			currentGuestItems.clear()
-			currentGuestItems.addAll(allData)
-			currentGuestItems.sortByDescending { it.regDate }
-			Log.v("allGuestItems", "$allData")
-			staticDataLoad.postValue(true)
-			// 게스트는 그냥 자동 true
-			favoriteDataLoad.postValue(true)
-		}
-	}
-
-	private var currentGuestCount = 0
-	fun getGuestCount(): Int = currentGuestCount
-
-	// -----------------------------------# 즐겨찾기 목록 가져오기 #-----------------------------------
-	private val _currentFaceFavorites = MutableLiveData<List<MeasureGridItem>>(emptyList())
-	val currentFaceFavorites: LiveData<List<MeasureGridItem>> = _currentFaceFavorites
-	private val favoriteDataLoad = MutableLiveData<Boolean>()
-	fun loadFavoriteDataFromDB(context: Context) {
-		viewModelScope.launch(Dispatchers.IO) {
-			val dao = FaceDatabase.Companion.getDatabase(context).faceDao()
-			val allData = dao.getAllFavorite()
-				.sortedByDescending { it.regDate }
-			_currentFaceFavorites.postValue(allData)
-
-			val snsData = dao.getAllFavoriteSn()
-			withContext(Dispatchers.Main) {
-				_currentFaceFavoriteSns.value = snsData
-			}
-			favoriteDataLoad.postValue(true)
-		}
-	}
-
-	// 즐겨찾기 sn만 담기
-	private var _currentFaceFavoriteSns = MutableLiveData<List<Int>>(emptyList())
-	val currentFaceFavoriteSns: LiveData<List<Int>> = _currentFaceFavoriteSns
-
-	// 사용자 데이터 + 즐겨찾기 데이터 전부 가져오기
 	val allDataLoaded = MediatorLiveData<Boolean>().apply {
 		val update = {
-			value = staticDataLoad.value == true &&
-				favoriteDataLoad.value == true
+			value = staticDataLoad.value == true
 		}
 		addSource(staticDataLoad) { update() }
-		addSource(favoriteDataLoad) { update() }
 	}
 
 	fun clearLoadDataFlag() {
 		staticDataLoad.value = false
-		favoriteDataLoad.value = false
-	}
-
-	// 즐겨찾기 토글 보존 true -> 게스트, false -> 유저
-	private var _toggleState = MutableLiveData<Boolean>(false)
-	val toggleState: LiveData<Boolean> = _toggleState
-	fun getToggleState(): Boolean {
-		return _toggleState.value ?: false
-	}
-
-	fun setToggleState(newData: Boolean) {
-		_toggleState.value = newData
 	}
 
 	//-------------------------------# info로 들어가는 dataClass 변환 #-------------------------------
@@ -271,15 +212,15 @@ class MainViewModel : ViewModel() {
 	var comparisonDoubleItem: Pair<FaceResult, FaceResult>? =
 		null // null 일경우 1개 선택 한 상황 not null일 경우 비교상황
 
-	private val _tempComparisonItems = MutableLiveData<MutableList<MeasureGridItem>>(mutableListOf())
-	val tempComparisonItems: LiveData<MutableList<MeasureGridItem>> = _tempComparisonItems
-	fun addItem(item: MeasureGridItem) {
+	private val _tempComparisonItems = MutableLiveData<MutableList<UserItem>>(mutableListOf())
+	val tempComparisonItems: LiveData<MutableList<UserItem>> = _tempComparisonItems
+	fun addItem(item: UserItem) {
 		val currentList = _tempComparisonItems.value ?: mutableListOf()
 		currentList.add(item)
 		_tempComparisonItems.value = currentList.toMutableList()
 	}
 
-	fun removeItem(item: MeasureGridItem) {
+	fun removeItem(item: UserItem) {
 		val currentList = _tempComparisonItems.value ?: mutableListOf()
 		currentList.remove(item)
 		_tempComparisonItems.value = currentList.toMutableList()
@@ -298,31 +239,7 @@ class MainViewModel : ViewModel() {
 
 	// TODO 여기서 DP에서 기록 가져오기 (data class 하나 필요할 듯 )
 	var dateDisplayList = listOf<DateDisplay>()
-	val leftDate = MutableLiveData<DateDisplay>()
-	val rightDate = MutableLiveData<DateDisplay>()
-	fun createDateDisplayListByUser(faceResult: UserItem): List<DateDisplay> {
-		return faceResult.regDate?.map {
-			DateDisplay(
-				fullDateTime = it,
-				displayDate = it.substring(0, 16)
-			)
-		} ?: listOf()
-	}
 
-	fun createDateDisplayListByGuest(mgis: List<MeasureGridItem>): List<DateDisplay> {
-		return mgis.map {
-			DateDisplay(
-				fullDateTime = it.regDate,
-				displayDate = it.regDate.substring(0, 16)
-			)
-		}
-	}
-
-	fun getFilteredDates(excludeDates: List<DateDisplay>): List<DateDisplay> {
-		return dateDisplayList.filter { date ->
-			excludeDates.none { it.fullDateTime == date.fullDateTime }
-		}
-	}
 
 
 }

@@ -23,6 +23,6 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "TangoFace"
+rootProject.name = "FaceBeautyExpert"
 include(":app")
 include(":obsensor_jni")

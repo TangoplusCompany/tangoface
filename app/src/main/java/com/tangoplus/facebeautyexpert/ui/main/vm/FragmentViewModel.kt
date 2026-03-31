@@ -12,7 +12,7 @@ class FragmentViewModel : ViewModel() {
 	// Fragment 타입 enum
 	enum class FragmentType {
 		MAIN_FRAGMENT,
-		INFORMATION_FRAGMENT,
+		MEASURE_HISTORY_FRAGMENT,
 		STATISTICS_FRAGMENT,
 	}
 

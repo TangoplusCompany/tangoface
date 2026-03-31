@@ -1,6 +1,7 @@
 package com.tangoplus.facebeautyexpert.ui.measure.vm
 
 import android.content.Context
+import android.graphics.Bitmap
 import android.net.Uri
 import android.util.Log
 import androidx.annotation.OptIn
@@ -17,6 +18,12 @@ import androidx.media3.transformer.Effects
 import androidx.media3.transformer.ExportException
 import androidx.media3.transformer.ExportResult
 import androidx.media3.transformer.Transformer
+import com.orbbec.obsensor.types.CameraIntrinsic
+import com.tangoplus.facebeautyexpert.domain.util.ClassifyUtility.calculateHorizontalRatio
+import com.tangoplus.facebeautyexpert.domain.util.ClassifyUtility.classifyFaceShape
+import com.tangoplus.facebeautyexpert.domain.util.ClassifyUtility.classifyFacialAsymmetry
+import com.tangoplus.facebeautyexpert.domain.util.ClassifyUtility.classifyFacialAxis
+import com.tangoplus.facebeautyexpert.domain.util.ClassifyUtility.classifySaggingDepth
 import com.tangoplus.facebeautyexpert.domain.util.MathHelpers.calculateAngle
 import com.tangoplus.facebeautyexpert.domain.util.MathHelpers.calculateAreaWithScaling
 import com.tangoplus.facebeautyexpert.domain.util.MathHelpers.calculatePolygonArea
@@ -43,7 +50,7 @@ import java.time.format.DateTimeFormatter
 
 class MeasureViewModel : ViewModel() {
 	// 측정할 것들만 가져오기
-	var allSeqs = mutableListOf<Sequence>()
+	var allSeqs = Sequence.entries.toMutableList()
 	var currentSeq = Sequence.COMFORT
 
 	fun moveToNextSeq(): Boolean {
@@ -70,9 +77,6 @@ class MeasureViewModel : ViewModel() {
 		return allSeqs.indexOf(currentSeq)
 	}
 
-	fun isFirstSeq(): Boolean = allSeqs.indexOf(currentSeq) == 0
-	fun isLastSeq(): Boolean = allSeqs.indexOf(currentSeq) == allSeqs.size - 1
-
 	// ----------# flag들 #-----------
 
 
@@ -90,8 +94,6 @@ class MeasureViewModel : ViewModel() {
 
 	// 중간 임시 저장 좌표들 ( seq 1개씩만 )
 	var tempCoordinateJA = JSONArray()
-	var videoTempCoordinatesJA = JSONArray()
-	var tempHairLineJO = JSONObject()
 
 	// ------------------------# 측정 1개당 값들이 들어가는 곳 전부 index == 6 #------------------------
 	// 측정값들 담기
@@ -124,10 +126,15 @@ class MeasureViewModel : ViewModel() {
 	var tempPlrJA = JSONArray()
 	val currentPlrCoordinate = mutableListOf<Pair<Float, Float>>()
 	val current3DPlrCoordinate = mutableListOf<Triple<Float, Float, Float>>() // 절대 좌표
-
 	val currentHairLine3DCoordinate = mutableListOf<Triple<Float, Float, Float>>()
 	fun getCurrentDateTime(): String = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))
 
+	// ----------------# 헤어라인 #---------------
+	var latestDepthData: ShortArray? = null
+	var latestDepthWidth: Int = 0
+	var latestDepthHeight: Int = 0
+	var latestBitmap: Bitmap? = null
+	var latestIntrinsic : CameraIntrinsic? = null
 	var scaleFactorX: Float? = null
 	var scaleFactorY: Float? = null
 
@@ -160,74 +167,6 @@ class MeasureViewModel : ViewModel() {
 			inputHeight = resultBundle.inputImageHeight
 		}
 	}
-
-	@UnstableApi
-	private fun flipVideo(
-		context: Context,
-		inputPath: String,
-		outputPath: String,
-		onSuccess: (File) -> Unit,
-		onError: (String) -> Unit
-	) {
-		// 입력 비디오 URI 생성
-		val inputUri = Uri.fromFile(File(inputPath))
-		val mediaItem = MediaItem.fromUri(inputUri)
-
-		val flipEffect = ScaleAndRotateTransformation.Builder()
-			.setScale(-1f, 1f)
-			.build()
-		val effects = Effects(
-			listOf(ChannelMixingAudioProcessor()),
-			listOf(flipEffect)
-		)
-		val editedMediaItem = EditedMediaItem.Builder(mediaItem)
-			.setEffects(effects)
-			.build()
-
-		val transformer = Transformer.Builder(context)
-			.setVideoMimeType(MimeTypes.VIDEO_H264)
-			.addListener(object : Transformer.Listener {
-				override fun onCompleted(composition: Composition, exportResult: ExportResult) {
-					super.onCompleted(composition, exportResult)
-					onSuccess(File(outputPath))
-				}
-
-				override fun onError(
-					composition: Composition,
-					exportResult: ExportResult,
-					exportException: ExportException
-				) {
-					super.onError(composition, exportResult, exportException)
-					onError(exportException.message ?: "Unknown error")
-				}
-			}).build()
-		transformer.start(editedMediaItem, outputPath)
-	}
-
-	@OptIn(UnstableApi::class)
-	fun flipVideoHorizontally(
-		context: Context,
-		inputPath: String,
-		outputPath: String,
-		callback: (Boolean) -> Unit
-	) {
-		CoroutineScope(Dispatchers.Main).launch {
-			flipVideo(
-				context = context,
-				inputPath = inputPath,
-				outputPath = outputPath,
-				onSuccess = { file ->
-					callback(true)
-					println("비디오 플립 성공: ${file.path}")
-				},
-				onError = { errorMessage ->
-					callback(false)
-					println("비디오 크롭 실패: $errorMessage")
-				},
-			)
-		}
-	}
-
 
 	private val leftCheeks = listOf(197, 454, 323, 361, 288, 397, 365, 379, 378, 400, 377, 152)
 	private val rightCheeks = listOf(197, 234, 93, 132, 58, 172, 136, 150, 149, 176, 148, 152)
@@ -381,8 +320,6 @@ class MeasureViewModel : ViewModel() {
 					// 🎀🎀🎀🎀🎀 중안부 🎀🎀🎀🎀🎀
 					val correctionValue = 180f - pupilAngle // 보정값 180
 
-
-
 					val leftAlaStartPoint = listOf(209, 49, 64)
 						.map { flr3D[it] }
 						.minByOrNull { it.first } ?: flr3D[49]
@@ -492,10 +429,29 @@ class MeasureViewModel : ViewModel() {
 						Triple((plr3D[11].first + plr3D[12].first) / 2, (plr3D[11].second + plr3D[12].second) / 2, (plr3D[11].third + plr3D[12].third) / 2)
 					val neckLength = get3DDistance(midShoulder3D, flr3D[152])
 					val faceLength = get3DDistance(flr3D[152], currentHairLine3DCoordinate[3])
-
-
+					val faceShape = classifyFaceShape(vmFlr, currentHairLine3DCoordinate)
+					val facialAxisShape = classifyFacialAxis(vmFlr)
+					val horizontalRatio = calculateHorizontalRatio(vmFlr)
+					val seggingDepths = classifySaggingDepth(vmFlr)
+					val asymmetrys = classifyFacialAsymmetry(vmFlr)
 					// 양쪾을 벌렸을 때 7.2 안벌렸을 때 4.6
 					val tempStatic = JSONObject().apply {
+
+						put("horizontal_ratio", horizontalRatio)
+
+						put("comfort_face_shape", faceShape.shape)
+						put("comfort_left_sagging_scale", seggingDepths.first)
+						put("comfort_right_sagging_scale", seggingDepths.second)
+						put("comfort_length_symmetry_factor", asymmetrys.first)
+						put("comfort_angle_symmetry_factor", asymmetrys.second)
+						put("comfort_facial_axis_shape", facialAxisShape.curve)
+						put("comfort_face_vertical_angle", faceVerticalAngle)
+						put("comfort_neck_vertical_angle", neckVerticalAngle)
+						put("comfort_shoulder_horizontal_angle", shoulderHorizon)
+						put("comfort_face_length", faceLength)
+						put("comfort_neck_length", neckLength)
+
+
 						put("comfort_eye_horizontal_angle", pupilAngle)
 						put("comfort_left_eye_horizontal_angle", eyeAngles.first)
 						put("comfort_right_eye_horizontal_angle", eyeAngles.second)
@@ -541,13 +497,8 @@ class MeasureViewModel : ViewModel() {
 						put("comfort_right_cheeks_extent", cheeksExtents.second)
 						put("comfort_left_cheekbone_extent", cheekboneExtents.first)
 						put("comfort_right_cheekbone_extent", cheekboneExtents.second)
-						// TODO 하관 shape계산 하는 값 넣기 + 계산넣을 떄 hairline에 대한 coordinates 넣기 
-						put("mid_lower_face_shape", "")
-						put("comfort_face_vertical_angle", faceVerticalAngle)
-						put("comfort_neck_vertical_angle", neckVerticalAngle)
-						put("comfort_shoulder_horizontal_angle", shoulderHorizon)
-						put("comfort_face_length", faceLength)
-						put("comfort_neck_length", neckLength)
+
+
 					}
 					staticJA.put(tempStatic)
 				}

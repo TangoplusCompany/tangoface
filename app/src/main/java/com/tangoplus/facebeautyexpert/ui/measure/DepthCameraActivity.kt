@@ -12,22 +12,15 @@ import android.content.pm.ActivityInfo
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Matrix
-import android.graphics.Paint
 import android.media.ExifInterface
-import android.media.MediaCodec
-import android.media.MediaCodecInfo
-import android.media.MediaFormat
-import android.media.MediaMuxer
 import android.net.Uri
 import android.os.Bundle
 import android.os.CountDownTimer
-import android.os.Environment
 import android.os.Handler
 import android.os.Looper
 import android.provider.MediaStore
 import android.util.JsonWriter
 import android.util.Log
-import android.view.Surface
 import android.view.View
 import android.view.WindowManager
 import android.view.animation.AccelerateDecelerateInterpolator
@@ -35,7 +28,6 @@ import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
-import androidx.camera.video.Recording
 import androidx.core.content.ContextCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
@@ -118,10 +110,6 @@ import com.tangoplus.facebeautyexpert.ui.main.MainActivity
 import com.tangoplus.facebeautyexpert.ui.main.vo.UserItem
 import com.tangoplus.facebeautyexpert.ui.measure.vm.InputViewModel
 import com.tangoplus.facebeautyexpert.ui.measure.vm.MeasureViewModel
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
-
 import java.io.FileOutputStream
 import java.io.OutputStreamWriter
 import java.nio.ByteBuffer
@@ -129,9 +117,10 @@ import kotlin.collections.listOf
 import kotlin.lazy
 import kotlin.math.abs
 import androidx.core.graphics.scale
-import com.orbbec.obsensor.types.PermissionType
+import com.tangoplus.facebeautyexpert.domain.util.ClassifyUtility.calculateVerticalRatio
+import com.tangoplus.facebeautyexpert.domain.util.MediaUtility.convertDepthPixelTo3D
+import com.tangoplus.facebeautyexpert.domain.util.MediaUtility.findNearbyDepth
 import com.tangoplus.facebeautyexpert.domain.util.clearAll
-import com.tangoplus.facebeautyexpert.domain.util.copyFrom
 import com.tangoplus.facebeautyexpert.ui.main.vm.MainViewModel
 import com.tangoplus.facebeautyexpert.ui.statistics.GyroDialogFragment
 import java.math.RoundingMode
@@ -331,15 +320,32 @@ class DepthCameraActivity : BaseActivity(), FaceLandmarkerHelper.LandmarkerListe
 					timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"))
 					hideViews()
 					playSound(R.raw.camera_shutter)
+
 					lifecycleScope.launch {
-						viewModel.setContourSave(true) // 컨투어를 위한 shortArray 추출 및 저장
+						viewModel.setContourSave(true)
 
-						// 이미지 캡처 -> scale init -> resultBundleToJson 으로 좌표값 및 데이터 저장
+						val success = captureImage(mvm.currentSeq)  // 여기서 saveMediaStorage까지 전부 완료
 
-						captureImage(mvm.currentSeq)
-						customResult?.let { mvm.resultBundleToJson(it, latestResult, mvm.currentSeq) }
-						viewModel.setSeqFinishedFlag(true)
-						updateUI()
+						if (success) {
+							// hairline, pose 전부 끝난 시점
+							customResult?.let { mvm.resultBundleToJson(it, latestResult, mvm.currentSeq) }
+
+							// vertical ratio 계산 (hairLine3DCoordinate 다 채워진 시점)
+							if (mvm.currentHairLine3DCoordinate.size == 7) {
+								val absoluteLandmarkPairs = customResult?.landmarks?.map {
+									Pair(calculateScreenX(mvm.overlayW, it.x), calculateScreenY(mvm.overlayH, it.y))
+								}?.toMutableList()
+								// 🕊️🕊️🕊️🕊️ 여기서 vertical 비율 넣기
+								absoluteLandmarkPairs?.let { pairs ->
+									val verticalRatio = calculateVerticalRatio(pairs, mvm.currentHairLine3DCoordinate)
+									mvm.staticJA.put(JSONObject().apply {
+										put("vertical_ratio", verticalRatio)
+									})
+								}
+							}
+							viewModel.setSeqFinishedFlag(true)
+							updateUI()
+						}
 					}
 				}
 			}
@@ -531,13 +537,10 @@ class DepthCameraActivity : BaseActivity(), FaceLandmarkerHelper.LandmarkerListe
 								val highByte = depthByteData[i * 2 + 1].toInt() and 0xFF
 								depthData[i] = (highByte shl 8 or lowByte).toShort()
 							}
-//                            if (viewModel.getContourSave() && customResult != null ) {
-//                                val faceRect = customResult!!.getBoundingRect(w, h) // 아래에 함수 정의됨
-//                                val croppedDepth = extractDepthAroundFace(depthData, w, h, faceRect, margin = 25)
-//                                mvm.contourSA.add(croppedDepth)
-//                                Log.v("컨투어저장", "seq: ${seqStep.value} -> ${croppedDepth.size}")
-//                                viewModel.setContourSave(false)
-//                            }
+							mvm.latestDepthData = depthData
+							mvm.latestDepthWidth = w
+							mvm.latestDepthHeight = h
+
 							// 3D 좌표 계산
 							val params = mDevice?.calibrationCameraParamList
 							val currentTime = System.currentTimeMillis()
@@ -547,6 +550,7 @@ class DepthCameraActivity : BaseActivity(), FaceLandmarkerHelper.LandmarkerListe
 							) {
 								val paramsUnit = params.getCameraParam(0) // 캘리브 원해상도 기준
 								val base = paramsUnit.colorIntrinsic
+								mvm.latestIntrinsic = base
 								last3DCalculateTime = currentTime
 								val landmarks3D = convertFaceLandmarksTo3D(
 									customResult!!,
@@ -700,7 +704,7 @@ class DepthCameraActivity : BaseActivity(), FaceLandmarkerHelper.LandmarkerListe
 
 								// 헤어라인과 기타 등등 담을 걸 etc > hairline, 다른 랜드마크..
 								mvm.etcJO.put("hairline", mvm.hairLineJA.optJSONObject(i) ?: JSONObject())
-								// TODO 추후 다른 랜드마크를 추출할 시
+
 //								mvm.etcJO.put("otherline", mvm.otherJA.optJSONArray(i) ?: JSONArray())
 
 								put("etc_landmark", mvm.etcJO)
@@ -902,7 +906,7 @@ class DepthCameraActivity : BaseActivity(), FaceLandmarkerHelper.LandmarkerListe
 				}
 
 				// guideText 움직이기 flag
-				if (!viewModel.getTextAnimationFlag()) {
+				/*if (!viewModel.getTextAnimationFlag()) {
 					Handler(Looper.getMainLooper()).postDelayed({
 						val isPortrait = if (getScreenOrientation().contains("portrait")) true else false
 
@@ -922,7 +926,7 @@ class DepthCameraActivity : BaseActivity(), FaceLandmarkerHelper.LandmarkerListe
 					) {
 						viewModel.setTextAnimationFlag(true)
 					}
-				}
+				}*/
 			}
 		}
 	}
@@ -1172,7 +1176,6 @@ class DepthCameraActivity : BaseActivity(), FaceLandmarkerHelper.LandmarkerListe
 					}
 					val tempUri = Uri.fromFile(tempFile)
 					saveMediaToStorage(this@DepthCameraActivity, tempUri, name, true)
-
 					return@withContext true
 				} ?: false
 			} catch (e: Exception) {
@@ -1223,194 +1226,191 @@ class DepthCameraActivity : BaseActivity(), FaceLandmarkerHelper.LandmarkerListe
 		}
 	}
 
-	fun saveMediaToStorage(context: Context, uri: Uri, fileName: String, isImage: Boolean) {
-		try {
-			val extension = if (isImage) ".jpg" else ".mp4"
+	private suspend fun saveMediaToStorage(context: Context, uri: Uri, fileName: String, isImage: Boolean) {
+		withContext(Dispatchers.IO) {
+			try {
+				val extension = if (isImage) ".jpg" else ".mp4"
 //			val file = File(context.cacheDir, "$fileName$extension")
 
-			if (isImage) {
-				val contentValues = ContentValues().apply {
-					put(MediaStore.MediaColumns.DISPLAY_NAME, "$fileName$extension")
-					put(MediaStore.MediaColumns.MIME_TYPE, "image/jpeg")
-					put(MediaStore.Images.Media.RELATIVE_PATH, "Pictures/TangoPlus")
-				}
-				val inputStream = context.contentResolver.openInputStream(uri)
-				val tempFile = File.createTempFile("tempImage", null, context.cacheDir)
-				inputStream?.use { input ->
-					tempFile.outputStream().use { output ->
-						input.copyTo(output)
+				if (isImage) {
+					val contentValues = ContentValues().apply {
+						put(MediaStore.MediaColumns.DISPLAY_NAME, "$fileName$extension")
+						put(MediaStore.MediaColumns.MIME_TYPE, "image/jpeg")
+						put(MediaStore.Images.Media.RELATIVE_PATH, "Pictures/TangoPlus")
 					}
-				}
-
-				// EXIF 데이터 읽기
-				val exif = ExifInterface(tempFile.absolutePath)
-				val orientation =
-					exif.getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL)
-//                Log.d("ExifDebug", "Exif Orientation: $orientation")
-				// 비트맵 디코딩
-				val options = BitmapFactory.Options().apply {
-					inJustDecodeBounds = true
-				}
-				BitmapFactory.decodeFile(tempFile.absolutePath, options)
-
-				val sourceWidth = options.outWidth
-				val sourceHeight = options.outHeight
-
-				val targetWidth = 1920
-				val targetHeight = 1080
-
-				// 이미지 스케일 계산
-				val widthRatio = sourceWidth.toFloat() / targetWidth
-				val heightRatio = sourceHeight.toFloat() / targetHeight
-				val scale = maxOf(widthRatio, heightRatio)
-
-				options.inJustDecodeBounds = false
-				options.inSampleSize = scale.toInt()
-
-				var bitmap = BitmapFactory.decodeFile(tempFile.absolutePath, options)
-				val matrix = Matrix()
-
-				// 회전 적용
-				when (orientation) {
-					ExifInterface.ORIENTATION_ROTATE_90 -> matrix.postRotate(90f)   // 시계 방향 90도
-					ExifInterface.ORIENTATION_ROTATE_180 -> matrix.postRotate(180f) // 시계 방향 180도
-					ExifInterface.ORIENTATION_ROTATE_270 -> matrix.postRotate(270f) // 시계 방향 270도
-				}
-
-				// ★★★ 좌우반전 ★★★
-				matrix.postScale(-1f, 1f, bitmap.width / 2f, bitmap.height / 2f)
-
-				// 모든 변환을 한번에 적용
-				bitmap = Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true)
-
-				// 스케일 조정
-				bitmap.scale(targetWidth, targetHeight).also { bitmap = it }
-
-				// Pictures/TangoBeauty에 저장
-				val imageUri = context.contentResolver.insert(
-					MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
-					contentValues
-				)
-
-				// --------------------------# poselandmark를 잡기 위한 detectAsync #-------------------------
-				customResult?.let {
-					val absoluteLandmarks = it.landmarks.map { landmark ->
-						FaceLandmarkResult.FaceLandmark(
-							x = calculateScreenX(mvm.overlayW, landmark.x),
-							y = calculateScreenY(mvm.overlayH, landmark.y)
-						)
-					}
-					val absoluteResult = FaceLandmarkResult(absoluteLandmarks)
-					val hairResult = findHairline(bitmap, absoluteResult)
-					if (hairResult != null) {
-						hairResult.hairlinePoints.forEach { linePoint ->
-							mvm.tempHairLineJO.apply {
-								put("landmark_index", linePoint.landmarkIndex)
-								put("sx", linePoint.point.x)
-								put("sy", linePoint.point.y)
-							}
-							mvm.hairLineJA.put(mvm.tempHairLineJO)
-							mvm.tempHairLineJO = JSONObject()
-						}
-					}
-				}
-
-				// --------------------------# poselandmark를 잡기 위한 detectAsync #-------------------------
-				val resultBundle = poseLandmarker.detectImage(bitmap)
-				if (resultBundle?.results?.first()?.landmarks()?.isNotEmpty() == true) {
-					val plr = resultBundle.results.first().landmarks()[0]
-
-					mvm.tempPlrJA = JSONArray()
-					plr.forEachIndexed { index, _ ->
-						val swapIndex = if (index >= 7 && index % 2 == 0) index - 1 // 짝수인 경우 뒤의 홀수 인덱스로 교체
-						else if (index >= 7) index + 1 // 홀수인 경우 앞의 짝수 인덱스로 교체
-						else index // 7 미만인 경우 그대로 사용
-						val targetLandmark = plr[swapIndex]
-
-						val scaledX = calculateScreenX(mvm.overlayW, targetLandmark.x())
-						val scaledY = calculateScreenY(mvm.overlayH, targetLandmark.y())
-
-						val jo = JSONObject().apply {
-							put("index", index)
-							put("isActive", true)
-							put("sx", scaledX.toBigDecimal().setScale(1, RoundingMode.HALF_UP))
-							put("sy", scaledY.toBigDecimal().setScale(1, RoundingMode.HALF_UP))
-							put("wx", targetLandmark.x().toBigDecimal().setScale(4, RoundingMode.HALF_UP))
-							put("wy", targetLandmark.y().toBigDecimal().setScale(4, RoundingMode.HALF_UP))
-							put("wz", targetLandmark.z().toBigDecimal().setScale(4, RoundingMode.HALF_UP))
-						}
-						mvm.tempPlrJA.put(jo)
-						mvm.currentPlrCoordinate.add(Pair(targetLandmark.x(), targetLandmark.y())) // 33 개가 다 담김
-					}
-
-					// 약 30개 랜드마크 JO를 저장한 seq 1개의 JA를 전체 seq를 담을 JA에 넣기
-					mvm.plrJA.put(mvm.tempPlrJA)
-				} else {
-					showToast("poselandmark를 찾을 수 없습니다.")
-					mvm.plrJA.put(JSONArray())
-				}
-				// -------------------------# 목젖 위치를 잡기 위한 detectAsync 끝 #-----------------------
-				imageUri?.let { imageURI ->
-					context.contentResolver.openOutputStream(imageURI)?.use { outputStream ->
-						bitmap.compress(Bitmap.CompressFormat.JPEG, 90, outputStream)
-						outputStream.flush()
-					}
-					Log.d("SaveMedia", "Image saved to Pictures: ${mvm.currentSeq} ->  $fileName$extension")
-				} ?: run {
-					Log.e("SaveMedia", "Failed to create image URI")
-				}
-				mvm.mediaFileNames.add("$fileName$extension")
-
-				Log.d("SaveMedia", "seqStep: ${mvm.currentSeq} vmFileName: ${mvm.mediaFileNames}")
-
-				// 임시 파일과 비트맵 정리
-				tempFile.delete()
-				bitmap.recycle()
-
-				// -----------------# video 저장 #------------------
-			} else {
-				val videoCollection =
-					MediaStore.Video.Media.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY)
-				val contentValues = ContentValues().apply {
-					put(MediaStore.Video.Media.DISPLAY_NAME, fileName)  // ex: 4-20251020145123.mp4
-					put(MediaStore.Video.Media.MIME_TYPE, "video/mp4")
-					put(
-						MediaStore.Video.Media.RELATIVE_PATH,
-						"${Environment.DIRECTORY_MOVIES}/TangoPlus"
-					) // Movies/TangoPlus/
-					put(MediaStore.Video.Media.IS_PENDING, 1)
-				}
-
-				val videoUri = context.contentResolver.insert(videoCollection, contentValues)
-
-				if (videoUri != null) {
-					context.contentResolver.openInputStream(uri)?.use { input ->
-						context.contentResolver.openOutputStream(videoUri)?.use { output ->
+					val inputStream = context.contentResolver.openInputStream(uri)
+					val tempFile = File.createTempFile("tempImage", null, context.cacheDir)
+					inputStream?.use { input ->
+						tempFile.outputStream().use { output ->
 							input.copyTo(output)
-
-							contentValues.clear()
-							contentValues.put(MediaStore.Video.Media.IS_PENDING, 0)
-							context.contentResolver.update(videoUri, contentValues, null, null)
-							Log.v("영상작업완료 후 plr넣기", "$fileName$extension")
-
-							mvm.mediaFileNames.add("$fileName$extension")
-							// 빈 jsonArray를 넣어서 index 갯수 맞추기
-							mvm.plrJA.put(JSONArray())
-							Log.v("영상작업완료 후 plr넣기", "${mvm.plrJA.length()}")
 						}
 					}
+
+					// EXIF 데이터 읽기
+					val exif = ExifInterface(tempFile.absolutePath)
+					val orientation =
+						exif.getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL)
+//                Log.d("ExifDebug", "Exif Orientation: $orientation")
+					// 비트맵 디코딩
+					val options = BitmapFactory.Options().apply {
+						inJustDecodeBounds = true
+					}
+					BitmapFactory.decodeFile(tempFile.absolutePath, options)
+
+					val sourceWidth = options.outWidth
+					val sourceHeight = options.outHeight
+
+					val targetWidth = 1920
+					val targetHeight = 1080
+
+					// 이미지 스케일 계산
+					val widthRatio = sourceWidth.toFloat() / targetWidth
+					val heightRatio = sourceHeight.toFloat() / targetHeight
+					val scale = maxOf(widthRatio, heightRatio)
+
+					options.inJustDecodeBounds = false
+					options.inSampleSize = scale.toInt()
+
+					var bitmap = BitmapFactory.decodeFile(tempFile.absolutePath, options)
+					val matrix = Matrix()
+
+					// 회전 적용
+					when (orientation) {
+						ExifInterface.ORIENTATION_ROTATE_90 -> matrix.postRotate(90f)   // 시계 방향 90도
+						ExifInterface.ORIENTATION_ROTATE_180 -> matrix.postRotate(180f) // 시계 방향 180도
+						ExifInterface.ORIENTATION_ROTATE_270 -> matrix.postRotate(270f) // 시계 방향 270도
+					}
+
+					// ★★★ 좌우반전 ★★★
+					matrix.postScale(-1f, 1f, bitmap.width / 2f, bitmap.height / 2f)
+
+					// 모든 변환을 한번에 적용
+					bitmap = Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true)
+
+					// 스케일 조정
+					bitmap.scale(targetWidth, targetHeight).also { bitmap = it }
+
+					// Pictures/TangoBeauty에 저장
+					val imageUri = context.contentResolver.insert(
+						MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
+						contentValues
+					)
+					mvm.latestBitmap = bitmap
+					// --------------------------# poselandmark를 잡기 위한 detectAsync #-------------------------
+					customResult?.let {
+						val absoluteLandmarks = it.landmarks.map { landmark ->
+							FaceLandmarkResult.FaceLandmark(
+								x = calculateScreenX(mvm.overlayW, landmark.x),
+								y = calculateScreenY(mvm.overlayH, landmark.y)
+							)
+						}
+						val absoluteResult = FaceLandmarkResult(absoluteLandmarks)
+						val hairResult = findHairline(bitmap, absoluteResult)
+						hairResult?.hairlinePoints?.forEach { linePoint ->
+							// 2D 좌표로 depth Z값 추출
+							val px = linePoint.point.x.toInt().coerceIn(0, mvm.latestDepthWidth - 1)
+							val py = linePoint.point.y.toInt().coerceIn(0, mvm.latestDepthHeight - 1)
+							val idx = py * mvm.latestDepthWidth + px
+							val depthMm = mvm.latestDepthData?.get(idx)?.toInt()?.and(0xFFFF) ?: 0
+							val depthM = depthMm / 1000f
+							val point3D = if (depthM > 0) {
+								convertDepthPixelTo3D(mvm.latestIntrinsic!!, px.toFloat(), py.toFloat(), depthM)
+							} else {
+								val nearbyDepth = findNearbyDepth(mvm.latestDepthData!!, px, py, mvm.latestDepthWidth, mvm.latestDepthHeight)
+								if (nearbyDepth > 0) convertDepthPixelTo3D(mvm.latestIntrinsic!!, px.toFloat(), py.toFloat(), nearbyDepth / 1000f)
+								else Point3D(px.toFloat(), py.toFloat(), 0f)
+							}
+
+							val pointJA = JSONArray().apply {
+								put(linePoint.landmarkIndex)
+								put(linePoint.point.x.toBigDecimal().setScale(1, RoundingMode.HALF_UP))
+								put(linePoint.point.y.toBigDecimal().setScale(1, RoundingMode.HALF_UP))
+								put(point3D.x.toBigDecimal().setScale(4, RoundingMode.HALF_UP))
+								put(point3D.y.toBigDecimal().setScale(4, RoundingMode.HALF_UP))
+								put(point3D.z.toBigDecimal().setScale(4, RoundingMode.HALF_UP))
+							}
+							mvm.hairLineJA.put(pointJA)
+							mvm.currentHairLine3DCoordinate.add(Triple(point3D.x, point3D.y, point3D.z))
+						}
+					}
+
+					// --------------------------# poselandmark를 잡기 위한 detectAsync #-------------------------
+					val resultBundle = poseLandmarker.detectImage(bitmap)
+					if (resultBundle?.results?.first()?.landmarks()?.isNotEmpty() == true) {
+						val plr = resultBundle.results.first().landmarks()[0]
+
+						mvm.tempPlrJA = JSONArray()
+						plr.forEachIndexed { index, _ ->
+							val swapIndex = if (index >= 7 && index % 2 == 0) index - 1
+							else if (index >= 7) index + 1
+							else index
+							val targetLandmark = plr[swapIndex]
+
+							val scaledX = calculateScreenX(mvm.overlayW, targetLandmark.x())
+							val scaledY = calculateScreenY(mvm.overlayH, targetLandmark.y())
+
+							// pose 랜드마크 3D 변환
+							val px = (targetLandmark.x() * mvm.latestDepthWidth).toInt().coerceIn(0, mvm.latestDepthWidth - 1)
+							val py = (targetLandmark.y() * mvm.latestDepthHeight).toInt().coerceIn(0, mvm.latestDepthHeight - 1)
+							val idx = py * mvm.latestDepthWidth + px
+							val depthMm = mvm.latestDepthData?.get(idx)?.toInt()?.and(0xFFFF) ?: 0
+							val depthM = depthMm / 1000f
+							val point3D = if (depthM > 0) {
+								convertDepthPixelTo3D(mvm.latestIntrinsic!!, px.toFloat(), py.toFloat(), depthM)
+							} else {
+								val nearbyDepth = findNearbyDepth(mvm.latestDepthData!!, px, py, mvm.latestDepthWidth, mvm.latestDepthHeight)
+								if (nearbyDepth > 0) convertDepthPixelTo3D(mvm.latestIntrinsic!!, px.toFloat(), py.toFloat(), nearbyDepth / 1000f)
+								else Point3D(0f, 0f, 0f)
+							}
+
+							val ja = JSONArray().apply {
+								put(index)
+								put(scaledX.toBigDecimal().setScale(1, RoundingMode.HALF_UP))
+								put(scaledY.toBigDecimal().setScale(1, RoundingMode.HALF_UP))
+								put(point3D.x.toBigDecimal().setScale(4, RoundingMode.HALF_UP))
+								put(point3D.y.toBigDecimal().setScale(4, RoundingMode.HALF_UP))
+								put(point3D.z.toBigDecimal().setScale(4, RoundingMode.HALF_UP))
+							}
+							mvm.tempPlrJA.put(ja)
+							mvm.currentPlrCoordinate.add(Pair(targetLandmark.x(), targetLandmark.y()))
+							mvm.current3DPlrCoordinate.add(Triple(point3D.x, point3D.y, point3D.z))
+						}
+						mvm.plrJA.put(mvm.tempPlrJA)
+					} else {
+						showToast("poselandmark를 찾을 수 없습니다.")
+						mvm.plrJA.put(JSONArray())
+					}
+					// -------------------------# 목젖 위치를 잡기 위한 detectAsync 끝 #-----------------------
+					imageUri?.let { imageURI ->
+						context.contentResolver.openOutputStream(imageURI)?.use { outputStream ->
+							bitmap.compress(Bitmap.CompressFormat.JPEG, 90, outputStream)
+							outputStream.flush()
+						}
+						Log.d("SaveMedia", "Image saved to Pictures: ${mvm.currentSeq} ->  $fileName$extension")
+					} ?: run {
+						Log.e("SaveMedia", "Failed to create image URI")
+					}
+					mvm.mediaFileNames.add("$fileName$extension")
+
+					Log.d("SaveMedia", "seqStep: ${mvm.currentSeq} vmFileName: ${mvm.mediaFileNames}")
+
+					// 임시 파일과 비트맵 정리
+					tempFile.delete()
+					bitmap.recycle()
+
+					// -----------------# video 저장 #------------------
 				}
+			} catch (e: IndexOutOfBoundsException) {
+				Log.e("SaveMediaIndex", "${e.message}")
+			} catch (e: IllegalArgumentException) {
+				Log.e("SaveMediaIllegal", "${e.message}")
+			} catch (e: IllegalStateException) {
+				Log.e("SaveMediaIllegal", "${e.message}")
+			} catch (e: NullPointerException) {
+				Log.e("SaveMediaNull", "${e.message}")
+			} catch (e: java.lang.Exception) {
+				Log.e("SaveMediaException", "${e.message}")
 			}
-		} catch (e: IndexOutOfBoundsException) {
-			Log.e("SaveMediaIndex", "${e.message}")
-		} catch (e: IllegalArgumentException) {
-			Log.e("SaveMediaIllegal", "${e.message}")
-		} catch (e: IllegalStateException) {
-			Log.e("SaveMediaIllegal", "${e.message}")
-		} catch (e: NullPointerException) {
-			Log.e("SaveMediaNull", "${e.message}")
-		} catch (e: java.lang.Exception) {
-			Log.e("SaveMediaException", "${e.message}")
 		}
 	}
 
@@ -1525,7 +1525,7 @@ class DepthCameraActivity : BaseActivity(), FaceLandmarkerHelper.LandmarkerListe
 
 	private fun initSettings() {
 
-		mvm.allSeqs = prefsUtil.getLastMeasureSeqs().sortedBy { it.ordinal }.toMutableList()
+//		mvm.allSeqs = prefsUtil.getLastMeasureSeqs().sortedBy { it.ordinal }.toMutableList()
 		mvm.currentSeq = mvm.allSeqs[0]
 
 		bd.tvPrevious.apply {
@@ -1541,16 +1541,14 @@ class DepthCameraActivity : BaseActivity(), FaceLandmarkerHelper.LandmarkerListe
 		ivm.isShownBtn = false
 		viewModel.comparisonDoubleItem = null
 
-		// userFragment에서 왔을 경우 이름과 휴대폰 번호 넣고, 설문지만 넣기
 		val currentUserItem = intent.getParcelableExtra<UserItem>("currentUserItem")
 		Log.v("currentUserItem", "is init? = $currentUserItem, ${currentUserItem == null}")
 		if (currentUserItem != null) {
-			ivm.mobileValue.value = currentUserItem.userMobile
-			ivm.nameValue.value = currentUserItem.userName
-			ivm.nationalityValue.value = currentUserItem.userNationality
-			ivm.birthdayValue.value = currentUserItem.userBirthday
-			ivm.genderValue.value = currentUserItem.userGender
-			mvm.currentUserSn = currentUserItem.userSn
+			ivm.mobileValue.value = currentUserItem.mobile
+			ivm.nameValue.value = currentUserItem.name
+			ivm.nationalityValue.value = currentUserItem.nationality
+			ivm.birthdayValue.value = currentUserItem.birthday
+			ivm.genderValue.value = currentUserItem.gender
 		}
 		val key = getString(R.string.kekeke)
 		mvm.currentUUID = generateCustomUUID(ivm.nameValue.value, ivm.mobileValue.value, key)

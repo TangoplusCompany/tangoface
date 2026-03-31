@@ -6,8 +6,8 @@ enum class FaceShape(val displayName: String) {
 	HEART("하트형"),
 	PEANUT("땅콩형"),
 	HEXAGON("육각형"),
-	CIRCLE("둥근형");
-
+	CIRCLE("둥근형"),
+	DEFAULT("미설정");
 	override fun toString(): String {
 		return displayName
 	}

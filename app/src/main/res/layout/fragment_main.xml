@@ -21,8 +21,8 @@
             android:id="@+id/clMList"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:background="@color/bg"
-            android:visibility="visible" >
+            android:background="@drawable/color_gradation_bg"
+            android:visibility="visible">
 
             <androidx.appcompat.widget.AppCompatButton
                 android:id="@+id/btnMainStart"

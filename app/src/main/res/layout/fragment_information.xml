@@ -10,7 +10,7 @@
         android:id="@+id/clGDImage"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:background="@color/subColor100"
+        android:background="@color/bg"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent">
@@ -21,476 +21,61 @@
             android:fillViewport="true"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@+id/cardView">
+            app:layout_constraintStart_toStartOf="parent">
 
             <androidx.constraintlayout.widget.ConstraintLayout
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content">
+                android:layout_height="wrap_content"
+                android:background="@color/bg">
 
                 <androidx.constraintlayout.widget.ConstraintLayout
-                    android:id="@+id/constraintLayout7"
+                    android:id="@+id/constraintLayout2"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toBottomOf="@+id/rvGD1">
+
+                    <androidx.recyclerview.widget.RecyclerView
+                        android:id="@+id/rvGD2"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        app:layout_constraintEnd_toEndOf="parent"
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintTop_toBottomOf="@+id/tvIdInfo" />
+
+                    <TextView
+                        android:id="@+id/tvIdInfo"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:gravity="center_vertical"
+                        android:padding="10dp"
+                        android:text="이강휘, 010-4544-9999"
+                        android:textColor="@color/white"
+                        android:textSize="18sp"
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintTop_toTopOf="parent" />
+
+                </androidx.constraintlayout.widget.ConstraintLayout>
+
+                <androidx.recyclerview.widget.RecyclerView
+                    android:id="@+id/rvGD1"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="10dp"
                     android:layout_marginTop="10dp"
+                    android:layout_marginEnd="10dp"
                     app:layout_constraintEnd_toEndOf="parent"
                     app:layout_constraintStart_toStartOf="parent"
                     app:layout_constraintTop_toTopOf="parent">
 
-                    <androidx.constraintlayout.widget.ConstraintLayout
-                        android:id="@+id/constraintLayout2"
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_marginStart="10dp"
-                        android:background="@drawable/bckgnd_12"
-                        app:layout_constraintBottom_toBottomOf="@+id/constraintLayout3"
-                        app:layout_constraintStart_toStartOf="parent"
-                        app:layout_constraintTop_toTopOf="@+id/constraintLayout3">
+                </androidx.recyclerview.widget.RecyclerView>
 
-                        <TextView
-                            android:id="@+id/tvIdInfo"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:gravity="center_vertical"
-                            android:padding="10dp"
-                            android:text="이강휘, 010-4544-9999"
-                            android:textColor="@color/black"
-                            android:textSize="18sp"
-                            app:layout_constraintEnd_toEndOf="parent"
-                            app:layout_constraintStart_toStartOf="parent"
-                            app:layout_constraintTop_toTopOf="parent" />
-
-                        <com.google.android.material.materialswitch.MaterialSwitch
-                            android:id="@+id/msID"
-                            style="@style/CustomSwitchStyle"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:padding="10dp"
-                            android:text="전체 각도"
-                            android:textColor="@color/black"
-                            android:textSize="18dp"
-                            app:layout_constraintEnd_toEndOf="parent"
-                            app:layout_constraintStart_toStartOf="parent"
-                            app:layout_constraintTop_toBottomOf="@+id/tvIdInfo"
-                            app:trackDecorationTint="@color/tint_black_100"
-                            app:trackTint="@color/tint_black_100"
-                            app:useMaterialThemeColors="false" />
-
-                        <LinearLayout
-                            android:id="@+id/llIDImageProcess"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_marginStart="10dp"
-                            android:layout_marginEnd="10dp"
-                            android:layout_marginBottom="10dp"
-                            android:background="@drawable/bckgnd_20"
-                            android:orientation="horizontal"
-                            app:layout_constraintBottom_toBottomOf="parent"
-                            app:layout_constraintEnd_toEndOf="parent"
-                            app:layout_constraintStart_toStartOf="parent"
-                            app:layout_constraintTop_toBottomOf="@+id/msID">
-
-                            <TextView
-                                android:id="@+id/btnIDRatio"
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:layout_marginEnd="5dp"
-                                android:background="@drawable/effect_12"
-                                android:gravity="center"
-                                android:paddingStart="3dp"
-                                android:paddingTop="6dp"
-                                android:paddingEnd="3dp"
-                                android:paddingBottom="6dp"
-                                android:text="🙆 얼굴 비율 보기"
-                                android:textColor="@color/black"
-                                android:textSize="18dp" />
-
-                            <TextView
-                                android:id="@+id/btnIDClean"
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:layout_marginStart="5dp"
-                                android:background="@drawable/effect_12"
-                                android:gravity="center"
-                                android:paddingStart="3dp"
-                                android:paddingTop="6dp"
-                                android:paddingEnd="3dp"
-                                android:paddingBottom="6dp"
-                                android:text="🔍 가이드라인 끄기"
-                                android:textColor="@color/black"
-                                android:textSize="18dp" />
-                        </LinearLayout>
-                    </androidx.constraintlayout.widget.ConstraintLayout>
-
-                    <androidx.constraintlayout.widget.ConstraintLayout
-                        android:id="@+id/constraintLayout3"
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_marginStart="10dp"
-                        android:layout_marginTop="10dp"
-                        android:layout_marginEnd="10dp"
-                        android:layout_marginBottom="10dp"
-                        android:background="@drawable/bckgnd_12"
-                        app:layout_constraintBottom_toBottomOf="parent"
-                        app:layout_constraintEnd_toEndOf="parent"
-                        app:layout_constraintStart_toEndOf="@+id/constraintLayout2"
-                        app:layout_constraintTop_toTopOf="parent">
-
-                        <LinearLayout
-                            android:id="@+id/linearLayout2"
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:orientation="horizontal"
-                            app:layout_constraintEnd_toEndOf="parent"
-                            app:layout_constraintStart_toStartOf="parent"
-                            app:layout_constraintTop_toTopOf="parent">
-
-                            <TextView
-                                android:id="@+id/tvID0"
-                                android:layout_width="match_parent"
-                                android:layout_height="match_parent"
-                                android:layout_weight="1"
-                                android:background="@drawable/effect_transparent"
-                                android:gravity="center"
-                                android:paddingTop="8dp"
-                                android:paddingBottom="8dp"
-                                android:text="편한 상태"
-                                android:textColor="@color/black"
-                                android:textSize="18dp" />
-
-                            <TextView
-                                android:id="@+id/tvID1"
-                                android:layout_width="match_parent"
-                                android:layout_height="match_parent"
-                                android:layout_weight="1"
-                                android:background="@drawable/effect_transparent"
-                                android:gravity="center"
-                                android:paddingTop="8dp"
-                                android:paddingBottom="8dp"
-                                android:text="정면"
-                                android:textColor="@color/black"
-                                android:textSize="18dp" />
-
-                            <TextView
-                                android:id="@+id/tvID2"
-                                android:layout_width="match_parent"
-                                android:layout_height="match_parent"
-                                android:layout_weight="1"
-                                android:background="@drawable/effect_transparent"
-                                android:gravity="center"
-                                android:paddingTop="8dp"
-                                android:paddingBottom="8dp"
-                                android:text="교합"
-                                android:textColor="@color/black"
-                                android:textSize="18dp" />
-                        </LinearLayout>
-
-                        <com.google.android.material.divider.MaterialDivider
-                            android:id="@+id/divIDHorizon1"
-                            android:layout_width="0dp"
-                            android:layout_height="2dp"
-                            app:dividerColor="@color/subColor100"
-                            app:layout_constraintEnd_toEndOf="parent"
-                            app:layout_constraintStart_toStartOf="parent"
-                            app:layout_constraintTop_toBottomOf="@+id/linearLayout2" />
-
-                        <com.google.android.material.divider.MaterialDivider
-                            android:id="@+id/materialDivider3"
-                            android:layout_width="2dp"
-                            android:layout_height="0dp"
-                            app:dividerColor="@color/subColor100"
-                            app:layout_constraintBottom_toBottomOf="@+id/llID2"
-                            app:layout_constraintEnd_toEndOf="parent"
-                            app:layout_constraintHorizontal_bias="0.33333333333333"
-                            app:layout_constraintStart_toStartOf="parent"
-                            app:layout_constraintTop_toTopOf="parent" />
-
-                        <com.google.android.material.divider.MaterialDivider
-                            android:id="@+id/materialDivider4"
-                            android:layout_width="2dp"
-                            android:layout_height="0dp"
-                            app:dividerColor="@color/subColor100"
-                            app:layout_constraintBottom_toBottomOf="@+id/llID2"
-                            app:layout_constraintEnd_toEndOf="parent"
-                            app:layout_constraintHorizontal_bias="0.66666666666"
-                            app:layout_constraintStart_toStartOf="parent"
-                            app:layout_constraintTop_toTopOf="parent" />
-
-                        <LinearLayout
-                            android:id="@+id/llID1"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:orientation="horizontal"
-                            android:visibility="visible"
-                            app:layout_constraintEnd_toEndOf="parent"
-                            app:layout_constraintStart_toStartOf="parent"
-                            app:layout_constraintTop_toBottomOf="@+id/linearLayout2">
-
-                            <TextView
-                                android:id="@+id/tvID3"
-                                android:layout_width="match_parent"
-                                android:layout_height="match_parent"
-                                android:layout_weight="1"
-                                android:background="@drawable/effect_transparent"
-                                android:gravity="center"
-                                android:paddingTop="8dp"
-                                android:paddingBottom="8dp"
-                                android:text="턱 좌측 이동"
-                                android:textColor="@color/black"
-                                android:textSize="18dp" />
-
-                            <TextView
-                                android:id="@+id/tvID4"
-                                android:layout_width="match_parent"
-                                android:layout_height="match_parent"
-                                android:layout_weight="1"
-                                android:background="@drawable/effect_transparent"
-                                android:gravity="center"
-                                android:paddingTop="8dp"
-                                android:paddingBottom="8dp"
-                                android:text="턱 우측 이동"
-                                android:textColor="@color/black"
-                                android:textSize="18dp" />
-
-                            <TextView
-                                android:id="@+id/tvID5"
-                                android:layout_width="match_parent"
-                                android:layout_height="match_parent"
-                                android:layout_weight="1"
-                                android:background="@drawable/effect_transparent"
-                                android:gravity="center"
-                                android:paddingStart="30dp"
-                                android:paddingTop="8dp"
-                                android:paddingEnd="30dp"
-                                android:paddingBottom="8dp"
-                                android:text="개구"
-                                android:textColor="@color/black"
-                                android:textSize="18dp"
-                                android:visibility="visible" />
-
-                        </LinearLayout>
-
-                        <com.google.android.material.divider.MaterialDivider
-                            android:id="@+id/divIDHorizon2"
-                            android:layout_width="0dp"
-                            android:layout_height="2dp"
-                            app:dividerColor="@color/subColor100"
-                            app:layout_constraintEnd_toEndOf="parent"
-                            app:layout_constraintStart_toStartOf="parent"
-                            app:layout_constraintTop_toBottomOf="@+id/llID1" />
-
-                        <LinearLayout
-                            android:id="@+id/llID2"
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:orientation="horizontal"
-                            android:visibility="visible"
-                            app:layout_constraintEnd_toEndOf="parent"
-                            app:layout_constraintStart_toStartOf="parent"
-                            app:layout_constraintTop_toBottomOf="@+id/llID1">
-
-                            <TextView
-                                android:id="@+id/tvID6"
-                                android:layout_width="match_parent"
-                                android:layout_height="match_parent"
-                                android:layout_weight="1"
-                                android:background="@drawable/effect_transparent"
-                                android:gravity="center"
-                                android:paddingTop="8dp"
-                                android:paddingBottom="8dp"
-                                android:text="목폄"
-                                android:textColor="@color/black"
-                                android:textSize="18dp" />
-
-                            <TextView
-                                android:id="@+id/tvID7"
-                                android:layout_width="match_parent"
-                                android:layout_height="match_parent"
-                                android:layout_weight="1"
-                                android:background="@drawable/effect_transparent"
-                                android:gravity="center"
-                                android:paddingTop="8dp"
-                                android:paddingBottom="8dp"
-                                android:text="좌측"
-                                android:textColor="@color/black"
-                                android:textSize="18dp" />
-
-                            <TextView
-                                android:id="@+id/tvID8"
-                                android:layout_width="match_parent"
-                                android:layout_height="match_parent"
-                                android:layout_weight="1"
-                                android:background="@drawable/effect_transparent"
-                                android:gravity="center"
-                                android:paddingTop="8dp"
-                                android:paddingBottom="8dp"
-                                android:text="우측"
-                                android:textColor="@color/black"
-                                android:textSize="18dp" />
-
-                        </LinearLayout>
-
-                        <com.google.android.material.divider.MaterialDivider
-                            android:id="@+id/divIDHorizon3"
-                            android:layout_width="0dp"
-                            android:layout_height="2dp"
-                            app:dividerColor="@color/subColor100"
-                            app:layout_constraintEnd_toEndOf="parent"
-                            app:layout_constraintStart_toStartOf="parent"
-                            app:layout_constraintTop_toBottomOf="@+id/llID2" />
-
-                        <TextView
-                            android:id="@+id/tvID9"
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:gravity="center"
-                            android:paddingTop="8dp"
-                            android:paddingBottom="8dp"
-                            android:text="페이스 보우"
-                            android:textColor="@color/black"
-                            android:textSize="18sp"
-                            android:visibility="visible"
-                            app:layout_constraintEnd_toEndOf="parent"
-                            app:layout_constraintStart_toStartOf="parent"
-                            app:layout_constraintTop_toBottomOf="@+id/llID2" />
-
-                    </androidx.constraintlayout.widget.ConstraintLayout>
-                </androidx.constraintlayout.widget.ConstraintLayout>
-
-                <androidx.recyclerview.widget.RecyclerView
-                    android:id="@+id/rvGD2"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="10dp"
-                    android:layout_marginTop="20dp"
-                    android:layout_marginEnd="10dp"
-                    app:layout_constraintEnd_toEndOf="parent"
-                    app:layout_constraintStart_toStartOf="parent"
-                    app:layout_constraintTop_toBottomOf="@+id/constraintLayout7" />
-
-                <TextView
-                    android:id="@+id/tvGDRatioTitle"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="20dp"
-                    android:layout_marginTop="60dp"
-                    android:text="얼굴 비율 확인"
-                    android:textColor="@color/black"
-                    android:textSize="24dp"
-                    android:visibility="visible"
-                    app:layout_constraintStart_toStartOf="parent"
-                    app:layout_constraintTop_toBottomOf="@+id/rvGD2" />
-
-                <LinearLayout
-                    android:id="@+id/llGDRatioTitle"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="20dp"
-                    android:layout_marginTop="20dp"
-                    android:layout_marginEnd="20dp"
-                    android:layout_marginBottom="30dp"
-                    android:orientation="horizontal"
-                    android:visibility="visible"
-                    app:layout_constraintBottom_toBottomOf="parent"
-                    app:layout_constraintEnd_toEndOf="parent"
-                    app:layout_constraintStart_toStartOf="parent"
-                    app:layout_constraintTop_toBottomOf="@+id/tvGDRatioTitle"
-                    app:layout_constraintVertical_bias="0.0">
-
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="64dp"
-                        android:layout_marginEnd="10dp"
-                        android:layout_weight="1"
-                        android:background="@drawable/bckgnd_20"
-                        android:orientation="horizontal">
-
-                        <TextView
-                            android:id="@+id/cbGDVerti"
-                            android:layout_width="match_parent"
-                            android:layout_height="64dp"
-                            android:layout_marginStart="10dp"
-                            android:layout_weight="1.5"
-                            android:gravity="center"
-                            android:text="얼굴 비율 : 세로"
-                            android:textColor="@color/black"
-                            android:textSize="20dp" />
-
-                        <TextView
-                            android:id="@+id/tvGDVerti"
-                            android:layout_width="match_parent"
-                            android:layout_height="match_parent"
-                            android:layout_weight="1"
-                            android:drawableEnd="@drawable/ic_alert_info"
-                            android:gravity="center"
-                            android:paddingEnd="20dp"
-                            android:textColor="@color/black"
-                            android:textSize="20dp" />
-                    </LinearLayout>
-
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="64dp"
-                        android:layout_marginStart="10dp"
-                        android:layout_weight="1"
-                        android:background="@drawable/bckgnd_20"
-                        android:orientation="horizontal">
-
-                        <TextView
-                            android:id="@+id/cbGDHorizon"
-                            android:layout_width="match_parent"
-                            android:layout_height="64dp"
-                            android:layout_marginStart="10dp"
-                            android:layout_weight="1.5"
-                            android:gravity="center"
-                            android:text="얼굴 비율 : 가로"
-                            android:textColor="@color/black"
-                            android:textSize="20dp" />
-
-                        <TextView
-                            android:id="@+id/tvGDHorizon"
-                            android:layout_width="match_parent"
-                            android:layout_height="match_parent"
-                            android:layout_weight="1"
-                            android:drawableEnd="@drawable/ic_alert_info"
-                            android:gravity="center"
-                            android:paddingEnd="20dp"
-                            android:textColor="@color/black"
-                            android:textSize="20dp" />
-                    </LinearLayout>
-
-
-                </LinearLayout>
             </androidx.constraintlayout.widget.ConstraintLayout>
         </androidx.core.widget.NestedScrollView>
 
         <androidx.cardview.widget.CardView
             android:id="@+id/cardView2"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="10dp"
-            android:layout_marginEnd="10dp"
-            app:cardBackgroundColor="#00FFFFFF"
-            app:cardCornerRadius="20dp"
-            app:cardElevation="0dp"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="parent"
-            app:layout_constraintWidth_percent="0.85">
-
-            <com.davemorrissey.labs.subscaleview.SubsamplingScaleImageView
-                android:id="@+id/ssiv1"
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:visibility="visible" />
-
-        </androidx.cardview.widget.CardView>
-
-        <androidx.cardview.widget.CardView
-            android:id="@+id/cardView"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_marginStart="10dp"
@@ -501,11 +86,28 @@
             app:cardElevation="0dp"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@+id/cardView2"
-            app:layout_constraintWidth_percent="0.85">
+            app:layout_constraintTop_toTopOf="parent">
+
+            <TextView
+                android:id="@+id/btnIDClean"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="bottom|end"
+                android:layout_marginEnd="5dp"
+                android:layout_marginBottom="5dp"
+                android:background="@drawable/effect_20"
+                android:backgroundTint="#1A140000"
+                android:gravity="center"
+                android:paddingStart="16dp"
+                android:paddingTop="8dp"
+                android:paddingEnd="16dp"
+                android:paddingBottom="8dp"
+                android:text="🔍 가이드라인 끄기"
+                android:textColor="@color/white"
+                android:textSize="18dp" />
 
             <com.davemorrissey.labs.subscaleview.SubsamplingScaleImageView
-                android:id="@+id/ssiv2"
+                android:id="@+id/ssiv"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
                 android:visibility="visible" />

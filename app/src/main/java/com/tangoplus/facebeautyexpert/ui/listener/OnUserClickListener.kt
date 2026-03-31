@@ -1,5 +1,5 @@
 package com.tangoplus.facebeautyexpert.ui.listener
 
 interface OnUserClickListener {
-    fun onUserClick(userSn: Int)
+    fun onUserClick(tempServerSn: Int)
 }

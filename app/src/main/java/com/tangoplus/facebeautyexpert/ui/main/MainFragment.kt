@@ -15,23 +15,12 @@ import android.view.ViewGroup
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.activityViewModels
-import com.tangoplus.facebeautyexpert.data.db.FaceDao
 import com.tangoplus.facebeautyexpert.databinding.FragmentMainBinding
-import com.tangoplus.facebeautyexpert.ui.listener.OnMeasureClickListener
-import androidx.lifecycle.lifecycleScope
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.tangoplus.facebeautyexpert.R
-import com.tangoplus.facebeautyexpert.data.db.FaceDatabase
 import com.tangoplus.facebeautyexpert.domain.util.FileUtility.setOnSingleClickListener
 import com.tangoplus.facebeautyexpert.ui.measure.DepthCameraActivity
-import com.tangoplus.facebeautyexpert.ui.LoadingDialogFragment
-import com.tangoplus.facebeautyexpert.ui.info.InformationFragment
-import com.tangoplus.facebeautyexpert.ui.listener.OnUserClickListener
 import com.tangoplus.facebeautyexpert.ui.main.vm.MainViewModel
-import com.tangoplus.facebeautyexpert.ui.statistics.StatisticsFragment
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 
 
 class MainFragment : Fragment() {

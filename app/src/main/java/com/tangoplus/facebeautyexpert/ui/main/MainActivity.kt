@@ -15,6 +15,7 @@ import android.os.Looper
 import android.provider.MediaStore
 import android.provider.Settings
 import android.util.Log
+import android.view.WindowManager
 import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.enableEdgeToEdge
@@ -23,7 +24,9 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.core.view.ViewCompat
+import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import androidx.lifecycle.lifecycleScope
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.tangoplus.facebeautyexpert.R
@@ -35,6 +38,7 @@ import com.tangoplus.facebeautyexpert.domain.util.PermissionUtility.getAllPermis
 import com.tangoplus.facebeautyexpert.domain.util.PreferenceUtility
 import com.tangoplus.facebeautyexpert.domain.util.SoundManager
 import com.tangoplus.facebeautyexpert.ui.info.InformationFragment
+import com.tangoplus.facebeautyexpert.ui.info.MeasureHistoryFragment
 import com.tangoplus.facebeautyexpert.ui.main.vm.FragmentViewModel
 import com.tangoplus.facebeautyexpert.ui.main.vm.MainViewModel
 import com.tangoplus.facebeautyexpert.ui.statistics.StatisticsFragment
@@ -87,12 +91,20 @@ class MainActivity : AppCompatActivity() {
 		super.onCreate(savedInstanceState)
 		enableEdgeToEdge()
 		bd = ActivityMainBinding.inflate(layoutInflater)
+		WindowCompat.setDecorFitsSystemWindows(window, false)
 		setContentView(bd.root)
 		ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main)) { v, insets ->
 			val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
 			v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
 			insets
 		}
+		// 상단, 하단 상태표시줄 넣기
+		val controller = WindowCompat.getInsetsController(window, window.decorView)
+		controller.apply {
+			hide(WindowInsetsCompat.Type.systemBars())
+			systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+		}
+
 		checkMemoryUsage()
 		SoundManager.init(this@MainActivity)
 
@@ -510,14 +522,14 @@ class MainActivity : AppCompatActivity() {
 	private fun setCurrentFragment(itemId: Int) {
 		// 새로운 프래그먼트 생성
 		val fragment = when (itemId) {
-			R.id.nav_measure -> MainFragment()
-			R.id.nav_record -> InformationFragment()
-			R.id.nav_stats -> StatisticsFragment()
+			R.id.nav_main -> MainFragment()
+			R.id.nav_measure_history -> MeasureHistoryFragment()
+			R.id.nav_statistics -> StatisticsFragment()
 			else -> MainFragment()
 		}
 		when (fragment) {
 			is MainFragment -> fvm.setCurrentFragment(FragmentViewModel.FragmentType.MAIN_FRAGMENT)
-			is InformationFragment -> fvm.setCurrentFragment(FragmentViewModel.FragmentType.INFORMATION_FRAGMENT)
+			is MeasureHistoryFragment -> fvm.setCurrentFragment(FragmentViewModel.FragmentType.MEASURE_HISTORY_FRAGMENT)
 			is StatisticsFragment -> fvm.setCurrentFragment(FragmentViewModel.FragmentType.STATISTICS_FRAGMENT)
 		}
 

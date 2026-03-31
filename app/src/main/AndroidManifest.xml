@@ -33,6 +33,7 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.FaceBeautyExpert"
         android:largeHeap="true"
+
         tools:targetApi="31">
         <activity
             android:name="com.tangoplus.facebeautyexpert.ui.measure.NormalCameraActivity"
@@ -41,7 +42,11 @@
             tools:ignore="DiscouragedApi, LockedOrientationActivity"/>
         <activity
             android:name="com.tangoplus.facebeautyexpert.ui.main.MainActivity"
-            android:exported="true">
+            android:exported="true"
+            android:screenOrientation="portrait"
+            android:resizeableActivity="false"
+            android:excludeFromRecents="false"
+            tools:ignore="DiscouragedApi,NonResizeableActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
@@ -52,6 +57,8 @@
             android:name="com.tangoplus.facebeautyexpert.ui.measure.DepthCameraActivity"
             android:exported="true"
             android:screenOrientation="portrait"
+            android:resizeableActivity="false"
+            android:excludeFromRecents="false"
             tools:ignore="DiscouragedApi,LockedOrientationActivity">
 
             <!--

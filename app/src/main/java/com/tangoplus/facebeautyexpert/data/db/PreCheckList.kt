@@ -11,6 +11,9 @@ data class PreCheckList(
 	@PrimaryKey(autoGenerate = true) val local_sn: Int = 0,
 	val server_sn: Int = 0,
 	var temp_server_sn: Int = 0,
+	var gender: Int = -1, //
+	var birthday: String? = "",
+	var nationality: String = "", // 국적 (ex KOR) 예정
 	val reg_date: String? = getCurrentDateTime(),
 	val FACE_ASYMMETRY: Int = 0,
 	val FACE_SIZE: Int = 0,

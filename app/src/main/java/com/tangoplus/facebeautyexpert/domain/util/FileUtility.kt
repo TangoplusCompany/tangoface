@@ -30,13 +30,13 @@ object FileUtility {
 	fun getFileName(seq: Sequence): String {
 		val timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"))
 		return when (seq) {
-			Sequence.COMFORT -> "1-$timestamp"
+			Sequence.COMFORT -> "0-$timestamp"
 //			Sequence.RESTING -> "2-$timestamp"
 //			Sequence.OCCLUSAL -> "3-$timestamp"
 //			Sequence.JAW_LEFT_TILT -> "4-$timestamp"
 //			Sequence.JAW_RIGHT_TILT -> "5-$timestamp"
 //			Sequence.JAW_OPENING -> "6-$timestamp"
-			Sequence.NECK_EXTENTION -> "7-$timestamp"
+			Sequence.NECK_EXTENTION -> "1-$timestamp"
 //			Sequence.SIDE_LEFT -> "8-$timestamp"
 //			Sequence.SIDE_RIGHT -> "9-$timestamp"
 //			Sequence.BOW -> "10-$timestamp"

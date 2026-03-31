@@ -3,6 +3,7 @@ package com.tangoplus.facebeautyexpert.domain.util
 import android.graphics.Bitmap
 import android.util.Log
 import com.tangoplus.facebeautyexpert.domain.vision.face.FaceLandmarkResult
+import com.tangoplus.facebeautyexpert.orbbec.vo.Point3D
 import org.opencv.android.Utils
 import org.opencv.core.Core
 import org.opencv.core.CvType
@@ -28,7 +29,6 @@ object HairLineUtility {
 		val point: PointF,         // 헤어라인 위치
 		val confidence: Float
 	)
-
 	data class PointF(val x: Float, val y: Float)
 	private val HAIRLINE_LANDMARK_INDICES = listOf(103, 67, 109, 10, 338, 297, 332)
 	/**

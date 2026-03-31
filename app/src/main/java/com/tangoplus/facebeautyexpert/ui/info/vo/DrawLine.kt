@@ -25,5 +25,9 @@ enum class DrawLine {
 	A_SHOULDER_NOSE,
 	A_SHOULDER_EAR,
 
-	A_BOW
+
+	A_RATIO_ALL,
+	A_RATIO_VERTI,
+	A_RATIO_HORIZON,
+
 }

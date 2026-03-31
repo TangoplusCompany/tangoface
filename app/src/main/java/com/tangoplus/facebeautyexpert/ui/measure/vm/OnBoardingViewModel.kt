@@ -49,13 +49,7 @@ class OnBoardingViewModel : ViewModel() {
 	): com.tangoplus.facebeautyexpert.data.db.PreCheckList {
 		fun PreCheckList.isChecked() = selectedItems.contains(this)
 		return com.tangoplus.facebeautyexpert.data.db.PreCheckList(
-			uuid = uuid,
 			temp_server_sn = tempServerSn,
-			name = name,
-			mobile = mobile,
-			gender = gender,
-			birthday = birthday,
-			nationality = nationality,
 			FACE_ASYMMETRY = if (PreCheckList.FACE_ASYMMETRY.isChecked()) 1 else 0,
 			FACE_SIZE = if (PreCheckList.FACE_SIZE.isChecked()) 1 else 0,
 			HEAD_SIZE = if (PreCheckList.HEAD_SIZE.isChecked()) 1 else 0,

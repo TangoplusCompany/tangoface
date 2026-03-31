@@ -5,8 +5,8 @@ import androidx.fragment.app.Fragment
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import androidx.core.view.isVisible
 import androidx.fragment.app.activityViewModels
-import androidx.fragment.app.replace
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.tangoplus.facebeautyexpert.R
@@ -15,7 +15,6 @@ import com.tangoplus.facebeautyexpert.data.db.FaceDatabase
 import com.tangoplus.facebeautyexpert.databinding.FragmentMeasureHistoryBinding
 import com.tangoplus.facebeautyexpert.ui.LoadingDialogFragment
 import com.tangoplus.facebeautyexpert.ui.adapter.UserRVAdapter
-import com.tangoplus.facebeautyexpert.ui.listener.OnMeasureClickListener
 import com.tangoplus.facebeautyexpert.ui.listener.OnUserClickListener
 import com.tangoplus.facebeautyexpert.ui.main.vm.MainViewModel
 import com.tangoplus.facebeautyexpert.ui.statistics.StatisticsFragment
@@ -24,7 +23,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlin.getValue
 
-class MeasureHistoryFragment : Fragment(), OnMeasureClickListener {
+class MeasureHistoryFragment : Fragment(), OnUserClickListener {
 	private lateinit var bd: FragmentMeasureHistoryBinding
 	private val mvm: MainViewModel by activityViewModels()
 	private lateinit var fDao: FaceDao
@@ -80,21 +79,22 @@ class MeasureHistoryFragment : Fragment(), OnMeasureClickListener {
 	}
 
 	private fun initUserUI() {
-		// Room DB 로딩 시작
 		mvm.loadUserDataFromDB(requireContext())
-		mvm.loadFavoriteDataFromDB(requireContext())
 	}
 
 	private fun setAdapter() {
 		val lm = LinearLayoutManager(requireContext(), LinearLayoutManager.VERTICAL, false)
-		val UserAdapter = UserRVAdapter(requireContext(), mvm.currentUserItems, mvm)
+		val userAdapter = UserRVAdapter(requireContext(), mvm.currentUserItems)
+		userAdapter.onUserClickListener = this@MeasureHistoryFragment
 		bd.rvMH.apply {
 			layoutManager = lm
-			adapter = UserAdapter
+			adapter = userAdapter
 		}
+
+		bd.tvMHEmpty.visibility = if (mvm.currentUserItems.isEmpty()) View.VISIBLE else View.GONE
 	}
 
-	override fun onMeasureClick(tempServerSn: Int) {
+	override fun onUserClick(tempServerSn: Int) {
 		if (!loadingDialog.isAdded && !loadingDialog.isVisible) {
 			loadingDialog.show(requireActivity().supportFragmentManager, "LoadingDialogFragment")
 		}

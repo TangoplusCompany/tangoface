@@ -2,17 +2,17 @@
 <menu xmlns:android="http://schemas.android.com/apk/res/android">
 
     <item
-        android:id="@+id/nav_measure"
+        android:id="@+id/nav_main"
         android:icon="@drawable/ic_measure"
         android:title="측정"/>
 
     <item
-        android:id="@+id/nav_record"
+        android:id="@+id/nav_measure_history"
         android:icon="@drawable/ic_record"
         android:title="기록 확인"/>
 
     <item
-        android:id="@+id/nav_stats"
+        android:id="@+id/nav_statistics"
         android:icon="@drawable/ic_stats"
         android:title="통계"/>
 

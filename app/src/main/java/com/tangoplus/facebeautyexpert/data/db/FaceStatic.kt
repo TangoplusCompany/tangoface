@@ -23,8 +23,22 @@ data class FaceStatic(
 	val reg_date: String? = getCurrentDateTime(),
 	val scale_factor: Float = 1f,
 	val depth_result: Boolean = false,
-	val face_shape: FaceShape,
 
+	// 얼굴 전체
+	val horizontal_ratio: String = "",
+	val vertical_ratio: String = "",
+
+	val comfort_face_shape: FaceShape = FaceShape.DEFAULT,
+	val comfort_left_sagging_scale: Float = 0f,
+	val comfort_right_sagging_scale: Float = 0f,
+	val comfort_length_symmetry_factor : Float = 0f,
+	val comfort_angle_symmetry_factor: Float = 0f,
+	val comfort_facial_axis_shape: FacialAxisShape = FacialAxisShape.DEFAULT,
+	val comfort_face_vertical_angle: Float = 0f, // 이마중심-턱중심 각도 // ✅
+	val comfort_neck_vertical_angle: Float = 0f, // ✅
+	val comfort_shoulder_horizontal_angle: Float = 0f, // ✅
+	val comfort_face_length: Float = 0f, // ✅
+	val comfort_neck_length: Float = 0f, // ✅
 
 	// 상안부
 	val comfort_eye_horizontal_angle: Float = 0f, // ✅
@@ -75,13 +89,7 @@ data class FaceStatic(
 	val comfort_left_cheekbone_extent: Float = 0f, // ✅
 	val comfort_right_cheekbone_extent: Float = 0f, // ✅
 
-	// 얼굴 전체
-	val mid_lower_face_shape: MidLowerFaceShape,
-	val comfort_face_vertical_angle: Float = 0f, // 이마중심-턱중심 각도 // ✅
-	val comfort_neck_vertical_angle: Float = 0f, // ✅
-	val comfort_shoulder_horizontal_angle: Float = 0f, // ✅
-	val comfort_face_length: Float = 0f, // ✅
-	val comfort_neck_length: Float = 0f, // ✅
+
 
 	val neck_extention_shoulder_horizontal_angle: Float = 0f,
 	val neck_extention_ear_horizontal_angle: Float = 0f,

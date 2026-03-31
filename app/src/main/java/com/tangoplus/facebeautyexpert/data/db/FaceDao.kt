@@ -3,7 +3,7 @@ package com.tangoplus.facebeautyexpert.data.db
 import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.Query
-import com.tangoplus.facebeautyexpert.ui.main.vo.MeasureGridItem
+import com.tangoplus.facebeautyexpert.ui.main.vo.UserItem
 
 @Dao
 interface FaceDao {
@@ -25,39 +25,25 @@ interface FaceDao {
 	)
 	suspend fun activatingStatics(tempServerSn: Int, activated: Int)
 
-
-	@Query(
-		"""
-        SELECT 
-            GROUP_CONCAT(DISTINCT temp_server_sn) AS tempServerSn,
-            name AS userTitle,
-            GROUP_CONCAT(DISTINCT reg_date) AS regDate,
-            uuid,
-            1 AS activated
-        FROM t_face_static
-        WHERE name IS 'GUEST'
-        AND activated = 1
-        GROUP BY uuid
-    """
-	)
-	suspend fun getGuestData(): List<MeasureGridItem>
-
 	@Query(
 		"""
         SELECT COUNT(DISTINCT temp_server_sn)
         FROM t_face_static
-        WHERE name = 'GUEST' 
-        AND activated = 1
+        WHERE activated = 1
     """
 	)
-	suspend fun getGuestCount(): Int
+	suspend fun getUserCount(): Int
 
 	// -------------# 회원관리할 때 user-guest 가릴거 없이 가져오기 #---------------
 	@Query(
 		"""
         SELECT 
             GROUP_CONCAT(DISTINCT temp_server_sn) AS tempServerSn,
-            name AS userTitle,
+            name AS name,
+						mobile AS mobile,
+						birthday AS birthday,
+						nationality AS nationality,
+						gender AS gender,
             GROUP_CONCAT(DISTINCT reg_date) AS regDate,
             uuid,
             1 AS activated
@@ -66,7 +52,7 @@ interface FaceDao {
         GROUP BY uuid
     """
 	)
-	suspend fun getAllMeasureItem(): List<MeasureGridItem>
+	suspend fun getAllUserItem(): List<UserItem>
 
 
 	@Query("SELECT * FROM t_face_static WHERE temp_server_sn == :tempServerSn ORDER BY seq ASC")
@@ -75,7 +61,7 @@ interface FaceDao {
 	suspend fun getStaticWithPlaceholders(tempServerSn: Int): List<FaceStatic> {
 		val statics = getStatic(tempServerSn)
 
-		return (0..9).map { seq ->
+		return (0..1).map { seq ->
 			statics.find { it.seq == seq } ?: FaceStatic(
 				temp_server_sn = tempServerSn,
 				seq = seq
@@ -98,22 +84,5 @@ interface FaceDao {
 
 	@Query("SELECT COUNT(DISTINCT local_sn) FROM t_face_pre_checklist")
 	suspend fun getPreChecklistCount(): Int
-
-	// ------------------------------------# 메모 #-----------------------------------------------
-
-	@Query(
-		"""
-        SELECT 
-            temp_server_sn AS tempServerSn,
-            substr(reg_date, 1, 16) || " " || name AS userTitle, 
-            reg_date AS regDate,
-            1 as activated
-            FROM t_face_static
-            WHERE user_sn = :userSn
-            AND activated = 1
-            GROUP BY temp_server_sn
-    """
-	)
-	suspend fun getMeasureDataFrom1User(userSn: Int): List<MeasureGridItem>
 
 }

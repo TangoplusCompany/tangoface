@@ -120,7 +120,7 @@ object FaceStaticUtility {
 		switchedOn: Boolean,
 		callback: () -> Unit
 	) {
-		val seqIndex = ivm.getBtnIndex()
+		val seq = ivm.getSeq()
 
 		// 각 seqIndex별 기본 라인 정의
 		val detailLines = mapOf(
@@ -148,7 +148,7 @@ object FaceStaticUtility {
 				DrawLine.A_SHOULDER_NOSE
 			),
 			5 to listOf(
-				DrawLine.A_CANTHUS, DrawLine.A_BOW, DrawLine.A_BOW, DrawLine.A_CHIN
+				DrawLine.A_CANTHUS, DrawLine.A_CHIN
 			)
 		)
 
@@ -175,26 +175,14 @@ object FaceStaticUtility {
 				DrawLine.A_SHOULDER_NOSE
 			),
 			9 to listOf(
-				DrawLine.A_CANTHUS, DrawLine.A_BOW, DrawLine.A_BOW, DrawLine.A_CHIN
+				DrawLine.A_CANTHUS, DrawLine.A_CHIN
 			)
 
 		)
 
 		ivm.currentCheckedLines.clear()
 
-		if (switchedOn) {
-			val targetLines = if (mvm.comparisonDoubleItem == null) {
-				detailLines[seqIndex]
-			} else {
-				// comparison에서는 0,1,2가 공통이므로 0으로 묶기
-				when (seqIndex) {
-					0, 1, 2 -> comparisonLines[0]
-					else -> comparisonLines[seqIndex]
-				}
-			}
 
-			targetLines?.let { ivm.currentCheckedLines.addAll(it) }
-		}
 		callback()
 	}
 
@@ -257,7 +245,6 @@ object FaceStaticUtility {
 		seqs0: Set<Sequence>?, seqs1: Set<Sequence>?
 	): List<FaceStaticItem>? {
 		Log.v("buildItem", "buildFaceStaticItemList started")
-		val btnIndex = ivm.getBtnIndex()
 //		val (leftSeq, rightSeq) = getBtnMatchedSeq(btnIndex, isComparison)
 //		val (leftSeqIdx, rightSeqIdx) = if (!isComparison) {
 			// seqs0만 사용
