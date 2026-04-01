@@ -215,11 +215,6 @@ object MediaUtility {
 		return Point3D(correctedX, correctedY, Z)
 	}
 
-	val largeRadiusIndices = listOf(
-		10, 109, 67, 103, 54, 21, 162, 127, 234, 93, 132, 58, 172, 136, 150, 149, 176, 148, 152,
-		175, 171, 140, 170, 169, 135, 138, 215, 177, 137, 227, 34, 139, 71, 68, 104, 69, 108, 151
-	)
-
 	fun convertFaceLandmarksTo3D(
 		landmarks2D: FaceLandmarkResult,
 		depthData: ShortArray,

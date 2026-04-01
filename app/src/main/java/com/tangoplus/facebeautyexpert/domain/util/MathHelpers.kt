@@ -23,14 +23,10 @@ object MathHelpers {
 	fun calculateSlope(x1: Float, y1: Float, x2: Float, y2: Float): Float {
 		val radians = atan2(y1 - y2, x1 - x2)
 		val degrees = toDegrees(radians.toDouble()).toFloat()
-		return if (degrees > 180) degrees % 180 else degrees
+		val result = if (degrees > 180) degrees % 180 else degrees
+		return "%.4f".format(result).toFloat()
 	}
 
-	//    fun calculateSlope(point1: Pair<Float, Float>, point2: Pair<Float, Float>): Float {
-//        val radians = atan2(point1.second - point2.second, point1.first - point1.second)
-//        val degrees = toDegrees(radians.toDouble()).toFloat()
-//        return  if (degrees > 180) degrees % 180 else degrees
-//    }
 	// ------# 점 3개의 각도 계산 #------
 	fun calculateAngle(x1: Float, y1: Float, x2: Float, y2: Float, x3: Float, y3: Float): Float {
 		val v1x = x1 - x2

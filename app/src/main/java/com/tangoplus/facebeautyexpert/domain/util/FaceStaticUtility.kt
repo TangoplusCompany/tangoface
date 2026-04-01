@@ -1,9 +1,7 @@
 package com.tangoplus.facebeautyexpert.domain.util
 
 import android.util.Log
-import com.tangoplus.facebeautyexpert.ui.info.InformationViewModel
-import com.tangoplus.facebeautyexpert.ui.main.vm.MainViewModel
-import com.tangoplus.facebeautyexpert.ui.info.vo.DrawLine
+import com.tangoplus.facebeautyexpert.ui.info.vm.InformationViewModel
 import com.tangoplus.facebeautyexpert.domain.vo.FaceStaticItem
 import com.tangoplus.facebeautyexpert.domain.vo.Sequence
 import org.json.JSONArray
@@ -114,77 +112,77 @@ object FaceStaticUtility {
 		return newFci
 	}
 
-	fun setLinesInImage(
-		ivm: InformationViewModel,
-		mvm: MainViewModel,
-		switchedOn: Boolean,
-		callback: () -> Unit
-	) {
-		val seq = ivm.getSeq()
-
-		// 각 seqIndex별 기본 라인 정의
-		val detailLines = mapOf(
-			0 to listOf(
-				DrawLine.A_CANTHUS, DrawLine.A_TIP_OF_LIPS, DrawLine.A_CHIN,
-				DrawLine.A_CANTHUS_ORAL, DrawLine.A_NASALWINGS_ORAL, DrawLine.A_SIDE_HEAD,
-				DrawLine.E_CHEEKS_REST, DrawLine.E_CHEEKBONE,
-				DrawLine.A_NECK, DrawLine.A_FACE
-			),
-			1 to listOf(
-				DrawLine.A_CANTHUS, DrawLine.A_TIP_OF_LIPS, DrawLine.A_CHIN,
-				DrawLine.A_CANTHUS_ORAL, DrawLine.A_NASALWINGS_ORAL, DrawLine.A_SIDE_HEAD,
-				DrawLine.E_CHEEKS_REST, DrawLine.E_CHEEKBONE
-			),
-			2 to listOf(
-				DrawLine.A_GLABELLA_NOSE, DrawLine.A_NOSE_JAW
-			),
-			3 to listOf(
-				DrawLine.A_BELOW_LIPS, DrawLine.E_CHEEKS_OPENING,
-				DrawLine.A_SHOULDER, DrawLine.A_EAR, DrawLine.A_NECK,
-				DrawLine.A_FACE, DrawLine.A_MANDIBULAR_CHIN
-			),
-			4 to listOf(
-				DrawLine.A_SHOULDER_EAR,
-				DrawLine.A_SHOULDER_NOSE
-			),
-			5 to listOf(
-				DrawLine.A_CANTHUS, DrawLine.A_CHIN
-			)
-		)
-
-		// comparison일 때 사용하는 라인 정의
-		val comparisonLines = mapOf(
-			0 to listOf( // seqIndex 0,1,2 공통
-				DrawLine.A_CANTHUS, DrawLine.A_TIP_OF_LIPS, DrawLine.A_CHIN,
-				DrawLine.A_CANTHUS_ORAL, DrawLine.A_NASALWINGS_ORAL, DrawLine.A_SIDE_HEAD,
-				DrawLine.E_CHEEKS_REST, DrawLine.E_CHEEKBONE
-			),
-			5 to listOf(
-				DrawLine.A_BELOW_LIPS, DrawLine.E_CHEEKS_OPENING
-			),
-			6 to listOf(
-				DrawLine.A_SHOULDER, DrawLine.A_EAR, DrawLine.A_NECK,
-				DrawLine.A_FACE, DrawLine.A_MANDIBULAR_CHIN
-			),
-			7 to listOf(
-				DrawLine.A_SHOULDER_EAR,
-				DrawLine.A_SHOULDER_NOSE
-			),
-			8 to listOf(
-				DrawLine.A_SHOULDER_EAR,
-				DrawLine.A_SHOULDER_NOSE
-			),
-			9 to listOf(
-				DrawLine.A_CANTHUS, DrawLine.A_CHIN
-			)
-
-		)
-
-		ivm.currentCheckedLines.clear()
-
-
-		callback()
-	}
+//	fun setLinesInImage(
+//		ivm: InformationViewModel,
+//		mvm: MainViewModel,
+//		switchedOn: Boolean,
+//		callback: () -> Unit
+//	) {
+//		val seq = ivm.getSeq()
+//
+//		// 각 seqIndex별 기본 라인 정의
+//		val detailLines = mapOf(
+//			0 to listOf(
+//				DrawLine.A_CANTHUS, DrawLine.A_TIP_OF_LIPS, DrawLine.A_CHIN,
+//				DrawLine.A_CANTHUS_ORAL, DrawLine.A_NASALWINGS_ORAL, DrawLine.A_SIDE_HEAD,
+//				DrawLine.E_CHEEKS_REST, DrawLine.E_CHEEKBONE,
+//				DrawLine.A_NECK, DrawLine.A_FACE
+//			),
+//			1 to listOf(
+//				DrawLine.A_CANTHUS, DrawLine.A_TIP_OF_LIPS, DrawLine.A_CHIN,
+//				DrawLine.A_CANTHUS_ORAL, DrawLine.A_NASALWINGS_ORAL, DrawLine.A_SIDE_HEAD,
+//				DrawLine.E_CHEEKS_REST, DrawLine.E_CHEEKBONE
+//			),
+//			2 to listOf(
+//				DrawLine.A_GLABELLA_NOSE, DrawLine.A_NOSE_JAW
+//			),
+//			3 to listOf(
+//				DrawLine.A_BELOW_LIPS, DrawLine.E_CHEEKS_OPENING,
+//				DrawLine.A_SHOULDER, DrawLine.A_EAR, DrawLine.A_NECK,
+//				DrawLine.A_FACE, DrawLine.A_MANDIBULAR_CHIN
+//			),
+//			4 to listOf(
+//				DrawLine.A_SHOULDER_EAR,
+//				DrawLine.A_SHOULDER_NOSE
+//			),
+//			5 to listOf(
+//				DrawLine.A_CANTHUS, DrawLine.A_CHIN
+//			)
+//		)
+//
+//		// comparison일 때 사용하는 라인 정의
+//		val comparisonLines = mapOf(
+//			0 to listOf( // seqIndex 0,1,2 공통
+//				DrawLine.A_CANTHUS, DrawLine.A_TIP_OF_LIPS, DrawLine.A_CHIN,
+//				DrawLine.A_CANTHUS_ORAL, DrawLine.A_NASALWINGS_ORAL, DrawLine.A_SIDE_HEAD,
+//				DrawLine.E_CHEEKS_REST, DrawLine.E_CHEEKBONE
+//			),
+//			5 to listOf(
+//				DrawLine.A_BELOW_LIPS, DrawLine.E_CHEEKS_OPENING
+//			),
+//			6 to listOf(
+//				DrawLine.A_SHOULDER, DrawLine.A_EAR, DrawLine.A_NECK,
+//				DrawLine.A_FACE, DrawLine.A_MANDIBULAR_CHIN
+//			),
+//			7 to listOf(
+//				DrawLine.A_SHOULDER_EAR,
+//				DrawLine.A_SHOULDER_NOSE
+//			),
+//			8 to listOf(
+//				DrawLine.A_SHOULDER_EAR,
+//				DrawLine.A_SHOULDER_NOSE
+//			),
+//			9 to listOf(
+//				DrawLine.A_CANTHUS, DrawLine.A_CHIN
+//			)
+//
+//		)
+//
+//		ivm.currentCheckedLines.clear()
+//
+//
+//		callback()
+//	}
 
 
 //	fun getBtnMatchedSeq(index: Int, isComparison: Boolean): Pair<Sequence, Sequence> {

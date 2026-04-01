@@ -155,15 +155,9 @@ class MainViewModel : ViewModel() {
 			Log.v("result확인", faceStatic.media_file_name)
 			try {
 
-				if (faceStatic.seq in listOf(3, 4)) {
-					val videoUri = FileUtility.getVideoUriFromFileName(context, faceStatic.media_file_name)
-					mediaUri.add(videoUri)
-					Log.v("비디오", "$indexx ${faceStatic.media_file_name}")
-				} else {
-					val imageUri = FileUtility.getImageUriFromFileName(context, faceStatic.media_file_name)
-					mediaUri.add(imageUri)
-					Log.v("이미지URI", "$indexx ${faceStatic.media_file_name}")
-				}
+				val imageUri = FileUtility.getImageUriFromFileName(context, faceStatic.media_file_name)
+				mediaUri.add(imageUri)
+				Log.v("이미지URI", "$indexx ${faceStatic.media_file_name}")
 			} catch (e: Exception) {
 				mediaUri.add(null)
 				Log.e("FaceResultConverter", "이미지 URI 파싱 실패: ${faceStatic.media_file_name}", e)

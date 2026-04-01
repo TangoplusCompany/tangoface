@@ -1,4 +1,4 @@
-package com.tangoplus.facebeautyexpert.ui.info
+package com.tangoplus.facebeautyexpert.ui.info.vm
 
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel

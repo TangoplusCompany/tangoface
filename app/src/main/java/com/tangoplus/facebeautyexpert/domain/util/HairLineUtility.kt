@@ -2,6 +2,9 @@ package com.tangoplus.facebeautyexpert.domain.util
 
 import android.graphics.Bitmap
 import android.util.Log
+import com.orbbec.obsensor.types.CameraIntrinsic
+import com.tangoplus.facebeautyexpert.domain.util.MediaUtility.convertDepthPixelTo3D
+import com.tangoplus.facebeautyexpert.domain.util.MediaUtility.findNearbyDepth
 import com.tangoplus.facebeautyexpert.domain.vision.face.FaceLandmarkResult
 import com.tangoplus.facebeautyexpert.orbbec.vo.Point3D
 import org.opencv.android.Utils
@@ -34,9 +37,54 @@ object HairLineUtility {
 	/**
 	 * 메인 함수: 헤어라인 찾기
 	 */
+	data class HairlinePoint3D(
+		val landmarkIndex: Int,
+		val point2D: PointF,      // 화면 좌표
+		val point3D: Point3D,     // 실제 3D 좌표 (mm)
+		val confidence: Float
+	)
+	fun convertHairlineTo3D(
+		hairlinePoints: List<HairlinePoint>,
+		depthData: ShortArray,
+		depthWidth: Int,
+		depthHeight: Int,
+		intrinsic: CameraIntrinsic
+	): List<HairlinePoint3D> {
+		val result = mutableListOf<HairlinePoint3D>()
+
+		for (point in hairlinePoints) {
+			val x = point.point.x.toInt()
+			val y = point.point.y.toInt()
+
+			if (x in 0 until depthWidth && y in 0 until depthHeight) {
+				val idx = y * depthWidth + x
+				val depthMm = depthData[idx].toInt() and 0xFFFF
+				val depthM = depthMm / 1000f
+
+				val point3D = if (depthM > 0) {
+					convertDepthPixelTo3D(intrinsic, x.toFloat(), y.toFloat(), depthM)
+				} else {
+					val nearbyDepth = findNearbyDepth(depthData, x, y, depthWidth, depthHeight)
+					if (nearbyDepth > 0) {
+						convertDepthPixelTo3D(intrinsic, x.toFloat(), y.toFloat(), nearbyDepth / 1000f)
+					} else {
+						Point3D(0f, 0f, 0f)
+					}
+				}
+				result.add(HairlinePoint3D(point.landmarkIndex, point.point, point3D, point.confidence))
+			} else {
+				result.add(HairlinePoint3D(point.landmarkIndex, point.point, Point3D(0f, 0f, 0f), point.confidence))
+			}
+		}
+		return result
+	}
+
 	fun findHairline(
 		bitmap: Bitmap,
-		faceLandmarks: FaceLandmarkResult
+		faceLandmarks: FaceLandmarkResult,
+		// ★ 튜닝 파라미터 - 조정 가능
+		skinHairLabThreshold: Double = 25.0,  // 피부→머리 색변화 임계값 (낮을수록 민감)
+		sustainLength: Int = 3                 // 연속으로 threshold 넘어야 하는 픽셀 수
 	): HairlineResult? {
 
 		if (faceLandmarks.landmarks.size < 339) {
@@ -52,52 +100,49 @@ object HairLineUtility {
 		Imgproc.cvtColor(matRgb, matLab, Imgproc.COLOR_RGB2Lab)
 
 		try {
-			val point10 = faceLandmarks.landmarks[10]   // 이마 중앙
-			val point9  = faceLandmarks.landmarks[9]    // 미간 중앙
-
+			val point10 = faceLandmarks.landmarks[10]
+			val point9  = faceLandmarks.landmarks[9]
 			val foreheadHeight = abs(point10.y - point9.y)
 
-			val searchStart = (point10.y - foreheadHeight * 2.0f).toInt().coerceAtLeast(0)
-			val searchEnd   = (point10.y - foreheadHeight * 0.5f).toInt().coerceAtLeast(0)
+			// ★ 수정: searchStart 항상 0, 머리카락 잘려도 탐색 가능
+			val searchStart = 0
+			val searchEnd   = (point10.y - foreheadHeight * 0.3f).toInt().coerceAtLeast(0)
 
-			// 피부색 샘플링 (기존과 동일)
-			val skinSampleIndices = listOf(9, 6, 1, 50, 280)
+			// ★ 이마 전체 피부색 샘플링 (눈썹 위 이마 영역)
+			// 기존 5개 → 이마 전체 영역으로 확장
+			val foreheadSampleIndices = listOf(9, 6, 1, 50, 280, 108, 337, 66, 296, 107, 336)
 			val skinColorLab = getSkinColorLabBrightPreferred(
-				matLab, faceLandmarks, skinSampleIndices, radius = 7
+				matLab, faceLandmarks, foreheadSampleIndices, radius = 10
 			) ?: return null
 
-			// ✅ 9개 랜드마크 각각에 대해 헤어라인 Y 탐색
+			Log.v("피부색Lab", "L=${skinColorLab.`val`[0]}, A=${skinColorLab.`val`[1]}, B=${skinColorLab.`val`[2]}")
+
 			val hairlinePoints = mutableListOf<HairlinePoint>()
 
 			for (landmarkIdx in HAIRLINE_LANDMARK_INDICES) {
 				val lm = faceLandmarks.landmarks[landmarkIdx]
 				val sampleX = lm.x.toInt().coerceIn(0, matRgb.cols() - 1)
 
-				val result = detectHairlineTransitionLab(
+				// ★ 단순화된 탐색: 위로 올라가면서 Lab 거리가 threshold 넘으면 머리카락
+				val foundY = findHairColorTransition(
 					matLab    = matLab,
-					matRgb    = matRgb,
 					centerX   = sampleX,
-					startY    = searchStart,
-					endY      = searchEnd,
-					skinLab   = skinColorLab
+					startY    = searchEnd,   // 랜드마크 바로 위부터
+					endY      = searchStart, // 화면 최상단까지
+					skinLab   = skinColorLab,
+					threshold = skinHairLabThreshold,
+					sustainLen = sustainLength
 				)
 
-				if (result != null) {
-					val (foundY, baseScore) = result
-
-					// 기존과 동일한 visibleBonus 보정
-					val belowHair = hairScoreWindow(
-						matLab, matRgb, sampleX,
-						(foundY + 10).coerceAtMost(matRgb.rows() - 1),
-						skinColorLab, 6, 1
-					)
-					val visibleBonus = (1.0 - belowHair).coerceIn(0.0, 1.0)
-					val finalScore   = baseScore * (0.7 + 0.6 * visibleBonus)
-
-					// confidence
+				if (foundY != null) {
 					val hairLabArr = matLab.get(foundY, sampleX) ?: continue
 					val hairColorLab = Scalar(hairLabArr[0], hairLabArr[1], hairLabArr[2])
 					val conf = calculateConfidenceLab(skinColorLab, hairColorLab)
+
+					Log.v("헤어라인탐색", "idx=$landmarkIdx x=$sampleX foundY=$foundY conf=$conf labDist=${
+						labDistance(hairLabArr[0], hairLabArr[1], hairLabArr[2],
+							skinColorLab.`val`[0], skinColorLab.`val`[1], skinColorLab.`val`[2])
+					}")
 
 					hairlinePoints.add(
 						HairlinePoint(
@@ -107,8 +152,7 @@ object HairLineUtility {
 						)
 					)
 				} else {
-					// 탐색 실패 시: 해당 랜드마크 Y를 그대로 사용 (fallback)
-					Log.w("헤어라인W", "랜드마크 $landmarkIdx 헤어라인 탐색 실패, landmark Y 사용")
+					Log.w("헤어라인W", "랜드마크 $landmarkIdx 탐색 실패, landmark Y 사용")
 					hairlinePoints.add(
 						HairlinePoint(
 							landmarkIndex = landmarkIdx,
@@ -118,11 +162,11 @@ object HairLineUtility {
 					)
 				}
 			}
-			val correctedPoints = correctHairlineWithCurvature(hairlinePoints, faceLandmarks)
 
+			val correctedPoints = correctHairlineWithCurvature(hairlinePoints, faceLandmarks)
 			val centerPoint = correctedPoints.find { it.landmarkIndex == 10 }
 				?: correctedPoints[correctedPoints.size / 2]
-			// hairColor (RGB, 중앙점 기준)
+
 			val cx = centerPoint.point.x.toInt().coerceIn(0, matRgb.cols() - 1)
 			val cy = centerPoint.point.y.toInt().coerceIn(0, matRgb.rows() - 1)
 			val hairRgbArr = matRgb.get(cy, cx) ?: return null
@@ -143,6 +187,43 @@ object HairLineUtility {
 			matRgb.release()
 			matLab.release()
 		}
+	}
+
+	// ★ 새로운 단순 탐색 함수
+	private fun findHairColorTransition(
+		matLab: Mat,
+		centerX: Int,
+		startY: Int,
+		endY: Int,
+		skinLab: Scalar,
+		threshold: Double = 25.0,
+		sustainLen: Int = 3,
+		maxThreshold: Double = 80.0  // ★ 추가: 이 이상이면 배경으로 판단 → 스킵
+	): Int? {
+		val skinL = skinLab.`val`[0]
+		val skinA = skinLab.`val`[1]
+		val skinB = skinLab.`val`[2]
+
+		var sustainCount = 0
+		var firstHairY = -1
+
+		for (y in startY downTo endY) {
+			val pixel = matLab.get(y, centerX) ?: continue
+			val dist = labDistance(pixel[0], pixel[1], pixel[2], skinL, skinA, skinB)
+
+			if (dist in threshold..maxThreshold) {  // ★ threshold ~ maxThreshold 사이만 머리카락
+				if (sustainCount == 0) firstHairY = y
+				sustainCount++
+				if (sustainCount >= sustainLen) {
+					Log.v("색변화", "x=$centerX y=$firstHairY dist=${"%.2f".format(dist)} threshold=$threshold")
+					return firstHairY
+				}
+			} else {
+				sustainCount = 0
+				firstHairY = -1
+			}
+		}
+		return null
 	}
 
 	private fun correctHairlineWithCurvature(

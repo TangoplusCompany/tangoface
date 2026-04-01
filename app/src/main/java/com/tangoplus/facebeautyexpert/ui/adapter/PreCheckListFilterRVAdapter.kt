@@ -29,7 +29,6 @@ class PreCheckListFilterRVAdapter(
 		cvm.allPreChecklistFilter.forEach { this[it] = false }
 	}
 
-
 	inner class ChecklistFilterViewHolder(view: View) : RecyclerView.ViewHolder(view) {
 		val mcbPCFI: MaterialCheckBox = view.findViewById(R.id.mcbPCFI)
 

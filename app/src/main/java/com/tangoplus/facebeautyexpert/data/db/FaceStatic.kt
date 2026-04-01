@@ -54,8 +54,8 @@ data class FaceStatic(
 	val comfort_right_eye_width: Float = 0f, // ✅
 	val comfort_left_eye_height: Float = 0f, // ✅
 	val comfort_right_eye_height: Float = 0f, // ✅
-	val comfort_left_pupil_length: Float = 0f, // ✅
-	val comfort_right_pupil_length: Float = 0f, // ✅
+	val comfort_left_cornea_length: Float = 0f, // ✅
+	val comfort_right_cornea_length: Float = 0f, // ✅
 
 	val comfort_eyebrow_horizontal_angle: Float = 0f,
 	val comfort_left_eyebrow_horizontal_angle: Float = 0f, // ✅
@@ -71,17 +71,17 @@ data class FaceStatic(
 	val comfort_nose_width: Float = 0f, // ✅
 	val comfort_nose_height: Float = 0f, // ✅
 	val comfort_earflaps_horizontal_angle : Float = 0f, // ✅
-	val comfort_ala_horizontal_angle: Float = 0f,
-	val comfort_left_ala_length : Float = 0f, // ✅
-	val comfort_right_ala_length: Float = 0f, // ✅
+	val comfort_alar_horizontal_angle: Float = 0f,
+	val comfort_left_alar_length : Float = 0f, // ✅
+	val comfort_right_alar_length: Float = 0f, // ✅
 
 	// 하안부
 	val comfort_tip_of_lips_horizontal_angle: Float = 0f, // ✅
 	val comfort_tip_of_chin_horizontal_angle: Float = 0f, // ✅
 	val comfort_canthus_oral_left_vertical_angle: Float = 0f,// ✅
 	val comfort_canthus_oral_right_vertical_angle: Float = 0f,// ✅
-	val comfort_nasal_wing_tip_of_lips_left_vertical_angle: Float = 0f,// ✅
-	val comfort_nasal_wing_tip_of_lips_right_vertical_angle: Float = 0f,// ✅
+	val comfort_alar_tip_of_lips_left_vertical_angle: Float = 0f,// ✅
+	val comfort_alar_tip_of_lips_right_vertical_angle: Float = 0f,// ✅
 	val comfort_side_head_left_angle: Float = 0f, // 관자놀이 각도 // ✅
 	val comfort_side_head_right_angle: Float = 0f, // ✅
 	val comfort_left_cheeks_extent: Float = 0f, // ✅

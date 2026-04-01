@@ -117,9 +117,12 @@ import kotlin.collections.listOf
 import kotlin.lazy
 import kotlin.math.abs
 import androidx.core.graphics.scale
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.tangoplus.facebeautyexpert.domain.util.ClassifyUtility.calculateVerticalRatio
+import com.tangoplus.facebeautyexpert.domain.util.HairLineUtility.convertHairlineTo3D
 import com.tangoplus.facebeautyexpert.domain.util.MediaUtility.convertDepthPixelTo3D
 import com.tangoplus.facebeautyexpert.domain.util.MediaUtility.findNearbyDepth
+import com.tangoplus.facebeautyexpert.domain.util.SoundManager
 import com.tangoplus.facebeautyexpert.domain.util.clearAll
 import com.tangoplus.facebeautyexpert.ui.main.vm.MainViewModel
 import com.tangoplus.facebeautyexpert.ui.statistics.GyroDialogFragment
@@ -271,6 +274,13 @@ class DepthCameraActivity : BaseActivity(), FaceLandmarkerHelper.LandmarkerListe
 				}
 			} catch (e: Exception) {
 				Log.e(TAG, "onDeviceAttach: " + e.printStackTrace())
+				MaterialAlertDialogBuilder(this@DepthCameraActivity, R.style.MaterialAlertDialog_App).apply {
+					setTitle("경고")
+					setMessage("PD포트가 고속충전 상태입니다. 충전단자를 제거하고, 카메라화면을 켠 후 다시 재연결 해주세요.")
+					setPositiveButton("예") { _, _ ->
+						finishAffinity()
+					}
+				}
 			} finally {
 				// 9.Release device list resources
 				deviceList.close()
@@ -329,8 +339,6 @@ class DepthCameraActivity : BaseActivity(), FaceLandmarkerHelper.LandmarkerListe
 						if (success) {
 							// hairline, pose 전부 끝난 시점
 							customResult?.let { mvm.resultBundleToJson(it, latestResult, mvm.currentSeq) }
-
-							// vertical ratio 계산 (hairLine3DCoordinate 다 채워진 시점)
 							if (mvm.currentHairLine3DCoordinate.size == 7) {
 								val absoluteLandmarkPairs = customResult?.landmarks?.map {
 									Pair(calculateScreenX(mvm.overlayW, it.x), calculateScreenY(mvm.overlayH, it.y))
@@ -341,8 +349,10 @@ class DepthCameraActivity : BaseActivity(), FaceLandmarkerHelper.LandmarkerListe
 									mvm.staticJA.put(JSONObject().apply {
 										put("vertical_ratio", verticalRatio)
 									})
+									Log.v("스태틱", "${mvm.staticJA}")
 								}
 							}
+							mvm.currentHairLine3DCoordinate.clear()
 							viewModel.setSeqFinishedFlag(true)
 							updateUI()
 						}
@@ -694,21 +704,11 @@ class DepthCameraActivity : BaseActivity(), FaceLandmarkerHelper.LandmarkerListe
 							put("data", JSONObject(transStatics[i].toJsonString()))
 
 							Log.v("LEN", "i=$i, coordinatesLen=${mvm.coordinatesJA.length()}, plrLen=${mvm.plrJA.length()}, mediaNames=${mvm.mediaFileNames.size}")
-							if (i == staticJos.size - 1 && currentStatic.seq == 9) {
-								put("face_landmark", mvm.hsvFLCoordinatesJA)
-								put("pose_landmark", mvm.hsvPLCoordinatesJA)
-								put("bow_landmark", mvm.resultTargetFs)
-							} else {
-								put("face_landmark", mvm.coordinatesJA.optJSONArray(i))
-								put("pose_landmark", mvm.plrJA.optJSONArray(i))
+							put("face_landmark", mvm.coordinatesJA.optJSONArray(i))
+							put("pose_landmark", mvm.plrJA.optJSONArray(i))
 
-								// 헤어라인과 기타 등등 담을 걸 etc > hairline, 다른 랜드마크..
-								mvm.etcJO.put("hairline", mvm.hairLineJA.optJSONObject(i) ?: JSONObject())
-
-//								mvm.etcJO.put("otherline", mvm.otherJA.optJSONArray(i) ?: JSONArray())
-
-								put("etc_landmark", mvm.etcJO)
-								mvm.etcJO = JSONObject()
+							if (i == 0) {
+								put("hairline_landmark", mvm.hairLineJA.optJSONArray(i))
 							}
 						}
 						mergedJOBeforeFileName.add(mergedJSON)
@@ -716,11 +716,13 @@ class DepthCameraActivity : BaseActivity(), FaceLandmarkerHelper.LandmarkerListe
 						val jsonPath = saveJsonToStorage(
 							mergedJSON,
 							if (i == staticJos.size - 1 && currentStatic.seq == 9) {
-								mvm.hsvMediaFileName.replace(".jpg", "").replace(".mp4", "")
+								mvm.hsvMediaFileName.replace(".png", "").replace(".mp4", "")
 							} else {
-								mvm.mediaFileNames[i].replace(".jpg", "").replace(".mp4", "")
+								mvm.mediaFileNames[i].replace(".png", "").replace(".mp4", "")
 							}
 						)
+
+
 						mergedJOBeforeFileName[i].put("json_file_name", jsonPath)
 						mvm.mergedJA.put(mergedJOBeforeFileName[i])
 					}
@@ -984,16 +986,6 @@ class DepthCameraActivity : BaseActivity(), FaceLandmarkerHelper.LandmarkerListe
 	private val guideHandler = Handler(Looper.getMainLooper())
 	private val guideRunnables = mutableListOf<Runnable>()
 
-	fun cancelJawTiltGuideText() {
-		guideRunnables.forEach { runnable -> guideHandler.removeCallbacks(runnable) }
-		guideRunnables.clear()
-	}
-
-//    private fun isFaceInCenter(glabellaX: Float, glabellaY: Float): Boolean {
-//        val targetRect = RectF(0.35f, 0.175f, 0.65f, 0.525f)
-//        return targetRect.contains(glabellaX, glabellaY)
-//    }
-
 	// ------! 타이머 control 시작 !------
 	private fun startTimer() {
 		// 시작 버튼 후 시작
@@ -1008,7 +1000,6 @@ class DepthCameraActivity : BaseActivity(), FaceLandmarkerHelper.LandmarkerListe
 
 	private fun updateUI() {
 		val isProcessing = mvm.moveToNextSeq()
-		cancelJawTiltGuideText()
 		if (!isProcessing) {
 			setGuideAnimation(mvm.currentSeq, true)
 			bd.clCountDown.visibility = View.GONE
@@ -1021,7 +1012,7 @@ class DepthCameraActivity : BaseActivity(), FaceLandmarkerHelper.LandmarkerListe
 			Log.v("몇단계?", "Max repeats reached, stopping the loop")
 		} else {
 			setGuideAnimation(mvm.currentSeq, false)
-			val seqCount = "${mvm.getSeqIndex() + 1} / ${mvm.allSeqs.size}"
+			val seqCount = "${mvm.getSeqIndex() + 1}. ${mvm.currentSeq.displayName} / ${mvm.allSeqs.size}"
 			bd.tvSeqCount.text = seqCount
 			viewModel.setCountDownFlag(false)
 			when (mvm.currentSeq) {
@@ -1170,7 +1161,7 @@ class DepthCameraActivity : BaseActivity(), FaceLandmarkerHelper.LandmarkerListe
 					bitmap.setPixels(pixels, 0, width, 0, 0, width, height)
 
 					// 임시 파일 저장
-					val tempFile = File.createTempFile("color_capture", ".jpg", cacheDir)
+					val tempFile = File.createTempFile("color_capture", ".png", cacheDir)
 					FileOutputStream(tempFile).use { fos ->
 						bitmap.compress(Bitmap.CompressFormat.JPEG, 100, fos)
 					}
@@ -1229,13 +1220,13 @@ class DepthCameraActivity : BaseActivity(), FaceLandmarkerHelper.LandmarkerListe
 	private suspend fun saveMediaToStorage(context: Context, uri: Uri, fileName: String, isImage: Boolean) {
 		withContext(Dispatchers.IO) {
 			try {
-				val extension = if (isImage) ".jpg" else ".mp4"
+				val extension = if (isImage) ".png" else ".mp4"
 //			val file = File(context.cacheDir, "$fileName$extension")
 
 				if (isImage) {
 					val contentValues = ContentValues().apply {
 						put(MediaStore.MediaColumns.DISPLAY_NAME, "$fileName$extension")
-						put(MediaStore.MediaColumns.MIME_TYPE, "image/jpeg")
+						put(MediaStore.MediaColumns.MIME_TYPE, "image/png")
 						put(MediaStore.Images.Media.RELATIVE_PATH, "Pictures/TangoPlus")
 					}
 					val inputStream = context.contentResolver.openInputStream(uri)
@@ -1282,7 +1273,7 @@ class DepthCameraActivity : BaseActivity(), FaceLandmarkerHelper.LandmarkerListe
 					}
 
 					// ★★★ 좌우반전 ★★★
-					matrix.postScale(-1f, 1f, bitmap.width / 2f, bitmap.height / 2f)
+					matrix.postScale(1f, 1f, bitmap.width / 2f, bitmap.height / 2f)
 
 					// 모든 변환을 한번에 적용
 					bitmap = Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true)
@@ -1297,40 +1288,41 @@ class DepthCameraActivity : BaseActivity(), FaceLandmarkerHelper.LandmarkerListe
 					)
 					mvm.latestBitmap = bitmap
 					// --------------------------# poselandmark를 잡기 위한 detectAsync #-------------------------
-					customResult?.let {
-						val absoluteLandmarks = it.landmarks.map { landmark ->
-							FaceLandmarkResult.FaceLandmark(
-								x = calculateScreenX(mvm.overlayW, landmark.x),
-								y = calculateScreenY(mvm.overlayH, landmark.y)
-							)
-						}
-						val absoluteResult = FaceLandmarkResult(absoluteLandmarks)
-						val hairResult = findHairline(bitmap, absoluteResult)
-						hairResult?.hairlinePoints?.forEach { linePoint ->
-							// 2D 좌표로 depth Z값 추출
-							val px = linePoint.point.x.toInt().coerceIn(0, mvm.latestDepthWidth - 1)
-							val py = linePoint.point.y.toInt().coerceIn(0, mvm.latestDepthHeight - 1)
-							val idx = py * mvm.latestDepthWidth + px
-							val depthMm = mvm.latestDepthData?.get(idx)?.toInt()?.and(0xFFFF) ?: 0
-							val depthM = depthMm / 1000f
-							val point3D = if (depthM > 0) {
-								convertDepthPixelTo3D(mvm.latestIntrinsic!!, px.toFloat(), py.toFloat(), depthM)
-							} else {
-								val nearbyDepth = findNearbyDepth(mvm.latestDepthData!!, px, py, mvm.latestDepthWidth, mvm.latestDepthHeight)
-								if (nearbyDepth > 0) convertDepthPixelTo3D(mvm.latestIntrinsic!!, px.toFloat(), py.toFloat(), nearbyDepth / 1000f)
-								else Point3D(px.toFloat(), py.toFloat(), 0f)
+					if (mvm.currentSeq == Sequence.COMFORT) {
+						customResult?.let {
+							val absoluteLandmarks = it.landmarks.map { landmark ->
+								FaceLandmarkResult.FaceLandmark(
+									x = calculateScreenX(mvm.overlayW, landmark.x),
+									y = calculateScreenY(mvm.overlayH, landmark.y)
+								)
 							}
+							val absoluteResult = FaceLandmarkResult(absoluteLandmarks)
+							val hairResult = findHairline(bitmap, absoluteResult)
+							hairResult?.let {
+								val hairline3D = convertHairlineTo3D(
+									hairlinePoints = it.hairlinePoints,
+									depthData      = mvm.latestDepthData!!,
+									depthWidth     = mvm.latestDepthWidth,
+									depthHeight    = mvm.latestDepthHeight,
+									intrinsic      = mvm.latestIntrinsic!!
+								)
 
-							val pointJA = JSONArray().apply {
-								put(linePoint.landmarkIndex)
-								put(linePoint.point.x.toBigDecimal().setScale(1, RoundingMode.HALF_UP))
-								put(linePoint.point.y.toBigDecimal().setScale(1, RoundingMode.HALF_UP))
-								put(point3D.x.toBigDecimal().setScale(4, RoundingMode.HALF_UP))
-								put(point3D.y.toBigDecimal().setScale(4, RoundingMode.HALF_UP))
-								put(point3D.z.toBigDecimal().setScale(4, RoundingMode.HALF_UP))
+								hairline3D.forEach { hp ->
+									val pointJA = JSONArray().apply {
+										put(hp.landmarkIndex)
+										put(hp.point2D.x.toBigDecimal().setScale(1, RoundingMode.HALF_UP))
+										put(hp.point2D.y.toBigDecimal().setScale(1, RoundingMode.HALF_UP))
+										put(hp.point3D.x.toBigDecimal().setScale(4, RoundingMode.HALF_UP))
+										put(hp.point3D.y.toBigDecimal().setScale(4, RoundingMode.HALF_UP))
+										put(hp.point3D.z.toBigDecimal().setScale(4, RoundingMode.HALF_UP))
+									}
+									mvm.tempHairLineJA.put(pointJA)
+									mvm.currentHairLine3DCoordinate.add(Triple(hp.point3D.x, hp.point3D.y, hp.point3D.z))
+								}
 							}
-							mvm.hairLineJA.put(pointJA)
-							mvm.currentHairLine3DCoordinate.add(Triple(point3D.x, point3D.y, point3D.z))
+							mvm.hairLineJA.put(mvm.tempHairLineJA)
+							Log.v("mvmhairLineJA", "${mvm.hairLineJA}")
+							mvm.tempHairLineJA = JSONArray()
 						}
 					}
 
@@ -1424,11 +1416,8 @@ class DepthCameraActivity : BaseActivity(), FaceLandmarkerHelper.LandmarkerListe
 					.show()
 			}
 		}
-
 		override fun onResults(resultBundle: PoseLandmarkerHelper.ResultBundle) {}
 	}
-
-
 
 	// --------------------------------------# init #-----------------------------------------------
 	private fun initFace() {
@@ -1577,7 +1566,6 @@ class DepthCameraActivity : BaseActivity(), FaceLandmarkerHelper.LandmarkerListe
 		mvm.mediaFileNames.clear()
 		mvm.plrJA.clearAll()
 		mvm.hairLineJA.clearAll()
-		mvm.etcJO.clearAll()
 		mvm.inputWidth = 0
 		mvm.inputHeight = 0
 		mvm.overlayW = 0f
@@ -1620,7 +1608,7 @@ class DepthCameraActivity : BaseActivity(), FaceLandmarkerHelper.LandmarkerListe
 		return originJo.apply {
 			put("temp_server_sn", prefsUtil.getLastTempServerSn())
 			put("media_file_name", mediaFileName)
-			put("json_file_name", mediaFileName.replace(".jpg", ".json").replace(".mp4", ".json"))
+			put("json_file_name", mediaFileName.replace(".png", ".json").replace(".mp4", ".json"))
 			put("seq", seqInt)
 			put("uuid", mvm.currentUUID)
 			put("name", ivm.nameValue.value)

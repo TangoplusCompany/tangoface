@@ -39,21 +39,11 @@ class MeasureHistoryFragment : Fragment(), OnUserClickListener {
 
 	override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
 		super.onViewCreated(view, savedInstanceState)
-		lifecycleScope.launch(Dispatchers.Main) {
-			// 초기 셋업
-			val fd = FaceDatabase.getDatabase(requireContext())
-			fDao = fd.faceDao()
-			initUserUI()
-			setAdapter()
-			loadingDialog = LoadingDialogFragment()
-		}
 
 		mvm.allDataLoaded.observe(viewLifecycleOwner) { isLoaded ->
 			if (isLoaded == true) {
-//                Log.v("displayList", "${mvm.displayList.value}")
 				mvm.clearLoadDataFlag()
-
-
+				setAdapter()
 				mvm.isMeasureFinish = activity?.intent?.getBooleanExtra("isMeasureFinish", false) ?: false
 				mvm.tempServerSnAfterMeasure = activity?.intent?.getIntExtra("serverSn", -1) ?: -1
 
@@ -64,7 +54,7 @@ class MeasureHistoryFragment : Fragment(), OnUserClickListener {
 						withContext(Dispatchers.Main) {
 							mvm.currentResult.value = mvm.convertToFaceResult(requireContext(), statics)
 							requireActivity().supportFragmentManager.beginTransaction().apply {
-								replace(R.id.flMain, StatisticsFragment())
+								replace(R.id.flMain, InformationFragment())
 								commit()
 							}
 							mvm.isMeasureFinish = false
@@ -76,6 +66,17 @@ class MeasureHistoryFragment : Fragment(), OnUserClickListener {
 				}
 			}
 		}
+
+		lifecycleScope.launch(Dispatchers.Main) {
+			// 초기 셋업
+			val fd = FaceDatabase.getDatabase(requireContext())
+			fDao = fd.faceDao()
+			initUserUI()
+			setAdapter()
+			loadingDialog = LoadingDialogFragment()
+		}
+
+
 	}
 
 	private fun initUserUI() {

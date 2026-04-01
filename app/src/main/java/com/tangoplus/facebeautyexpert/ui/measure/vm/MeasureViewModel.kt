@@ -94,7 +94,7 @@ class MeasureViewModel : ViewModel() {
 
 	// 중간 임시 저장 좌표들 ( seq 1개씩만 )
 	var tempCoordinateJA = JSONArray()
-
+	var tempHairLineJA = JSONArray()
 	// ------------------------# 측정 1개당 값들이 들어가는 곳 전부 index == 6 #------------------------
 	// 측정값들 담기
 	val staticJA = JSONArray()
@@ -110,7 +110,6 @@ class MeasureViewModel : ViewModel() {
 
 	// 그 외 추가할 것 헤어라인 등
 	var hairLineJA = JSONArray()
-	var etcJO = JSONObject()
 
 	// 현재 얼굴 좌표들 전부 담는 곳 (형식은 coordinatesJA와 같음)
 	var currentCoordinate = mutableListOf<Pair<Float, Float>>() // 절대 좌표
@@ -251,8 +250,7 @@ class MeasureViewModel : ViewModel() {
 					// 🎀🎀🎀🎀🎀 상안부 🎀🎀🎀🎀🎀
 					// 468: 실제 오른쪽 눈  473: 실제 왼쪽 눈
 
-
-					val pupilAngle =
+					val corneaAngle =
 						calculateSlope(vmFlr[468].first, vmFlr[468].second, vmFlr[473].first, vmFlr[473].second)
 					val eyeAngles = Pair(
 						calculateSlope(vmFlr[133].first, vmFlr[133].second, vmFlr[33].first, vmFlr[33].second),
@@ -260,17 +258,17 @@ class MeasureViewModel : ViewModel() {
 					)
 					// 왼쪽 내안각, 외안각
 					val leftCanthuses = Pair(
-						calculateSlope(vmFlr[133].first, vmFlr[133].second, vmFlr[243].first, vmFlr[243].second),
+						calculateSlope(vmFlr[243].first, vmFlr[243].second, vmFlr[133].first, vmFlr[133].second),
 						calculateSlope(vmFlr[33].first, vmFlr[33].second, vmFlr[130].first, vmFlr[130].second)
 					)
 					val rightCanthuses = Pair(
 						calculateSlope(vmFlr[362].first, vmFlr[362].second, vmFlr[463].first, vmFlr[463].second),
-						calculateSlope(vmFlr[263].first, vmFlr[263].second, vmFlr[359].first, vmFlr[359].second)
+						calculateSlope(vmFlr[359].first, vmFlr[359].second, vmFlr[263].first, vmFlr[263].second)
 					)
 
 					val leftEyeTopPoint = listOf(160,159,158)
 						.map { flr3D[it] }
-						.minByOrNull { it.second } ?: flr3D[159] // min인 이유: y값은 낮을수록 위쪽 좌표임
+						.minByOrNull { it.second } ?: flr3D[159]
 					val leftEyeBottomPoint = listOf(144,145,153)
 						.map { flr3D[it] }
 						.maxByOrNull { it.second } ?: flr3D[145]
@@ -289,7 +287,7 @@ class MeasureViewModel : ViewModel() {
 						get3DDistance(flr3D[133], flr3D[33]),
 						get3DDistance(rightEyeTopPoint, rightEyeBottomPoint)
 					)
-					val pupilLengths = Pair(
+					val corneaLengths = Pair(
 						get3DDistance(flr3D[469], flr3D[471]),
 						get3DDistance(flr3D[474], flr3D[476]),
 					)
@@ -318,7 +316,7 @@ class MeasureViewModel : ViewModel() {
 					)
 
 					// 🎀🎀🎀🎀🎀 중안부 🎀🎀🎀🎀🎀
-					val correctionValue = 180f - pupilAngle // 보정값 180
+					val correctionValue = 180f - corneaAngle // 보정값 180
 
 					val leftAlaStartPoint = listOf(209, 49, 64)
 						.map { flr3D[it] }
@@ -326,8 +324,8 @@ class MeasureViewModel : ViewModel() {
 					val rightAlaEndPoint = listOf(429, 279, 294)
 						.map { flr3D[it] }
 						.maxByOrNull { it.first } ?: flr3D[279]
-					val noseWidth = get3DDistance(flr3D[168], flr3D[2])
-					val noseHeight = get3DDistance(leftAlaStartPoint, rightAlaEndPoint)
+					val noseHeight = get3DDistance(flr3D[168], flr3D[2])
+					val noseWidth = get3DDistance(leftAlaStartPoint, rightAlaEndPoint)
 					val alaLengths = Pair(
 						get3DFloorDistance(leftAlaStartPoint, flr3D[2]),
 						get3DFloorDistance(flr3D[2], rightAlaEndPoint),
@@ -346,7 +344,7 @@ class MeasureViewModel : ViewModel() {
 						calculateSlope(vmFlr[148].first, vmFlr[148].second, vmFlr[377].first, vmFlr[377].second)
 					val correctTipOfChinsAngle = correctingValue(tipOfChinsAngle, correctionValue)
 
-					Log.v("각도보기", "$pupilAngle $correctionValue $tipOfLipsAngle -> $correctTipOfLipsAngle")
+					Log.v("각도보기", "$corneaAngle $correctionValue $tipOfLipsAngle -> $correctTipOfLipsAngle")
 
 					val canthusOralAngle = Pair(
 						calculateSlope(vmFlr[33].first, vmFlr[33].second, vmFlr[61].first, vmFlr[61].second),
@@ -452,7 +450,7 @@ class MeasureViewModel : ViewModel() {
 						put("comfort_neck_length", neckLength)
 
 
-						put("comfort_eye_horizontal_angle", pupilAngle)
+						put("comfort_eye_horizontal_angle", corneaAngle)
 						put("comfort_left_eye_horizontal_angle", eyeAngles.first)
 						put("comfort_right_eye_horizontal_angle", eyeAngles.second)
 						put("comfort_left_medial_canthus_angle", leftCanthuses.first)
@@ -464,9 +462,8 @@ class MeasureViewModel : ViewModel() {
 						put("comfort_left_eye_height", leftEyeSizes.second)
 						put("comfort_right_eye_width", rightEyeSizes.first)
 						put("comfort_right_eye_height", rightEyeSizes.second)
-						put("comfort_left_pupil_length", pupilLengths.first)
-						put("comfort_right_pupil_length", pupilLengths.second
-						)
+						put("comfort_left_cornea_length", corneaLengths.first)
+						put("comfort_right_cornea_length", corneaLengths.second)
 
 						put("comfort_eyebrow_horizontal_angle", eyeBrowHorizonAngle)
 						put("comfort_left_eyebrow_horizontal_angle", eyeBrowAngles.first)
@@ -480,10 +477,10 @@ class MeasureViewModel : ViewModel() {
 
 						put("comfort_nose_width", noseWidth)
 						put("comfort_nose_height", noseHeight)
-						put("comfort_left_ala_length", alaLengths.first)
-						put("comfort_right_ala_length", alaLengths.second)
+						put("comfort_left_alar_length", alaLengths.first)
+						put("comfort_right_alar_length", alaLengths.second)
 						put("comfort_earflaps_horizontal_angle", earFlapAngle)
-						put("comfort_ala_horizontal_angle", alaAngle)
+						put("comfort_alar_horizontal_angle", alaAngle)
 
 						put("comfort_tip_of_lips_horizontal_angle", correctTipOfLipsAngle)
 						put("comfort_tip_of_chin_horizontal_angle", correctTipOfChinsAngle)

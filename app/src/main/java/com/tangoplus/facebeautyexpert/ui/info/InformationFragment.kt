@@ -22,14 +22,19 @@ import com.tangoplus.facebeautyexpert.domain.vo.Sequence
 import com.tangoplus.facebeautyexpert.ui.main.vm.MainViewModel
 import kotlinx.coroutines.launch
 import com.tangoplus.facebeautyexpert.domain.util.BitmapUtility.setSSIV
-import com.tangoplus.facebeautyexpert.ui.listener.OnFaceCategoryClickListener
+import com.tangoplus.facebeautyexpert.ui.adapter.SelectRVAdapter
+import com.tangoplus.facebeautyexpert.ui.info.vm.InformationViewModel
+import com.tangoplus.facebeautyexpert.ui.info.vm.SelectViewModel
+import com.tangoplus.facebeautyexpert.ui.info.vo.DrawLine
+import com.tangoplus.facebeautyexpert.ui.info.vo.FacialPart
+import com.tangoplus.facebeautyexpert.ui.listener.OnFacialPartClickListener
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 
 
-class InformationFragment : Fragment(), OnFaceCategoryClickListener {
+class InformationFragment : Fragment(), OnFacialPartClickListener {
 	private lateinit var bd: FragmentInformationBinding
-
+	private val svm: SelectViewModel by activityViewModels()
 	//    private val mvm : MeasureViewModel by activityViewModels()
 	private val ivm: InformationViewModel by activityViewModels()
 	private val mvm: MainViewModel by activityViewModels()
@@ -64,11 +69,24 @@ class InformationFragment : Fragment(), OnFaceCategoryClickListener {
 
 		val fd = FaceDatabase.getDatabase(requireContext())
 		fDao = fd.faceDao()
+		ivm.currentCheckedLines.addAll(DrawLine.entries)
+		ivm.currentCheckedLines.remove(DrawLine.A_RATIO_HORIZON)
+		ivm.currentCheckedLines.remove(DrawLine.A_RATIO_VERTI)
+		Log.v("currentCheckedLine", "${ivm.currentCheckedLines}")
+		setAdapter()
 		setUserInfo()
 		setResult()
 		setRatioBtn()
 	}
-
+	private fun setAdapter() {
+		val vLayoutManager = LinearLayoutManager(requireContext(), LinearLayoutManager.VERTICAL, false)
+		val sAdapter = SelectRVAdapter(svm, 0)
+		sAdapter.onFacialPartClickListener = this@InformationFragment
+		bd.rvGD1.apply {
+			adapter = sAdapter
+			layoutManager = vLayoutManager
+		}
+	}
 	private fun setRatioBtn() {
 		bd.btnIDClean.setOnSingleClickListener {
 			ivm.switchedLineOn()
@@ -129,7 +147,6 @@ class InformationFragment : Fragment(), OnFaceCategoryClickListener {
 
 
 		setImage()
-		// TODO 하단 데이터 저장
 		bd.rvGD2.apply {
 			layoutManager = LinearLayoutManager(requireContext(), LinearLayoutManager.VERTICAL, false)
 
@@ -172,7 +189,18 @@ class InformationFragment : Fragment(), OnFaceCategoryClickListener {
 		}
 	}
 
-	override fun onFaceCategoryClick(categoryIdx: Int) {
-		TODO("Not yet implemented")
+
+	override fun onFacialPartClick(part: FacialPart) {
+		ivm.currentCheckedLines.clear()
+		val drawLines = when (part) {
+			FacialPart.DERIVE -> listOf( DrawLine.A_FACE, DrawLine.A_SAGGING_FACE, DrawLine.A_FACIAL_AXIS, DrawLine.A_HORIZON)
+			FacialPart.RATIO -> listOf(DrawLine.A_RATIO_HORIZON, DrawLine.A_RATIO_VERTI, )
+			FacialPart.TOP -> listOf(DrawLine.A_EYE, DrawLine.L_EYE, DrawLine.A_EYEBROW, DrawLine.L_EYEBROW, DrawLine.L_CORNEA)
+			FacialPart.MIDDLE -> listOf(DrawLine.A_NOSE, DrawLine.L_NOSE, DrawLine.A_EARFLAP, DrawLine.A_ALAR_ORAL, DrawLine.A_SIDE_HEAD, DrawLine.E_CHEEKBONE, )
+			FacialPart.BOTTOM -> listOf(DrawLine.A_CHIN, DrawLine.E_CHEEKS, DrawLine.A_CANTHUS_ORAL)
+		}
+		ivm.currentCheckedLines.addAll(drawLines)
+
+		setImage()
 	}
 }

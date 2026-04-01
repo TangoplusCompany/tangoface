@@ -28,11 +28,12 @@ object LandmarkUtility {
 	fun scaleLandmarksToFHD(
 		faceLandmarks: FaceLandmarkResult?,
 		poseLandmarks: PoseLandmarkResult?,
+		hairLineLandmarks: List<Pair<Float, Float>>?,
 		originalWidth: Int = 1280,
 		originalHeight: Int = 720,
 		targetWidth: Int = 1920,
 		targetHeight: Int = 1080
-	): Pair<FaceLandmarkResult?, PoseLandmarkResult?> {
+	): Triple<FaceLandmarkResult?, PoseLandmarkResult?, List<Pair<Float,Float>>?> {
 		val scaleX = targetWidth.toFloat() / originalWidth
 		val scaleY = targetHeight.toFloat() / originalHeight
 
@@ -57,8 +58,15 @@ object LandmarkUtility {
 				}
 			)
 		}
-
-		return Pair(scaledFace, scaledPose)
+		val scaledHairline = hairLineLandmarks?.let { result ->
+			result.map { l ->
+			Pair(
+				l.first * scaleX,
+				l.second * scaleY
+			)
+		}
+		}
+		return Triple(scaledFace, scaledPose, scaledHairline)
 	}
 
 	fun scalePointToFHD(
@@ -122,7 +130,32 @@ object LandmarkUtility {
 	}
 
 	fun extractFace3DCoordinates(jsonData: JSONObject?): List<Triple<Float, Float, Float>>? {
-		val poseData = jsonData?.optJSONArray("face_landmark")
+		val faceData = jsonData?.optJSONArray("face_landmark")
+		return if (faceData != null) {
+			List(faceData.length()) { i ->
+				val landmark = faceData.getJSONArray(i)
+				Triple(
+					landmark.optDouble(3).toFloat(),
+					landmark.optDouble(4).toFloat(),
+					landmark.optDouble(5).toFloat()
+				)
+			}
+		} else null
+	}
+	fun extractPoseCoordinates(jsonData: JSONObject?): List<Pair<Float , Float>>? {
+		val poseData = jsonData?.optJSONArray("pose_landmark")
+		return if (poseData != null) {
+			List(poseData.length()) { i ->
+				val landmark = poseData.getJSONArray(i)
+				Pair(
+					landmark.optDouble(1).toFloat(),
+					landmark.optDouble(2).toFloat()
+				)
+			}
+		} else null
+	}
+	fun extractPose3DCoordinates(jsonData: JSONObject?): List<Triple<Float, Float, Float>>? {
+		val poseData = jsonData?.optJSONArray("pose_landmark")
 		return if (poseData != null) {
 			List(poseData.length()) { i ->
 				val landmark = poseData.getJSONArray(i)
@@ -134,40 +167,30 @@ object LandmarkUtility {
 			}
 		} else null
 	}
-
-	fun extractPoseCoordinates(jsonData: JSONObject?): List<Pair<Float, Float>>? {
-		val data = jsonData?.optJSONArray("pose_landmark")
+	fun extractHairLineCoordinate(jsonData: JSONObject?): List<Pair<Float, Float>>? {
+		val data = jsonData?.optJSONArray("hairline_landmark")
 		return if (data != null) {
 			List(data.length()) { i ->
-				val landmark = data.getJSONObject(i)
+				val landmark = data.getJSONArray(i)
 				Pair(
-					landmark.optDouble("sx").toFloat(),
-					landmark.optDouble("sy").toFloat()
+					landmark.optDouble(1).toFloat(),
+					landmark.optDouble(2).toFloat()
+				)
+			}
+		} else null
+	}
+	fun extractHairLine3DCoordinate(jsonData: JSONObject?): List<Triple<Float, Float, Float>>? {
+		val hairData = jsonData?.optJSONArray("hairline_landmark")
+		return if (hairData != null) {
+			List(hairData.length()) { i ->
+				val landmark = hairData.getJSONArray(i)
+				Triple(
+					landmark.optDouble(3).toFloat(),
+					landmark.optDouble(4).toFloat(),
+					landmark.optDouble(5).toFloat()
 				)
 			}
 		} else null
 	}
 
-	fun extractBowCoordinates(jsonData: JSONObject?): List<Pair<Float, Float>>? {
-		val data = jsonData?.optJSONArray("bow_landmark")
-		return if (data != null) {
-			List(data.length()) { i ->
-				val landmark = data.getJSONObject(i)
-				Pair(
-					landmark.optDouble("cx").toFloat(),
-					landmark.optDouble("cy").toFloat()
-				)
-			}
-		} else null
-	}
-	fun extractHairLineCoordinate(jsonData: JSONObject?): Pair<Float, Float>? {
-		val data = jsonData?.optJSONObject("etc_landmark")
-		return if (data != null) {
-			val dataJo = data.optJSONObject("hairline")
-			Pair(
-				dataJo?.optDouble("sx")?.toFloat() ?: 0f,
-				dataJo?.optDouble("sy")?.toFloat() ?: 0f
-			)
-		} else null
-	}
 }
