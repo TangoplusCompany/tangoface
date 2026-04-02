@@ -28,5 +28,5 @@
 
     <color name="transparent">#00FFFFFF</color>
     <color name="warningMarkColor">#FF992B</color>
-    <color name="test">#FF0000</color>
+    <color name="test">#25FFFFFF</color>
 </resources>

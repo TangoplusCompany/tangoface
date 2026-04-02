@@ -237,7 +237,7 @@
         android:paddingEnd="12dp"
         android:paddingBottom="8dp"
         android:text="↩ 이전으로"
-        android:textColor="@color/subColor900"
+        android:textColor="@color/subColor100"
         android:textSize="24dp"
         android:visibility="invisible"
         app:layout_constraintEnd_toEndOf="parent"

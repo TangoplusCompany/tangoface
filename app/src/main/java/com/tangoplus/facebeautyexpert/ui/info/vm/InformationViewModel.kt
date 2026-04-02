@@ -23,11 +23,13 @@ class InformationViewModel : ViewModel() {
 	}
 
 	private var isLineOn = true
-	fun switchedLineOn() {
-		isLineOn = !isLineOn
-	}
-
+	fun switchedLineOn() { isLineOn = !isLineOn }
 	fun getLineOn(): Boolean = isLineOn
+
+	private var isGridLineOn = true
+	fun switchedGridLineOn() { isGridLineOn = !isGridLineOn }
+	fun getGridLineOn(): Boolean = isGridLineOn
+
 
 	val unitIdxFromFaceResult = MutableLiveData(Pair(0, 0))
 	val unitIdxFromCompare = MutableLiveData(Pair(0, 0))
@@ -36,4 +38,6 @@ class InformationViewModel : ViewModel() {
 		unitIdxFromFaceResult.value = Pair(0, 0)
 		unitIdxFromCompare.value = Pair(0, 0)
 	}
+
+
 }

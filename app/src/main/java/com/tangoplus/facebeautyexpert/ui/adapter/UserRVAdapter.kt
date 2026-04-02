@@ -26,7 +26,7 @@ class UserRVAdapter(
 	inner class MeasureVerticalViewHolder(view: View) : RecyclerView.ViewHolder(view) {
 		val clMVI: ConstraintLayout = view.findViewById(R.id.clMVI)
 		val tvMVIName: TextView = view.findViewById(R.id.tvMVIName)
-		val tvMVIGrade: TextView = view.findViewById(R.id.tvMVIGrade)
+		val tvMVIRegDate: TextView = view.findViewById(R.id.tvMVIRegDate)
 		val tvMVIAge: TextView = view.findViewById(R.id.tvMVIAge)
 		val tvMVIGender: TextView = view.findViewById(R.id.tvMVIGender)
 	}
@@ -45,22 +45,22 @@ class UserRVAdapter(
 			holder.tvMVIName.text = currentItem.name
 //            Log.v("mobiel", "${currentItem.userMobile.isNullOrEmpty()}, ${currentItem.userMobile}")
 			val mobile = if (currentItem.mobile?.length == 11) {
-				currentItem.mobile.substring(0, 3) + "-" + currentItem.mobile.substring(
-					3,
-					7
-				) + "-" + currentItem.mobile.substring(7)
+				currentItem.mobile.substring(0, 3) + "-****-" + currentItem.mobile.substring(7) + ", "
 			} else {
 				""
 			}
-			holder.tvMVIGrade.text = mobile
 
-			holder.tvMVIGender.text = when (currentItem.gender) {
+			val genderText = when (currentItem.gender) {
 				0 -> "남성"
-				else -> "여성"
+				1 -> "여성"
+				else -> ""
 			}
+			holder.tvMVIGender.text = "${mobile}${genderText}"
 			val c = Calendar.getInstance(TimeZone.getTimeZone("Asia/Seoul"))
 			val birthday = currentItem.birthday
 
+
+			holder.tvMVIRegDate.text = currentItem.regDate.substring(0, 11)
 			val age = if (birthday?.length == 10) {
 				try {
 					val (birthYear, birthMonth, birthDay) = birthday.split("-").map { it.toInt() }
@@ -85,7 +85,6 @@ class UserRVAdapter(
 			}
 
 			holder.tvMVIAge.text = age
-
 			holder.clMVI.setOnSingleClickListener {
 				onUserClickListener?.onUserClick(currentItem.tempServerSn)
 			}

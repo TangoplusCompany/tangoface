@@ -648,7 +648,7 @@ class DepthCameraActivity : BaseActivity(), FaceLandmarkerHelper.LandmarkerListe
 			}
 		}
 		ivm.isFinishInput.observe(this) {
-
+			Log.v("인풋", "2: ${ivm.nameValue.value}, ${ivm.mobileValue.value}, ${ivm.genderValue.value}, ${ivm.birthdayValue.value}, ${ivm.nationalityValue.value}")
 		}
 		prefsUtil = PreferenceUtility(this@DepthCameraActivity)
 
@@ -1015,20 +1015,25 @@ class DepthCameraActivity : BaseActivity(), FaceLandmarkerHelper.LandmarkerListe
 			val seqCount = "${mvm.getSeqIndex() + 1}. ${mvm.currentSeq.displayName} / ${mvm.allSeqs.size}"
 			bd.tvSeqCount.text = seqCount
 			viewModel.setCountDownFlag(false)
-			when (mvm.currentSeq) {
-				Sequence.COMFORT,  -> {
-					bd.fdgv.triggerOffAnimationIfNeeded()
-					Handler(Looper.getMainLooper()).postDelayed({ bd.fdgv.visibility = View.INVISIBLE }, 800)
-					bd.ivFrame.visibility = View.VISIBLE
-					startFadeIn(bd.ivFrame)
-				}
-				else -> {
-					bd.fdgv.visibility = View.VISIBLE
-					bd.fdgv.triggerIntroAnimationIfNeeded()
-					Handler(Looper.getMainLooper()).postDelayed({ bd.ivFrame.visibility = View.INVISIBLE }, 800)
-					startFadeOut(bd.ivFrame)
-				}
-			}
+			bd.ivFrame.visibility = View.VISIBLE
+			startFadeIn(bd.ivFrame)
+			bd.ivFrame.setImageDrawable(
+				ContextCompat.getDrawable(this@DepthCameraActivity, R.drawable.drawable_seq_1)
+			)
+//			when (mvm.currentSeq) {
+//				Sequence.COMFORT,  -> {
+//					bd.fdgv.triggerOffAnimationIfNeeded()
+//					Handler(Looper.getMainLooper()).postDelayed({ bd.fdgv.visibility = View.INVISIBLE }, 800)
+//					bd.ivFrame.visibility = View.VISIBLE
+//					startFadeIn(bd.ivFrame)
+//				}
+//				else -> {
+//					bd.fdgv.visibility = View.VISIBLE
+//					bd.fdgv.triggerIntroAnimationIfNeeded()
+//					Handler(Looper.getMainLooper()).postDelayed({ bd.ivFrame.visibility = View.INVISIBLE }, 800)
+//					startFadeOut(bd.ivFrame)
+//				}
+//			}
 
 //			when (mvm.currentSeq) {
 //				Sequence.SIDE_LEFT -> bd.ivFrame.setImageDrawable(
@@ -1075,30 +1080,15 @@ class DepthCameraActivity : BaseActivity(), FaceLandmarkerHelper.LandmarkerListe
 
 		// -----------# frame -> fdgv 변경하기 #--------
 		Log.v("이전seq", "${mvm.allSeqs}/${mvm.currentSeq}")
-		when (mvm.currentSeq) {
-			Sequence.COMFORT,  -> {
-				Handler(Looper.getMainLooper()).postDelayed({ bd.fdgv.visibility = View.INVISIBLE }, 800)
-				bd.fdgv.triggerOffAnimationIfNeeded()
-				bd.ivFrame.visibility = View.VISIBLE
-				startFadeIn(bd.ivFrame)
-			}
-			else -> {
-				bd.fdgv.visibility = View.VISIBLE
-				bd.fdgv.triggerIntroAnimationIfNeeded()
-				startFadeOut(bd.ivFrame)
-				Handler(Looper.getMainLooper()).postDelayed({ bd.ivFrame.visibility = View.INVISIBLE }, 800)
-			}
-		}
-		// ivFrame 이미지 프레임을 사용할 때만 7, 8, 0 넣기
 		bd.ivFrame.setImageDrawable(
 			ContextCompat.getDrawable(
 				this@DepthCameraActivity,
 				when (mvm.currentSeq) {
-					else -> R.drawable.drawable_seq_0
+					Sequence.COMFORT -> R.drawable.drawable_seq_0
+					else -> R.drawable.drawable_seq_1
 				}
 			)
 		)
-
 		bd.clCountDown.visibility = View.GONE
 		mCountDown.cancel()
 		setGuideAnimation(mvm.currentSeq, false)
@@ -1112,7 +1102,7 @@ class DepthCameraActivity : BaseActivity(), FaceLandmarkerHelper.LandmarkerListe
 			isEnabled = true
 		}
 
-		val seqCount = "${mvm.getSeqIndex() + 1} / ${mvm.allSeqs.size}"
+		val seqCount = "${mvm.getSeqIndex() + 1}. ${mvm.currentSeq.displayName}"
 		bd.tvSeqCount.text = seqCount
 		viewModel.setCountDownFlag(false)
 
@@ -1530,15 +1520,15 @@ class DepthCameraActivity : BaseActivity(), FaceLandmarkerHelper.LandmarkerListe
 		ivm.isShownBtn = false
 		viewModel.comparisonDoubleItem = null
 
-		val currentUserItem = intent.getParcelableExtra<UserItem>("currentUserItem")
-		Log.v("currentUserItem", "is init? = $currentUserItem, ${currentUserItem == null}")
-		if (currentUserItem != null) {
-			ivm.mobileValue.value = currentUserItem.mobile
-			ivm.nameValue.value = currentUserItem.name
-			ivm.nationalityValue.value = currentUserItem.nationality
-			ivm.birthdayValue.value = currentUserItem.birthday
-			ivm.genderValue.value = currentUserItem.gender
-		}
+//		val currentUserItem = intent.getParcelableExtra<UserItem>("currentUserItem")
+//		Log.v("currentUserItem", "is init? = $currentUserItem, ${currentUserItem == null}")
+//		if (currentUserItem != null) {
+//			ivm.mobileValue.value = currentUserItem.mobile
+//			ivm.nameValue.value = currentUserItem.name
+//			ivm.nationalityValue.value = currentUserItem.nationality
+//			ivm.birthdayValue.value = currentUserItem.birthday
+//			ivm.genderValue.value = currentUserItem.gender
+//		}
 		val key = getString(R.string.kekeke)
 		mvm.currentUUID = generateCustomUUID(ivm.nameValue.value, ivm.mobileValue.value, key)
 
@@ -1613,6 +1603,11 @@ class DepthCameraActivity : BaseActivity(), FaceLandmarkerHelper.LandmarkerListe
 			put("uuid", mvm.currentUUID)
 			put("name", ivm.nameValue.value)
 			put("mobile", ivm.mobileValue.value)
+			put("birthday", ivm.birthdayValue.value)
+			put("gender", ivm.genderValue.value)
+			put("nationality", ivm.nationalityValue.value)
+
+
 			put("scale_factor", getScaleFactor())
 			put("depth_result", true)
 		}

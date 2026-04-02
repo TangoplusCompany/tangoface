@@ -410,7 +410,16 @@ class MeasureViewModel : ViewModel() {
 							calculatePolygonArea(rightCheekBonePoint)
 						)
 					}
-
+					val mouseCornerAngle = Pair(
+						calculateSlope(vmFlr[61].first, vmFlr[61].second, vmFlr[13].first, vmFlr[13].second),
+						calculateSlope(vmFlr[291].first, vmFlr[291].second, vmFlr[13].first, vmFlr[13].second)
+					)
+					val philtrumLength = get3DFloorDistance(flr3D[2], flr3D[0])
+					val mouseWidth = get3DDistance(flr3D[61], flr3D[291])
+					val lipsLengths = Pair(
+						get3DDistance(flr3D[0], flr3D[13]),
+						get3DDistance(flr3D[14], flr3D[17])
+					)
 					// 🎀🎀🎀🎀🎀 얼굴 전체 🎀🎀🎀🎀🎀
 					Log.v("뎁스카메라", "isSDKInit: ${isDepthCameraMeasure}, $cheekboneExtents")
 					val plr = currentPlrCoordinate
@@ -448,7 +457,12 @@ class MeasureViewModel : ViewModel() {
 						put("comfort_shoulder_horizontal_angle", shoulderHorizon)
 						put("comfort_face_length", faceLength)
 						put("comfort_neck_length", neckLength)
-
+						put("comfort_left_mouse_corner_angle", mouseCornerAngle.first)
+						put("comfort_right_mouse_corner_angle", mouseCornerAngle.second)
+						put("comfort_philtrum_length", philtrumLength)
+						put("comfort_mouse_width", mouseWidth)
+						put("comfort_upper_lips_height", lipsLengths.first)
+						put("comfort_lower_lips_height", lipsLengths.second)
 
 						put("comfort_eye_horizontal_angle", corneaAngle)
 						put("comfort_left_eye_horizontal_angle", eyeAngles.first)

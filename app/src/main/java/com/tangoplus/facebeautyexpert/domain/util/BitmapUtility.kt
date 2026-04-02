@@ -44,6 +44,8 @@ import com.tangoplus.facebeautyexpert.domain.util.LandmarkUtility.extractHairLin
 import com.tangoplus.facebeautyexpert.domain.util.LandmarkUtility.extractPose3DCoordinates
 import com.tangoplus.facebeautyexpert.domain.util.LandmarkUtility.extractPoseCoordinates
 import com.tangoplus.facebeautyexpert.domain.util.LandmarkUtility.scaleLandmarksToFHD
+import com.tangoplus.facebeautyexpert.domain.vision.face.FaceLandmarkResult
+import com.tangoplus.facebeautyexpert.domain.vo.BitmapFlag
 import com.tangoplus.facebeautyexpert.domain.vo.Landmarks
 import com.tangoplus.facebeautyexpert.domain.vo.Sequence
 import com.tangoplus.facebeautyexpert.ui.info.vo.LineType
@@ -56,6 +58,7 @@ object BitmapUtility {
 		val setedLine: MutableSet<DrawLine>,
 		val seq: Sequence,
 		val lms : Landmarks,
+		val flags: BitmapFlag,
 	)
 
 	suspend fun getCombineBitmap(
@@ -124,6 +127,12 @@ object BitmapUtility {
 				scaledHairline,
 				hairLine3DCoordinate
 			)
+			val isLineOn = ivm.getLineOn()
+			val isGridLineOn = ivm.getGridLineOn()
+			val flags = BitmapFlag(
+				isLineOn = isLineOn,
+				isGridLineOn = isGridLineOn
+			)
 			val combinedBitmap = combineImageAndOverlay(
 				DrawImageUiModel(
 					processedBitmap,
@@ -131,6 +140,7 @@ object BitmapUtility {
 					setedLine = ivm.currentCheckedLines,
 					seq = seq,
 					lms = lms,
+					flags = flags
 				)
 			)
 
@@ -189,7 +199,12 @@ object BitmapUtility {
 		10, 109, 67, 103, 54, 21, 162, 127, 234, 93, 132, 58, 172, 136, 150, 149, 176, 148,
 		152, 377, 378, 379, 365, 397, 288, 361, 323, 454, 356, 389, 251, 284, 332, 297, 338, 10
 	)
-
+	val whiteAlpha15Paint = Paint().apply {
+		color = "#25FFFFFF".toColorInt()
+		strokeWidth = strokeWidthh
+		strokeCap = Paint.Cap.ROUND
+		style = Paint.Style.STROKE
+	}
 
 	val whitePaint = Paint().apply {
 		color = "#FFFFFF".toColorInt()
@@ -517,7 +532,939 @@ object BitmapUtility {
 		// ----------# 선택한 항목이 없을 때 기본 축 #------------
 		val dimPLS = dim.lms.poseLandmarks
 		val dimFLS = dim.lms.faceLandmarks
+		if (dim.flags.isGridLineOn) {
+			val gridSize = 25f  // 그리드 간격 (픽셀)
 
+			// 세로 선 그리기
+			var x = 0f
+			while (x <= canvas.width) {
+				canvas.drawLine(x, 0f, x, canvas.height.toFloat(), whiteAlpha15Paint)
+				x += gridSize
+			}
+
+			// 가로 선 그리기
+			var y = 0f
+			while (y <= canvas.height) {
+				canvas.drawLine(0f, y, canvas.width.toFloat(), y, whiteAlpha15Paint)
+				y += gridSize
+			}
+		}
+
+		if (dim.flags.isLineOn) {
+			if (dim.setedLine.contains(DrawLine.A_SAGGING_FACE)) {
+				val leftEarFlap = dimFLS.landmarks[234]
+				val rightEarFlap = dimFLS.landmarks[454]
+				val leftMandibularBone = dimFLS.landmarks[58]
+				val rightMandibularBone = dimFLS.landmarks[288]
+				val midChin = dimFLS.landmarks[152]
+				val leftCheeks = listOf(93, 132, 58, 172, 136,150 ,149, 176, 148)
+				val rightCheeks = listOf(323, 361, 288, 397, 365, 379, 378, 400, 377)
+
+				val leftCheeksLm = leftCheeks.map { dimFLS.landmarks[it] }
+				val rightCheeksLm = rightCheeks.map { dimFLS.landmarks[it] }
+				drawSmoothCurve(canvas, leftCheeksLm, redPaint)
+				drawSmoothCurve(canvas, rightCheeksLm, redPaint)
+				val x00 = leftEarFlap.x
+				val y00 = leftEarFlap.y
+				val x01 = rightEarFlap.x
+				val y01 = rightEarFlap.y
+				val x10 = leftMandibularBone.x
+				val y10 = leftMandibularBone.y
+				val x11 = rightMandibularBone.x
+				val y11 = rightMandibularBone.y
+				val x12 = midChin.x
+				val y12 = midChin.y
+
+				drawExtendedLine(canvas, x00, y00, x10, y10, 0f, 0f, orangePaint)
+				drawExtendedLine(canvas, x10, y10, x12, y12, 0f, 0f, orangePaint)
+				drawExtendedLine(canvas, x12, y12, x11, y11, 0f, 0f, orangePaint)
+				drawExtendedLine(canvas, x11, y11, x01, y01, 0f, 0f, orangePaint)
+			}
+
+			if (dim.setedLine.contains(DrawLine.A_SHOULDER)) {
+				val topLm0 = dimFLS.landmarks[11]
+				val bottomLm0 = dimFLS.landmarks[12]
+				val rawData = extractRawData(dim, DrawLine.A_SHOULDER)
+				val nullCheckRawData = if (rawData.isNotEmpty()) rawData[0] else ""
+				val x00 = topLm0.x
+				val y00 = topLm0.y
+				val x01 = bottomLm0.x
+				val y01 = bottomLm0.y
+				drawExtendedLine(canvas, x00, y00, x01, y01, 50f, 50f, whitePaint, )
+			}
+
+			if (dim.setedLine.contains(DrawLine.NECK)) {
+				val topLm0 = dimPLS.landmarks[11]
+				val bottomLm0 = dimPLS.landmarks[12]
+				val rawData = extractRawData(dim, DrawLine.NECK)
+				val nullCheckRawData = if (rawData.isNotEmpty()) rawData[0] else ""
+
+				val middleShoulderX = (topLm0.x + bottomLm0.x) / 2
+				val middleShoulderY = (topLm0.y + bottomLm0.y) / 2
+				val nose = dimFLS.landmarks[1]
+				val x00 = middleShoulderX
+				val y00 = middleShoulderY
+				val x01 = nose.x
+				val y01 = nose.y
+				drawExtendedLine(
+					canvas,
+					x00,
+					y00,
+					x01,
+					y01,
+					0f,
+					100f,
+					whitePaint,
+				) // neck에 대해서 끝 위치
+			}
+
+			if (dim.setedLine.contains(DrawLine.FACE)) {
+				// height
+				val topLm0 = dimFLS.landmarks[152]
+				val bottomLm0 = dimFLS.landmarks[10]
+				val rawData = extractRawData(dim, DrawLine.FACE)
+				val x00 = topLm0.x
+				val y00 = topLm0.y
+				val x01 = bottomLm0.x
+				val y01 = bottomLm0.y
+				drawExtendedLine(
+					canvas,
+					x00,
+					y00,
+					x01,
+					y01,
+					150f,
+					150f,
+					redPaint,
+				)
+
+
+				// width
+				val leftIndex = listOf(162, 127,234, 93, 132, 58, 172, 136)
+				val rightIndex=  listOf(389, 356, 454, 323, 361, 288, 397, 365)
+				val smallestLeft = leftIndex.map { dimFLS.landmarks[it] }.minBy { it.x }
+				val largestRight = rightIndex.map { dimFLS.landmarks[it] }.maxBy { it.x }
+
+				val x10 = smallestLeft.x
+				val y10 = smallestLeft.y
+				val x11 = largestRight.x
+				val y11 = largestRight.y
+				drawExtendedLine(
+					canvas,
+					x10,
+					(y10 + y11) / 2,
+					x11,
+					(y10 + y11) / 2,
+					0f,
+					0f,
+					yellowPaint,
+					lineType = LineType.LENGTH
+				)
+			}
+
+			if (dim.setedLine.contains(DrawLine.A_HORIZON)) {
+				val rawData0 = extractRawData(dim, DrawLine.A_HORIZON)
+				val nullCheckRawData0 = if (rawData0.isNotEmpty()) rawData0[0] else ""
+				val leftLm0 = dimFLS.landmarks[33]
+				val rightLm0 = dimFLS.landmarks[263]
+				val x00 = leftLm0.x
+				val y00 = leftLm0.y
+				val x01 = rightLm0.x
+				val y01 = rightLm0.y
+				drawExtendedLine(
+					canvas,
+					x00,
+					y00,
+					x01,
+					y01,
+					100f,
+					100f,
+					whitePaint,
+				)
+
+
+
+				val nullCheckRawData1 = if (rawData0.isNotEmpty()) rawData0[1] else ""
+				val leftLm1 = dimFLS.landmarks[234]
+				val rightLm1 = dimFLS.landmarks[454]
+				val x10 = leftLm1.x
+				val y10 = leftLm1.y
+				val x11 = rightLm1.x
+				val y11 = rightLm1.y
+				drawExtendedLine(
+					canvas,
+					x10,
+					y10,
+					x11,
+					y11,
+					100f,
+					100f,
+					whitePaint,
+					lineType = LineType.ANGLE
+				)
+
+				val nullCheckRawData2 = if (rawData0.isNotEmpty()) rawData0[2] else ""
+				val leftLm2 = dimFLS.landmarks[61]
+				val rightLm2 = dimFLS.landmarks[291]
+				val x20 = leftLm2.x
+				val y20 = leftLm2.y
+				val x21 = rightLm2.x
+				val y21 = rightLm2.y
+
+				val centerX = (leftLm2.x + rightLm2.x) / 2
+				val centerY = (leftLm2.y + rightLm2.y) / 2
+
+				drawExtendedLine(
+					canvas,
+					centerX,
+					centerY,
+					x20,
+					y20,
+					100f,
+					100f,
+					whitePaint,
+				)
+				drawExtendedLine(canvas, centerX, centerY, x21, y21, 100f, 100f, whitePaint)
+
+
+				val nullCheckRawData3 = if (rawData0.isNotEmpty()) rawData0[3] else ""
+				val topLm0 = dimFLS.landmarks[152]
+				val bottomLm0 = dimFLS.landmarks[152]
+				val x30 = topLm0.x
+				val y30 = topLm0.y
+				val x31 = bottomLm0.x + 1
+				val y31 = bottomLm0.y
+				drawExtendedLine(canvas, x30, y30, x31, y31, 100f, 100f, whitePaint, )
+			}
+
+			// ✅✅✅✅✅✅
+			if (dim.setedLine.contains(DrawLine.EYE)) {
+				val leftLm1 = dimFLS.landmarks[133]
+				val rightLm1 = dimFLS.landmarks[33]
+				val x10 = leftLm1.x
+				val y10 = leftLm1.y
+				val x11 = rightLm1.x
+				val y11 = rightLm1.y
+				val leftLm2 = dimFLS.landmarks[263]
+				val rightLm2 = dimFLS.landmarks[362]
+				val x20 = leftLm2.x
+				val y20 = leftLm2.y
+				val x21 = rightLm2.x
+				val y21 = rightLm2.y
+				drawExtendedLine(canvas, x10, y10, x11, y11, 0f, 0f, redPaint, lineType = LineType.ANGLE)
+				drawExtendedLine(canvas, x20, y20, x21, y21, 0f, 0f, redPaint, lineType = LineType.ANGLE)
+
+				// 왼쪽 눈꺼풀들
+				val leftLm3 = dimFLS.landmarks[33]
+				val rightLm3 = dimFLS.landmarks[130]
+				val x30 = leftLm3.x
+				val y30 = leftLm3.y
+				val x31 = rightLm3.x
+				val y31 = rightLm3.y
+				val leftLm4 = dimFLS.landmarks[243]
+				val rightLm4 = dimFLS.landmarks[133]
+				val x40 = leftLm4.x
+				val y40 = leftLm4.y
+				val x41 = rightLm4.x
+				val y41 = rightLm4.y
+				drawExtendedLine(canvas, x30, y30, x31, y31, 0f, 10f, orangePaint, lineType = LineType.ANGLE)
+				drawExtendedLine(canvas, x40, y40, x41, y41, 0f, 10f, orangePaint, lineType = LineType.ANGLE)
+
+				// 오른쪽 눈꺼풀들
+				val leftLm5 = dimFLS.landmarks[362]
+				val rightLm5 = dimFLS.landmarks[463]
+				val x50 = leftLm5.x
+				val y50 = leftLm5.y
+				val x51 = rightLm5.x
+				val y51 = rightLm5.y
+				val leftLm6 = dimFLS.landmarks[359]
+				val rightLm6 = dimFLS.landmarks[263]
+				val x60 = leftLm6.x
+				val y60 = leftLm6.y
+				val x61 = rightLm6.x
+				val y61 = rightLm6.y
+				drawExtendedLine(canvas, x50, y50, x51, y51, 0f, 10f, orangePaint, lineType = LineType.ANGLE)
+				drawExtendedLine(canvas, x60, y60, x61, y61, 0f, 10f, orangePaint, lineType = LineType.ANGLE)
+
+				// length
+				val leftLm7 = dimFLS.landmarks[133]
+				val rightLm7 = dimFLS.landmarks[33]
+				val x70 = leftLm7.x
+				val y70 = leftLm7.y
+				val x71 = rightLm7.x
+				val y71 = rightLm7.y
+				drawExtendedLine(canvas, x70, ((y70 + y71) / 2) - 5, x71, ((y70 + y71) / 2) - 5, 0f, 0f, yellowPaint, lineType = LineType.LENGTH)
+//			drawExtendedLine(canvas, (x10 + x11) / 2, y10, (x10 + x11) / 2, y11, 0f, 0f, yellowPaint, lineType = LineType.LENGTH)
+				val leftLm8 = dimFLS.landmarks[159]
+				val rightLm8 = dimFLS.landmarks[145]
+				val x80 = leftLm8.x
+				val y80 = leftLm8.y
+				val x81 = rightLm8.x
+				val y81 = rightLm8.y
+//			drawExtendedLine(canvas, x20, (y20 + y21) / 2, x21, (y20 + y21) / 2, 0f, 0f, yellowPaint, lineType = LineType.LENGTH)
+				drawExtendedLine(canvas, (x80 + x81) / 2, y80, (x80 + x81) / 2, y81, 0f, 0f, yellowPaint, lineType = LineType.LENGTH)
+
+				val leftLm9 = dimFLS.landmarks[362]
+				val rightLm9 = dimFLS.landmarks[263]
+				val x90 = leftLm3.x
+				val y90 = leftLm3.y
+				val x91 = rightLm3.x
+				val y91 = rightLm3.y
+				drawExtendedLine(canvas, x90, ((y90 + y91) / 2) - 5, x91, ((y90 + y91) / 2) -5 , 0f, 0f, yellowPaint, lineType = LineType.LENGTH)
+//			drawExtendedLine(canvas, (x30 + x31) / 2, y30, (x30 + x31) / 2, y31, 0f, 0f, yellowPaint, lineType = LineType.LENGTH)
+				val leftLm10 = dimFLS.landmarks[386]
+				val rightLm10 = dimFLS.landmarks[374]
+				val x100 = leftLm10.x
+				val y100 = leftLm10.y
+				val x101 = rightLm10.x
+				val y101 = rightLm10.y
+//			drawExtendedLine(canvas, x40, (y40 + y41) / 2, x41, (y40 + y41) / 2, 0f, 0f, yellowPaint, lineType = LineType.LENGTH)
+				drawExtendedLine(canvas, (x100 + x101) / 2, y100, (x100 + x101) / 2, y101, 0f, 0f, yellowPaint, lineType = LineType.LENGTH)
+
+
+			}
+			if (dim.setedLine.contains(DrawLine.L_CORNEA)) {
+				val rawData = extractRawData(dim, DrawLine.L_CORNEA)
+				val nullCheckRawData = if (rawData.isNotEmpty()) rawData[0] else ""
+				val leftLm0 = dimFLS.landmarks[470]
+				val rightLm0 = dimFLS.landmarks[472]
+				val x00 = leftLm0.x
+				val y00 = leftLm0.y
+				val x01 = rightLm0.x
+				val y01 = rightLm0.y
+				val leftLm1 = dimFLS.landmarks[475]
+				val rightLm1 = dimFLS.landmarks[477]
+				val x10 = leftLm1.x
+				val y10 = leftLm1.y
+				val x11 = rightLm1.x
+				val y11 = rightLm1.y
+				drawExtendedLine(
+					canvas,
+					x00 + 5,
+					y00,
+					x01 + 5 ,
+					y01,
+					0f,
+					0f,
+					redPaint,
+					lineType = LineType.LENGTH
+				)
+				drawExtendedLine(
+					canvas,
+					x10,
+					y10,
+					x11,
+					y11,
+					0f,
+					0f,
+					redPaint,
+					lineType = LineType.LENGTH
+				)
+			}
+
+			if (dim.setedLine.contains(DrawLine.EYEBROW)) {
+				val rawData = extractRawData(dim, DrawLine.EYEBROW)
+				val nullCheckRawData = if (rawData.isNotEmpty()) rawData[0] else ""
+				val leftLm00 = dimFLS.landmarks[55]
+				val leftLm01 = dimFLS.landmarks[107]
+				val leftLm10 = dimFLS.landmarks[52]
+				val leftLm11 = dimFLS.landmarks[105]
+
+				val x000 = leftLm00.x
+				val y000 = leftLm00.y
+				val x001 = leftLm01.x
+				val y001 = leftLm01.y
+
+				val x010 = leftLm10.x
+				val y010 = leftLm10.y
+				val x011 = leftLm11.x
+				val y011 = leftLm11.y
+				val centerX00 = (x000 + x001) / 2
+				val centerY00 = (y000 + y001) / 2
+				val centerX01 = (x010 + x011) / 2
+				val centerY01 = (y010 + y011) / 2
+				drawExtendedLine(
+					canvas,
+					centerX00,
+					centerY00,
+					centerX01,
+					centerY01,
+					0f,
+					0f,
+					redPaint,
+					lineType = LineType.ANGLE
+				)
+
+				val rightLm00 = dimFLS.landmarks[285]
+				val rightLm01 = dimFLS.landmarks[336]
+				val rightLm10 = dimFLS.landmarks[282]
+				val rightLm11 = dimFLS.landmarks[334]
+
+				val x100 = rightLm00.x
+				val y100 = rightLm00.y
+				val x101 = rightLm01.x
+				val y101 = rightLm01.y
+				val x110 = rightLm10.x
+				val y110 = rightLm10.y
+				val x111 = rightLm11.x
+				val y111 = rightLm11.y
+				val centerX10 = (x100 + x101) / 2
+				val centerY10 = (y100 + y101) / 2
+				val centerX11 = (x110 + x111) / 2
+				val centerY11 = (y110 + y111) / 2
+
+				drawExtendedLine(canvas,
+					centerX10,
+					centerY10,
+					centerX11,
+					centerY11,
+					0f,
+					0f,
+					redPaint,
+					lineType = LineType.ANGLE
+				)
+
+
+				val leftLm0 = dimFLS.landmarks[55]
+				val rightLm0 = dimFLS.landmarks[107]
+				val x00 = leftLm0.x
+				val y00 = leftLm0.y
+				val x01 = rightLm0.x
+				val y01 = rightLm0.y
+				val leftLm1 = dimFLS.landmarks[52]
+				val rightLm1 = dimFLS.landmarks[105]
+				val x10 = leftLm1.x
+				val y10 = leftLm1.y
+				val x11 = rightLm1.x
+				val y11 = rightLm1.y
+				val leftLm2 = dimFLS.landmarks[46]
+				val rightLm2 = dimFLS.landmarks[70]
+				val x20 = leftLm2.x
+				val y20 = leftLm2.y
+				val x21 = rightLm2.x
+				val y21 = rightLm2.y
+
+				drawExtendedLine(
+					canvas,
+					x00,
+					y00,
+					x01,
+					y01,
+					0f,
+					0f,
+					yellowPaint,
+					lineType = LineType.LENGTH
+				)
+				drawExtendedLine(
+					canvas,
+					x10,
+					y10,
+					x11,
+					y11,
+					0f,
+					0f,
+					yellowPaint,
+					lineType = LineType.LENGTH
+				)
+				drawExtendedLine(
+					canvas,
+					x20,
+					y20,
+					x21,
+					y21,
+					0f,
+					0f,
+					yellowPaint,
+					lineType = LineType.LENGTH
+				)
+
+				//👉👉👉👉👉👉👉👉👉👉👉👉👉👉👉👉
+				val leftLm3 = dimFLS.landmarks[285]
+				val rightLm3 = dimFLS.landmarks[336]
+				val x30 = leftLm3.x
+				val y30 = leftLm3.y
+				val x31 = rightLm3.x
+				val y31 = rightLm3.y
+				val leftLm4 = dimFLS.landmarks[282]
+				val rightLm4 = dimFLS.landmarks[334]
+				val x40 = leftLm4.x
+				val y40 = leftLm4.y
+				val x41 = rightLm4.x
+				val y41 = rightLm4.y
+				val leftLm5 = dimFLS.landmarks[276]
+				val rightLm5 = dimFLS.landmarks[300]
+				val x50 = leftLm5.x
+				val y50 = leftLm5.y
+				val x51 = rightLm5.x
+				val y51 = rightLm5.y
+
+				drawExtendedLine(
+					canvas,
+					x30,
+					y30,
+					x31,
+					y31,
+					0f,
+					0f,
+					yellowPaint,
+					lineType = LineType.LENGTH
+				)
+				drawExtendedLine(
+					canvas,
+					x40,
+					y40,
+					x41,
+					y41,
+					0f,
+					0f,
+					yellowPaint,
+					lineType = LineType.LENGTH
+				)
+				drawExtendedLine(
+					canvas,
+					x50,
+					y50,
+					x51,
+					y51,
+					0f,
+					0f,
+					yellowPaint,
+					lineType = LineType.LENGTH
+				)
+			}
+
+
+			if (dim.setedLine.contains(DrawLine.NOSE)) {
+				val rawData = extractRawData(dim, DrawLine.NOSE)
+				val nullCheckRawData = if (rawData.isNotEmpty()) rawData[0] else ""
+				val leftLm0 = dimFLS.landmarks[220]
+				val rightLm0 = dimFLS.landmarks[48]
+				val x00 = leftLm0.x
+				val y00 = leftLm0.y
+				val x01 = rightLm0.x
+				val y01 = rightLm0.y
+				val leftLm1 = dimFLS.landmarks[278]
+				val rightLm1 = dimFLS.landmarks[440]
+				val x10 = leftLm1.x
+				val y10 = leftLm1.y
+				val x11 = rightLm1.x
+				val y11 = leftLm1.y
+				val leftLm2 = dimFLS.landmarks[440]
+				val rightLm2 = dimFLS.landmarks[220]
+				val x20 = leftLm2.x
+				val y20 = leftLm2.y
+				val x21 = rightLm2.x
+				val y21 = rightLm2.y
+
+				drawExtendedLine(
+					canvas,
+					x00,
+					((y20+ y21) / 2) + 50,
+					x01,
+					((y20+ y21) / 2) + 50,
+					0f,
+					0f,
+					redPaint,
+					lineType = LineType.ANGLE
+				)
+				drawExtendedLine(
+					canvas,
+					x10,
+					((y20+ y21) / 2) + 50,
+					x11,
+					((y20+ y21) / 2) + 50,
+					0f,
+					0f,
+					redPaint,
+					lineType = LineType.ANGLE
+				)
+				drawExtendedLine(
+					canvas,
+					x20,
+					((y20+ y21) / 2) + 30,
+					x21,
+					((y20+ y21) / 2) + 30,
+					0f,
+					0f,
+					redPaint,
+					lineType = LineType.ANGLE
+				)
+
+				val leftLm3 = dimFLS.landmarks[168]
+				val rightLm3 = dimFLS.landmarks[2]
+				val x30 = leftLm3.x
+				val y30 = leftLm3.y
+				val x31 = rightLm3.x
+				val y31 = rightLm3.y
+				val leftLm4 = dimFLS.landmarks[278]
+				val rightLm4 = dimFLS.landmarks[48]
+				val x40 = leftLm4.x
+				val y40 = leftLm4.y
+				val x41 = rightLm4.x
+				val y41 = rightLm4.y
+				drawExtendedLine(
+					canvas,
+					x30,
+					y30,
+					x31,
+					y31,
+					0f,
+					0f,
+					yellowPaint,
+					lineType = LineType.LENGTH
+				)
+				drawExtendedLine(
+					canvas,
+					x40,
+					y40,
+					x41,
+					y41,
+					0f,
+					0f,
+					yellowPaint,
+					lineType = LineType.LENGTH
+				)
+			}
+
+			if (dim.setedLine.contains(DrawLine.A_CANTHUS_ORAL)) {
+				val topLm0 = dimFLS.landmarks[33]
+				val bottomLm0 = dimFLS.landmarks[61]
+				val x00 = topLm0.x
+				val y00 = topLm0.y
+				val x01 = bottomLm0.x + 1
+				val y01 = bottomLm0.y
+				drawExtendedLine(canvas, x00, y00, x01, y01, 0f, 100f, whitePaint)
+
+				val topLm1 = dimFLS.landmarks[263]
+				val bottomLm1 = dimFLS.landmarks[291]
+				val x10 = topLm1.x
+				val y10 = topLm1.y
+				val x11 = bottomLm1.x
+				val y11 = bottomLm1.y
+				drawExtendedLine(canvas, x10, y10, x11, y11, 0f, 100f, whitePaint)
+			}
+			if (dim.setedLine.contains(DrawLine.A_ALAR_ORAL)) {
+				val topLm0 = dimFLS.landmarks[64]
+				val bottomLm0 = dimFLS.landmarks[61]
+				val x00 = topLm0.x
+				val y00 = topLm0.y
+				val x01 = bottomLm0.x + 1
+				val y01 = bottomLm0.y
+				drawExtendedLine(canvas, x00, y00, x01, y01, 0f, 0f, redPaint, lineType = LineType.ANGLE)
+
+				val topLm1 = dimFLS.landmarks[294]
+				val bottomLm1 = dimFLS.landmarks[291]
+				val x10 = topLm1.x
+				val y10 = topLm1.y
+				val x11 = bottomLm1.x
+				val y11 = bottomLm1.y
+				drawExtendedLine(canvas, x10, y10, x11, y11, 0f, 0f, redPaint, lineType = LineType.ANGLE)
+			}
+			if (dim.setedLine.contains(DrawLine.A_SIDE_HEAD)) {
+				val leftTop = dimFLS.landmarks[156]
+				val leftMid = dimFLS.landmarks[143]
+				val leftBottom = dimFLS.landmarks[111]
+				val x00 = leftTop.x
+				val y00 = leftTop.y
+				val x01 = leftMid.x
+				val y01 = leftMid.y
+				val x02 = leftBottom.x
+				val y02 = leftBottom.y
+				drawExtendedLine(canvas, x00, y00, x01, y01, 0f, 0f, whitePaint)
+				drawExtendedLine(canvas, x01, y01, x02, y02, 0f, 0f, whitePaint)
+
+				val rightTop = dimFLS.landmarks[383]
+				val rightMid = dimFLS.landmarks[372]
+				val rightBottom = dimFLS.landmarks[340]
+				val x10 = rightTop.x
+				val y10 = rightTop.y
+				val x11 = rightMid.x
+				val y11 = rightMid.y
+				val x22 = rightBottom.x
+				val y22 = rightBottom.y
+				drawExtendedLine(canvas, x10, y10, x11, y11, 0f, 0f, whitePaint)
+				drawExtendedLine(canvas, x11, y11, x22, y22, 0f, 0f, whitePaint)
+			}
+
+			if (dim.setedLine.contains(DrawLine.E_CHEEKS)) {
+				val cheekPath0 = Path()
+				leftCheekIndex.forEachIndexed { i, landmarkIndex ->
+					val landmark = dimFLS.landmarks[landmarkIndex]
+					val x = landmark.x
+					val y = landmark.y
+
+					if (i == 0) {
+						cheekPath0.moveTo(x, y) // 시작점
+					} else {
+						cheekPath0.lineTo(x, y) // 선 연결
+					}
+				}
+				canvas.drawPath(cheekPath0, orangeAlphaPaint)
+
+
+				val cheekPath1 = Path()
+				rightCheekIndex.forEachIndexed { i, landmarkIndex ->
+					val landmark = dimFLS.landmarks[landmarkIndex]
+					val x = landmark.x
+					val y = landmark.y
+
+					if (i == 0) {
+						cheekPath1.moveTo(x, y) // 시작점
+					} else {
+						cheekPath1.lineTo(x, y) // 선 연결
+					}
+				}
+				canvas.drawPath(cheekPath1, orangeAlphaPaint)
+			}
+			if (dim.setedLine.contains(DrawLine.E_CHEEKBONE)) {
+				val cheekBonePath0 = Path()
+				leftCheekBoneIndex.forEachIndexed { i, landmarkIndex ->
+					val landmark = dimFLS.landmarks[landmarkIndex]
+					val x = landmark.x
+					val y = landmark.y
+
+					if (i == 0) {
+						cheekBonePath0.moveTo(x, y) // 시작점
+					} else {
+						cheekBonePath0.lineTo(x, y) // 선 연결
+					}
+				}
+				canvas.drawPath(cheekBonePath0, orangeAlphaPaint)
+
+				val cheekBonePath1 = Path()
+				rightCheekBoneIndex.forEachIndexed { i, landmarkIndex ->
+					val landmark = dimFLS.landmarks[landmarkIndex]
+					val x = landmark.x
+					val y = landmark.y
+
+					if (i == 0) {
+						cheekBonePath1.moveTo(x, y) // 시작점
+					} else {
+						cheekBonePath1.lineTo(x, y) // 선 연결
+					}
+				}
+				canvas.drawPath(cheekBonePath1, orangeAlphaPaint)
+			}
+
+			if (dim.setedLine.contains(DrawLine.MOUSE)) {
+				// 입꼬리 각도
+				val midLm = dimFLS.landmarks[13]
+				val topLm0 = dimFLS.landmarks[61]
+				val bottomLm0 = dimFLS.landmarks[291]
+				val rawData = extractRawData(dim, DrawLine.MOUSE)
+				val nullCheckRawData = if (rawData.isNotEmpty()) rawData[0] else ""
+				val x0 = midLm.x
+				val y0 = midLm.y
+				val x00 = topLm0.x
+				val y00 = topLm0.y
+				val x01 = bottomLm0.x
+				val y01 = bottomLm0.y
+				drawExtendedLine(
+					canvas,
+					x0,
+					y0,
+					x00,
+					y00,
+					0f,
+					25f,
+					redPaint,
+					lineType = LineType.ANGLE
+				)
+				drawExtendedLine(
+					canvas,
+					x0,
+					y0,
+					x01,
+					y01,
+					0f,
+					25f,
+					redPaint,
+					lineType = LineType.ANGLE
+				)
+
+				// 입술 너비
+				drawExtendedLine(
+					canvas,
+					x00,
+					y00 - 10,
+					x01,
+					y01 - 10,
+					0f,
+					0f,
+					yellowPaint,
+					lineType = LineType.LENGTH
+				)
+
+				val topLm2 = dimFLS.landmarks[2]
+				val bottomLm2 = dimFLS.landmarks[0]
+				val x20 = topLm2.x
+				val y20 = topLm2.y
+				val x21 = bottomLm2.x
+				val y21 = bottomLm2.y
+				drawExtendedLine(
+					canvas,
+					x20,
+					y20,
+					x21,
+					y21,
+					0f,
+					0f,
+					yellowPaint,
+					lineType = LineType.LENGTH
+				)
+
+				// 윗입술 아랫입술 높이
+				val topLm3 = dimFLS.landmarks[0]
+				val bottomLm3 = dimFLS.landmarks[13]
+				val x30 = topLm3.x
+				val y30 = topLm3.y
+				val x31 = bottomLm3.x
+				val y31 = bottomLm3.y
+				drawExtendedLine(
+					canvas,
+					x30 + 10,
+					y30,
+					x30 + 10,
+					y31,
+					0f,
+					0f,
+					yellowPaint,
+					lineType = LineType.LENGTH
+				)
+
+				// 윗입술 아랫입술 높이
+				val topLm4 = dimFLS.landmarks[14]
+				val bottomLm4 = dimFLS.landmarks[17]
+				val x40 = topLm4.x
+				val y40 = topLm4.y
+				val x41 = bottomLm4.x
+				val y41 = bottomLm4.y
+				drawExtendedLine(
+					canvas,
+					x40 + 10,
+					y40,
+					x40 + 10,
+					y41,
+					0f,
+					0f,
+					yellowPaint,
+					lineType = LineType.LENGTH
+				)
+
+			}
+
+			// ----------------------------------# 목 폄 상태 #--------------------------------------
+			if (dim.setedLine.contains(DrawLine.A_FACIAL_AXIS)) {
+				val rawData = extractRawData(dim, DrawLine.A_FACIAL_AXIS)
+				val nullCheckRawData = if (rawData.isNotEmpty()) rawData[0] else ""
+				val lm0 = dimFLS.landmarks[168]
+				val lm1= dimFLS.landmarks[2]
+				val lm2 = dimFLS.landmarks[152]
+				val x0 = lm0.x
+				val y0 = lm0.y
+				val x1 = lm1.x
+				val y1 = lm1.y
+				val x2 = lm2.x
+				val y2 = lm2.y
+
+				drawExtendedLine(
+					canvas,
+					x0,
+					y0,
+					x1,
+					y1,
+					0f,
+					0f,
+					greenPaint,
+					lineType = LineType.ANGLE
+				)
+				drawExtendedLine(
+					canvas,
+					x1,
+					y1,
+					x2,
+					y2,
+					0f,
+					0f,
+					greenPaint,
+					lineType = LineType.ANGLE
+				)
+			}
+
+
+
+
+			// ----------------------------------# 비율 계산기 #------------------------------------
+			if ( dim.setedLine.contains(DrawLine.A_RATIO_VERTI)) {
+
+				val leftFace = listOf(21, 162, 127, 234, 93, 132, 58)
+				val rightFace = listOf(251, 390, 356, 454, 323, 361)
+
+				val minLeftIndex = leftFace.maxByOrNull { index -> dimFLS.landmarks[index].x }
+				val minRightIndex = rightFace.minByOrNull { index -> dimFLS.landmarks[index].x }
+				val leftLm = minLeftIndex?.let { dimFLS.landmarks[it] }
+				val rightLm = minRightIndex?.let { dimFLS.landmarks[it] }
+				val x0 = leftLm?.x ?: 0f
+				val y0 = leftLm?.y ?: 0f
+
+				val x1 = rightLm?.x ?: 0f
+				val y1 = rightLm?.y ?: 0f
+				val leftEyeStart = dimFLS.landmarks[130]
+				val leftEyeEnd = dimFLS.landmarks[133]
+
+				val rightEyeStart = dimFLS.landmarks[362]
+				val rightEyeEnd = dimFLS.landmarks[359]
+
+				val x2 = leftEyeStart.x
+				val y2 = leftEyeStart.y
+				val x3 = leftEyeEnd.x
+				val y3 = leftEyeEnd.y
+				val x4 = rightEyeStart.x
+				val y4 = rightEyeStart.y
+				val x5 = rightEyeEnd.x
+				val y5 = rightEyeEnd.y
+
+				drawExtendedLine(canvas, x0, y2, x0, y2 + 1, 400f, 400f, greenPaint)
+				drawExtendedLine(canvas, x1, y2, x1, y2 + 1, 400f, 400f, greenPaint)
+				drawExtendedLine(canvas, x2, y2, x2, y2 + 1, 400f, 400f, greenPaint)
+				drawExtendedLine(canvas, x3, y2, x3, y2 + 1, 400f, 400f, greenPaint)
+				drawExtendedLine(canvas, x4, y2, x4, y2 + 1, 400f, 400f, greenPaint)
+				drawExtendedLine(canvas, x5, y2, x5, y2 + 1, 400f, 400f, greenPaint)
+			}
+
+
+			if (dim.setedLine.contains(DrawLine.A_RATIO_HORIZON)) {
+
+				val glabella = dimFLS.landmarks[8]
+				val subNazale = dimFLS.landmarks[2]
+//					val centerTopLips = dimFLS.landmarks[13]
+				val menton = dimFLS.landmarks[152]
+
+				val x0 = glabella.x
+				val y0 = glabella.y
+
+				val x1 = subNazale.x
+				val y1 = subNazale.y
+
+//					val x2 = centerTopLips.x
+//					val y2 = centerTopLips.y
+
+				val x3 = menton.x
+				val y4 = menton.y
+
+				val hairLine = dim.lms.hairLineLandmarks
+				Log.v("hairLine", "notExtract: ${hairLine}")
+				if (hairLine != null && hairLine.size == 7) {
+					drawExtendedLine(canvas, x1, hairLine[3].second, x1 + 1, hairLine[3].second, 300f, 300f, redPaint)
+					hairLine.forEach { point ->
+						canvas.drawCircle(point.first, point.second, 1f, yellowPaint)
+					}
+				}
+				drawExtendedLine(canvas, x1, y0, x1 + 1, y0, 300f, 300f, redPaint)
+				drawExtendedLine(canvas, x1, y1, x1 + 1, y1, 300f, 300f, redPaint)
+				drawExtendedLine(canvas, x1, y4, x1 + 1, y4, 300f, 300f, redPaint)
+			}
+		}
 //			if (dim.setedLine.isEmpty()) {
 //				// ----------# 얼굴 외곽 선 #----------
 //				if (dim.seq !in listOf(Sequence.SIDE_LEFT, Sequence.SIDE_RIGHT)) {
@@ -613,889 +1560,100 @@ object BitmapUtility {
 //				}
 //			}
 // ------------------------------# 선택에 따라 바로 그리기 #----------------------------------
-		if (dim.setedLine.contains(DrawLine.A_SHOULDER)) {
-			val topLm0 = dimFLS.landmarks[11]
-			val bottomLm0 = dimFLS.landmarks[12]
-			val rawData = extractRawData(dim, DrawLine.A_SHOULDER)
-			val nullCheckRawData = if (rawData.isNotEmpty()) rawData[0] else ""
-			val x00 = topLm0.x
-			val y00 = topLm0.y
-			val x01 = bottomLm0.x
-			val y01 = bottomLm0.y
-			drawExtendedLine(canvas, x00, y00, x01, y01, 50f, 50f, whitePaint, nullCheckRawData)
-
-		}
-
-		if (dim.setedLine.contains(DrawLine.A_NECK)) {
-			val topLm0 = dimPLS.landmarks[11]
-			val bottomLm0 = dimPLS.landmarks[12]
-			val rawData = extractRawData(dim, DrawLine.A_NECK)
-			val nullCheckRawData = if (rawData.isNotEmpty()) rawData[0] else ""
-
-			val middleShoulderX = (topLm0.x + bottomLm0.x) / 2
-			val middleShoulderY = (topLm0.y + bottomLm0.y) / 2
-			val nose = dimFLS.landmarks[1]
-			val x00 = middleShoulderX
-			val y00 = middleShoulderY
-			val x01 = nose.x
-			val y01 = nose.y
-			drawExtendedLine(
-				canvas,
-				x00,
-				y00,
-				x01,
-				y01,
-				0f,
-				100f,
-				whitePaint,
-				nullCheckRawData,
-				0
-			) // neck에 대해서 끝 위치
-		}
-
-		if (dim.setedLine.contains(DrawLine.A_FACE)) {
-			val topLm0 = dimFLS.landmarks[152]
-			val bottomLm0 = dimFLS.landmarks[10]
-			val rawData = extractRawData(dim, DrawLine.A_FACE)
-			val nullCheckRawData = if (rawData.isNotEmpty()) rawData[0] else ""
-			val x00 = topLm0.x
-			val y00 = topLm0.y
-			val x01 = bottomLm0.x
-			val y01 = bottomLm0.y
-			drawExtendedLine(
-				canvas,
-				x00,
-				y00,
-				x01,
-				y01,
-				150f,
-				150f,
-				redPaint,
-				nullCheckRawData
-			)
-		}
-
-
-		if (dim.setedLine.contains(DrawLine.L_EYE)) {
-
-			val leftLm1 = dimFLS.landmarks[133]
-			val rightLm1 = dimFLS.landmarks[33]
-			val x10 = leftLm1.x
-			val y10 = leftLm1.y
-			val x11 = rightLm1.x
-			val y11 = rightLm1.y
-			drawExtendedLine(canvas, x10, ((y10 + y11) / 2) - 5, x11, ((y10 + y11) / 2) - 5, 0f, 0f, yellowPaint, lineType = LineType.LENGTH)
-//			drawExtendedLine(canvas, (x10 + x11) / 2, y10, (x10 + x11) / 2, y11, 0f, 0f, yellowPaint, lineType = LineType.LENGTH)
-			val leftLm2 = dimFLS.landmarks[159]
-			val rightLm2 = dimFLS.landmarks[145]
-			val x20 = leftLm2.x
-			val y20 = leftLm2.y
-			val x21 = rightLm2.x
-			val y21 = rightLm2.y
-//			drawExtendedLine(canvas, x20, (y20 + y21) / 2, x21, (y20 + y21) / 2, 0f, 0f, yellowPaint, lineType = LineType.LENGTH)
-			drawExtendedLine(canvas, (x20 + x21) / 2, y20, (x20 + x21) / 2, y21, 0f, 0f, yellowPaint, lineType = LineType.LENGTH)
-
-			val leftLm3 = dimFLS.landmarks[362]
-			val rightLm3 = dimFLS.landmarks[263]
-			val x30 = leftLm3.x
-			val y30 = leftLm3.y
-			val x31 = rightLm3.x
-			val y31 = rightLm3.y
-			drawExtendedLine(canvas, x30, ((y30 + y31) / 2) - 5, x31, ((y30 + y31) / 2) -5 , 0f, 0f, yellowPaint, lineType = LineType.LENGTH)
-//			drawExtendedLine(canvas, (x30 + x31) / 2, y30, (x30 + x31) / 2, y31, 0f, 0f, yellowPaint, lineType = LineType.LENGTH)
-			val leftLm4 = dimFLS.landmarks[386]
-			val rightLm4 = dimFLS.landmarks[374]
-			val x40 = leftLm4.x
-			val y40 = leftLm4.y
-			val x41 = rightLm4.x
-			val y41 = rightLm4.y
-//			drawExtendedLine(canvas, x40, (y40 + y41) / 2, x41, (y40 + y41) / 2, 0f, 0f, yellowPaint, lineType = LineType.LENGTH)
-			drawExtendedLine(canvas, (x40 + x41) / 2, y40, (x40 + x41) / 2, y41, 0f, 0f, yellowPaint, lineType = LineType.LENGTH)
-		}
-
-		if (dim.setedLine.contains(DrawLine.A_HORIZON)) {
-			val rawData0 = extractRawData(dim, DrawLine.A_EYE)
-			val nullCheckRawData0 = if (rawData0.isNotEmpty()) rawData0[0] else ""
-			val leftLm0 = dimFLS.landmarks[33]
-			val rightLm0 = dimFLS.landmarks[263]
-			val x00 = leftLm0.x
-			val y00 = leftLm0.y
-			val x01 = rightLm0.x
-			val y01 = rightLm0.y
-			drawExtendedLine(
-				canvas,
-				x00,
-				y00,
-				x01,
-				y01,
-				100f,
-				100f,
-				whitePaint,
-				nullCheckRawData0,
-				0
-			)
-
-
-			val rawData1 = extractRawData(dim, DrawLine.A_EARFLAP)
-			val nullCheckRawData1 = if (rawData1.isNotEmpty()) rawData1[0] else ""
-			val leftLm1 = dimFLS.landmarks[234]
-			val rightLm1 = dimFLS.landmarks[454]
-			val x10 = leftLm1.x
-			val y10 = leftLm1.y
-			val x11 = rightLm1.x
-			val y11 = rightLm1.y
-			drawExtendedLine(
-				canvas,
-				x10,
-				y10,
-				x11,
-				y11,
-				100f,
-				100f,
-				whitePaint,
-				nullCheckRawData1,
-				lineType = LineType.ANGLE
-			)
-
-			val rawData2 = extractRawData(dim, DrawLine.A_TIP_OF_LIPS)
-			val nullCheckRawData2 = if (rawData2.isNotEmpty()) rawData2[0] else ""
-			val leftLm2 = dimFLS.landmarks[61]
-			val rightLm2 = dimFLS.landmarks[291]
-			val x20 = leftLm2.x
-			val y20 = leftLm2.y
-			val x21 = rightLm2.x
-			val y21 = rightLm2.y
-
-			val centerX = (leftLm2.x + rightLm2.x) / 2
-			val centerY = (leftLm2.y + rightLm2.y) / 2
-
-			drawExtendedLine(
-				canvas,
-				centerX,
-				centerY,
-				x20,
-				y20,
-				100f,
-				100f,
-				whitePaint,
-				nullCheckRawData2
-			)
-			drawExtendedLine(canvas, centerX, centerY, x21, y21, 100f, 100f, whitePaint)
-
-			val rawData3 = extractRawData(dim, DrawLine.A_CHIN)
-			val nullCheckRawData3 = if (rawData3.isNotEmpty()) rawData3[0] else ""
-			val topLm0 = dimFLS.landmarks[152]
-			val bottomLm0 = dimFLS.landmarks[152]
-			val x30 = topLm0.x
-			val y30 = topLm0.y
-			val x31 = bottomLm0.x + 1
-			val y31 = bottomLm0.y
-			drawExtendedLine(canvas, x30, y30, x31, y31, 100f, 100f, whitePaint, nullCheckRawData3)
-
-
-		}
-
-
-		// ✅✅✅✅✅✅
-		if (dim.setedLine.contains(DrawLine.A_EYE)) {
-
-			val leftLm1 = dimFLS.landmarks[133]
-			val rightLm1 = dimFLS.landmarks[33]
-			val x10 = leftLm1.x
-			val y10 = leftLm1.y
-			val x11 = rightLm1.x
-			val y11 = rightLm1.y
-			val leftLm2 = dimFLS.landmarks[263]
-			val rightLm2 = dimFLS.landmarks[362]
-			val x20 = leftLm2.x
-			val y20 = leftLm2.y
-			val x21 = rightLm2.x
-			val y21 = rightLm2.y
-			drawExtendedLine(canvas, x10, y10, x11, y11, 0f, 0f, redPaint, lineType = LineType.ANGLE)
-			drawExtendedLine(canvas, x20, y20, x21, y21, 0f, 0f, redPaint, lineType = LineType.ANGLE)
-
-
-			// 왼쪽 눈꺼풀들
-			val leftLm3 = dimFLS.landmarks[33]
-			val rightLm3 = dimFLS.landmarks[130]
-			val x30 = leftLm3.x
-			val y30 = leftLm3.y
-			val x31 = rightLm3.x
-			val y31 = rightLm3.y
-			val leftLm4 = dimFLS.landmarks[243]
-			val rightLm4 = dimFLS.landmarks[133]
-			val x40 = leftLm4.x
-			val y40 = leftLm4.y
-			val x41 = rightLm4.x
-			val y41 = rightLm4.y
-			drawExtendedLine(canvas, x30, y30, x31, y31, 0f, 0f, redPaint, lineType = LineType.ANGLE)
-			drawExtendedLine(canvas, x40, y40, x41, y41, 0f, 0f, redPaint, lineType = LineType.ANGLE)
-
-			// 오른쪽 눈꺼풀들
-			val leftLm5 = dimFLS.landmarks[362]
-			val rightLm5 = dimFLS.landmarks[463]
-			val x50 = leftLm5.x
-			val y50 = leftLm5.y
-			val x51 = rightLm5.x
-			val y51 = rightLm5.y
-			val leftLm6 = dimFLS.landmarks[359]
-			val rightLm6 = dimFLS.landmarks[263]
-			val x60 = leftLm6.x
-			val y60 = leftLm6.y
-			val x61 = rightLm6.x
-			val y61 = rightLm6.y
-			drawExtendedLine(canvas, x50, y50, x51, y51, 0f, 0f, redPaint, lineType = LineType.ANGLE)
-			drawExtendedLine(canvas, x60, y60, x61, y61, 0f, 0f, redPaint, lineType = LineType.ANGLE)
-		}
-		if (dim.setedLine.contains(DrawLine.L_CORNEA)) {
-			val rawData = extractRawData(dim, DrawLine.L_CORNEA)
-			val nullCheckRawData = if (rawData.isNotEmpty()) rawData[0] else ""
-			val leftLm0 = dimFLS.landmarks[470]
-			val rightLm0 = dimFLS.landmarks[472]
-			val x00 = leftLm0.x
-			val y00 = leftLm0.y
-			val x01 = rightLm0.x
-			val y01 = rightLm0.y
-			val leftLm1 = dimFLS.landmarks[475]
-			val rightLm1 = dimFLS.landmarks[477]
-			val x10 = leftLm1.x
-			val y10 = leftLm1.y
-			val x11 = rightLm1.x
-			val y11 = rightLm1.y
-			drawExtendedLine(
-				canvas,
-				x00 + 5,
-				y00,
-				x01 + 5 ,
-				y01,
-				0f,
-				0f,
-				redPaint,
-				nullCheckRawData,
-				0,
-				lineType = LineType.LENGTH
-			)
-			drawExtendedLine(
-				canvas,
-				x10,
-				y10,
-				x11,
-				y11,
-				0f,
-				0f,
-				redPaint,
-				nullCheckRawData,
-				0,
-				lineType = LineType.LENGTH
-			)
-		}
-
-		if (dim.setedLine.contains(DrawLine.A_EYEBROW)) {
-			val rawData = extractRawData(dim, DrawLine.A_EYEBROW)
-			val nullCheckRawData = if (rawData.isNotEmpty()) rawData[0] else ""
-			val leftLm00 = dimFLS.landmarks[55]
-			val leftLm01 = dimFLS.landmarks[107]
-			val leftLm10 = dimFLS.landmarks[52]
-			val leftLm11 = dimFLS.landmarks[105]
-
-			val x000 = leftLm00.x
-			val y000 = leftLm00.y
-			val x001 = leftLm01.x
-			val y001 = leftLm01.y
-
-			val x010 = leftLm10.x
-			val y010 = leftLm10.y
-			val x011 = leftLm11.x
-			val y011 = leftLm11.y
-			val centerX00 = (x000 + x001) / 2
-			val centerY00 = (y000 + y001) / 2
-			val centerX01 = (x010 + x011) / 2
-			val centerY01 = (y010 + y011) / 2
-			drawExtendedLine(
-				canvas,
-				centerX00,
-				centerY00,
-				centerX01,
-				centerY01,
-				0f,
-				0f,
-				redPaint,
-				nullCheckRawData,
-				lineType = LineType.ANGLE
-			)
-
-			val rightLm00 = dimFLS.landmarks[285]
-			val rightLm01 = dimFLS.landmarks[336]
-			val rightLm10 = dimFLS.landmarks[282]
-			val rightLm11 = dimFLS.landmarks[334]
-
-			val x100 = rightLm00.x
-			val y100 = rightLm00.y
-			val x101 = rightLm01.x
-			val y101 = rightLm01.y
-			val x110 = rightLm10.x
-			val y110 = rightLm10.y
-			val x111 = rightLm11.x
-			val y111 = rightLm11.y
-			val centerX10 = (x100 + x101) / 2
-			val centerY10 = (y100 + y101) / 2
-			val centerX11 = (x110 + x111) / 2
-			val centerY11 = (y110 + y111) / 2
-
-			drawExtendedLine(canvas,
-				centerX10,
-				centerY10,
-				centerX11,
-				centerY11,
-				0f,
-				0f,
-				redPaint,
-				lineType = LineType.ANGLE
-			)
-		}
-
-		if (dim.setedLine.contains(DrawLine.L_EYEBROW)) {
-			val rawData = extractRawData(dim, DrawLine.L_EYEBROW)
-			val nullCheckRawData = if (rawData.isNotEmpty()) rawData[0] else ""
-			val leftLm0 = dimFLS.landmarks[55]
-			val rightLm0 = dimFLS.landmarks[107]
-			val x00 = leftLm0.x
-			val y00 = leftLm0.y
-			val x01 = rightLm0.x
-			val y01 = rightLm0.y
-			val leftLm1 = dimFLS.landmarks[52]
-			val rightLm1 = dimFLS.landmarks[105]
-			val x10 = leftLm1.x
-			val y10 = leftLm1.y
-			val x11 = rightLm1.x
-			val y11 = rightLm1.y
-			val leftLm2 = dimFLS.landmarks[46]
-			val rightLm2 = dimFLS.landmarks[70]
-			val x20 = leftLm2.x
-			val y20 = leftLm2.y
-			val x21 = rightLm2.x
-			val y21 = rightLm2.y
-
-			drawExtendedLine(
-				canvas,
-				x00,
-				y00,
-				x01,
-				y01,
-				0f,
-				0f,
-				yellowPaint,
-				nullCheckRawData,
-				lineType = LineType.LENGTH
-			)
-			drawExtendedLine(
-				canvas,
-				x10,
-				y10,
-				x11,
-				y11,
-				0f,
-				0f,
-				yellowPaint,
-				nullCheckRawData,
-				lineType = LineType.LENGTH
-			)
-			drawExtendedLine(
-				canvas,
-				x20,
-				y20,
-				x21,
-				y21,
-				0f,
-				0f,
-				yellowPaint,
-				nullCheckRawData,
-				lineType = LineType.LENGTH
-			)
-
-			//👉👉👉👉👉👉👉👉👉👉👉👉👉👉👉👉
-			val leftLm3 = dimFLS.landmarks[285]
-			val rightLm3 = dimFLS.landmarks[336]
-			val x30 = leftLm3.x
-			val y30 = leftLm3.y
-			val x31 = rightLm3.x
-			val y31 = rightLm3.y
-			val leftLm4 = dimFLS.landmarks[282]
-			val rightLm4 = dimFLS.landmarks[334]
-			val x40 = leftLm4.x
-			val y40 = leftLm4.y
-			val x41 = rightLm4.x
-			val y41 = rightLm4.y
-			val leftLm5 = dimFLS.landmarks[276]
-			val rightLm5 = dimFLS.landmarks[300]
-			val x50 = leftLm5.x
-			val y50 = leftLm5.y
-			val x51 = rightLm5.x
-			val y51 = rightLm5.y
-
-			drawExtendedLine(
-				canvas,
-				x30,
-				y30,
-				x31,
-				y31,
-				0f,
-				0f,
-				yellowPaint,
-				nullCheckRawData,
-				lineType = LineType.LENGTH
-			)
-			drawExtendedLine(
-				canvas,
-				x40,
-				y40,
-				x41,
-				y41,
-				0f,
-				0f,
-				yellowPaint,
-				nullCheckRawData,
-				lineType = LineType.LENGTH
-			)
-			drawExtendedLine(
-				canvas,
-				x50,
-				y50,
-				x51,
-				y51,
-				0f,
-				0f,
-				yellowPaint,
-				nullCheckRawData,
-				lineType = LineType.LENGTH
-			)
-		}
-
-		if (dim.setedLine.contains(DrawLine.A_NOSE)) {
-			val rawData = extractRawData(dim, DrawLine.A_NOSE)
-			val nullCheckRawData = if (rawData.isNotEmpty()) rawData[0] else ""
-			val leftLm0 = dimFLS.landmarks[220]
-			val rightLm0 = dimFLS.landmarks[48]
-			val x00 = leftLm0.x
-			val y00 = leftLm0.y
-			val x01 = rightLm0.x
-			val y01 = rightLm0.y
-			val leftLm1 = dimFLS.landmarks[278]
-			val rightLm1 = dimFLS.landmarks[440]
-			val x10 = leftLm1.x
-			val y10 = leftLm1.y
-			val x11 = rightLm1.x
-			val y11 = leftLm1.y
-			val leftLm2 = dimFLS.landmarks[440]
-			val rightLm2 = dimFLS.landmarks[220]
-			val x20 = leftLm2.x
-			val y20 = leftLm2.y
-			val x21 = rightLm2.x
-			val y21 = rightLm2.y
-
-			drawExtendedLine(
-				canvas,
-				x00,
-				((y20+ y21) / 2) + 50,
-				x01,
-				((y20+ y21) / 2) + 50,
-				0f,
-				0f,
-				redPaint,
-				nullCheckRawData,
-				lineType = LineType.ANGLE
-			)
-			drawExtendedLine(
-				canvas,
-				x10,
-				((y20+ y21) / 2) + 50,
-				x11,
-				((y20+ y21) / 2) + 50,
-				0f,
-				0f,
-				redPaint,
-				nullCheckRawData,
-				lineType = LineType.ANGLE
-			)
-			drawExtendedLine(
-				canvas,
-				x20,
-				((y20+ y21) / 2) + 30,
-				x21,
-				((y20+ y21) / 2) + 30,
-				0f,
-				0f,
-				redPaint,
-				nullCheckRawData,
-				lineType = LineType.ANGLE
-			)
-		}
-
-		if (dim.setedLine.contains(DrawLine.L_NOSE)) {
-			val rawData = extractRawData(dim, DrawLine.L_NOSE)
-			val nullCheckRawData = if (rawData.isNotEmpty()) rawData[0] else ""
-			val leftLm0 = dimFLS.landmarks[168]
-			val rightLm0 = dimFLS.landmarks[2]
-			val x00 = leftLm0.x
-			val y00 = leftLm0.y
-			val x01 = rightLm0.x
-			val y01 = rightLm0.y
-			val leftLm1 = dimFLS.landmarks[278]
-			val rightLm1 = dimFLS.landmarks[48]
-			val x10 = leftLm1.x
-			val y10 = leftLm1.y
-			val x11 = rightLm1.x
-			val y11 = rightLm1.y
-			drawExtendedLine(
-				canvas,
-				x00,
-				y00,
-				x01,
-				y01,
-				0f,
-				0f,
-				yellowPaint,
-				nullCheckRawData,
-				lineType = LineType.LENGTH
-			)
-			drawExtendedLine(
-				canvas,
-				x10,
-				y10,
-				x11,
-				y11,
-				0f,
-				0f,
-				yellowPaint,
-				nullCheckRawData,
-				lineType = LineType.LENGTH
-			)
-		}
-
-		if (dim.setedLine.contains(DrawLine.A_EARFLAP) || dim.setedLine.contains(DrawLine.A_EAR)) {
-			val rawData = extractRawData(dim, DrawLine.A_EARFLAP)
-			val nullCheckRawData = if (rawData.isNotEmpty()) rawData[0] else ""
-			val leftLm = dimFLS.landmarks[234]
-			val rightLm = dimFLS.landmarks[454]
-			val x0 = leftLm.x
-			val y0 = leftLm.y
-			val x1 = rightLm.x
-			val y1 = rightLm.y
-			drawExtendedLine(
-				canvas,
-				x0,
-				y0,
-				x1,
-				y1,
-				100f,
-				100f,
-				whitePaint,
-				nullCheckRawData,
-				lineType = LineType.ANGLE
-			)
-		}
-
-		if (dim.setedLine.contains(DrawLine.A_TIP_OF_LIPS)) {
-			val rawData = extractRawData(dim, DrawLine.A_TIP_OF_LIPS)
-			val nullCheckRawData = if (rawData.isNotEmpty()) rawData[0] else ""
-			val leftLm = dimFLS.landmarks[61]
-			val rightLm = dimFLS.landmarks[291]
-			val x0 = leftLm.x
-			val y0 = leftLm.y
-			val x1 = rightLm.x
-			val y1 = rightLm.y
-
-			val centerX = (leftLm.x + rightLm.x) / 2
-			val centerY = (leftLm.y + rightLm.y) / 2
-
-			drawExtendedLine(
-				canvas,
-				centerX,
-				centerY,
-				x0,
-				y0,
-				170f,
-				170f,
-				whitePaint,
-				nullCheckRawData
-			)
-			drawExtendedLine(canvas, centerX, centerY, x1, y1, 170f, 170f, whitePaint)
-		}
-
-		if (dim.setedLine.contains(DrawLine.A_CHIN)) {
-			val rawData = extractRawData(dim, DrawLine.A_CHIN)
-			val nullCheckRawData = if (rawData.isNotEmpty()) rawData[0] else ""
-			val topLm0 = dimFLS.landmarks[152]
-			val bottomLm0 = dimFLS.landmarks[152]
-			val x00 = topLm0.x
-			val y00 = topLm0.y
-			val x01 = bottomLm0.x + 1
-			val y01 = bottomLm0.y
-			drawExtendedLine(canvas, x00, y00, x01, y01, 300f, 300f, whitePaint, nullCheckRawData)
-		}
-
-		if (dim.setedLine.contains(DrawLine.A_CANTHUS_ORAL)) {
-			val topLm0 = dimFLS.landmarks[33]
-			val bottomLm0 = dimFLS.landmarks[61]
-			val x00 = topLm0.x
-			val y00 = topLm0.y
-			val x01 = bottomLm0.x + 1
-			val y01 = bottomLm0.y
-			drawExtendedLine(canvas, x00, y00, x01, y01, 0f, 100f, whitePaint)
-
-			val topLm1 = dimFLS.landmarks[263]
-			val bottomLm1 = dimFLS.landmarks[291]
-			val x10 = topLm1.x
-			val y10 = topLm1.y
-			val x11 = bottomLm1.x
-			val y11 = bottomLm1.y
-			drawExtendedLine(canvas, x10, y10, x11, y11, 0f, 100f, whitePaint)
-		}
-		if (dim.setedLine.contains(DrawLine.A_ALAR_ORAL)) {
-			val topLm0 = dimFLS.landmarks[64]
-			val bottomLm0 = dimFLS.landmarks[61]
-			val x00 = topLm0.x
-			val y00 = topLm0.y
-			val x01 = bottomLm0.x + 1
-			val y01 = bottomLm0.y
-			drawExtendedLine(canvas, x00, y00, x01, y01, 0f, 0f, redPaint, lineType = LineType.ANGLE)
-
-			val topLm1 = dimFLS.landmarks[294]
-			val bottomLm1 = dimFLS.landmarks[291]
-			val x10 = topLm1.x
-			val y10 = topLm1.y
-			val x11 = bottomLm1.x
-			val y11 = bottomLm1.y
-			drawExtendedLine(canvas, x10, y10, x11, y11, 0f, 0f, redPaint, lineType = LineType.ANGLE)
-		}
-		if (dim.setedLine.contains(DrawLine.A_SIDE_HEAD)) {
-			val leftTop = dimFLS.landmarks[156]
-			val leftMid = dimFLS.landmarks[143]
-			val leftBottom = dimFLS.landmarks[111]
-			val x00 = leftTop.x
-			val y00 = leftTop.y
-			val x01 = leftMid.x
-			val y01 = leftMid.y
-			val x02 = leftBottom.x
-			val y02 = leftBottom.y
-			drawExtendedLine(canvas, x00, y00, x01, y01, 0f, 0f, whitePaint)
-			drawExtendedLine(canvas, x01, y01, x02, y02, 0f, 0f, whitePaint)
-
-			val rightTop = dimFLS.landmarks[383]
-			val rightMid = dimFLS.landmarks[372]
-			val rightBottom = dimFLS.landmarks[340]
-			val x10 = rightTop.x
-			val y10 = rightTop.y
-			val x11 = rightMid.x
-			val y11 = rightMid.y
-			val x22 = rightBottom.x
-			val y22 = rightBottom.y
-			drawExtendedLine(canvas, x10, y10, x11, y11, 0f, 0f, whitePaint)
-			drawExtendedLine(canvas, x11, y11, x22, y22, 0f, 0f, whitePaint)
-		}
-
-		if (dim.setedLine.contains(DrawLine.E_CHEEKS)) {
-			val cheekPath0 = Path()
-			leftCheekIndex.forEachIndexed { i, landmarkIndex ->
-				val landmark = dimFLS.landmarks[landmarkIndex]
-				val x = landmark.x
-				val y = landmark.y
-
-				if (i == 0) {
-					cheekPath0.moveTo(x, y) // 시작점
-				} else {
-					cheekPath0.lineTo(x, y) // 선 연결
-				}
-			}
-			canvas.drawPath(cheekPath0, orangeAlphaPaint)
-
-
-			val cheekPath1 = Path()
-			rightCheekIndex.forEachIndexed { i, landmarkIndex ->
-				val landmark = dimFLS.landmarks[landmarkIndex]
-				val x = landmark.x
-				val y = landmark.y
-
-				if (i == 0) {
-					cheekPath1.moveTo(x, y) // 시작점
-				} else {
-					cheekPath1.lineTo(x, y) // 선 연결
-				}
-			}
-			canvas.drawPath(cheekPath1, orangeAlphaPaint)
-		}
-		if (dim.setedLine.contains(DrawLine.E_CHEEKBONE)) {
-			val cheekBonePath0 = Path()
-			leftCheekBoneIndex.forEachIndexed { i, landmarkIndex ->
-				val landmark = dimFLS.landmarks[landmarkIndex]
-				val x = landmark.x
-				val y = landmark.y
-
-				if (i == 0) {
-					cheekBonePath0.moveTo(x, y) // 시작점
-				} else {
-					cheekBonePath0.lineTo(x, y) // 선 연결
-				}
-			}
-			canvas.drawPath(cheekBonePath0, orangeAlphaPaint)
-
-			val cheekBonePath1 = Path()
-			rightCheekBoneIndex.forEachIndexed { i, landmarkIndex ->
-				val landmark = dimFLS.landmarks[landmarkIndex]
-				val x = landmark.x
-				val y = landmark.y
-
-				if (i == 0) {
-					cheekBonePath1.moveTo(x, y) // 시작점
-				} else {
-					cheekBonePath1.lineTo(x, y) // 선 연결
-				}
-			}
-			canvas.drawPath(cheekBonePath1, orangeAlphaPaint)
-		}
-
-
-
-		// ----------------------------------# 목 폄 상태 #--------------------------------------
-		if (dim.setedLine.contains(DrawLine.A_FACIAL_AXIS)) {
-			val rawData = extractRawData(dim, DrawLine.A_FACIAL_AXIS)
-			val nullCheckRawData = if (rawData.isNotEmpty()) rawData[0] else ""
-			val lm0 = dimFLS.landmarks[168]
-			val lm1= dimFLS.landmarks[2]
-			val lm2 = dimFLS.landmarks[152]
-			val x0 = lm0.x
-			val y0 = lm0.y
-			val x1 = lm1.x
-			val y1 = lm1.y
-			val x2 = lm2.x
-			val y2 = lm2.y
-
-			drawExtendedLine(
-				canvas,
-				x0,
-				y0,
-				x1,
-				y1,
-				0f,
-				0f,
-				greenPaint,
-				nullCheckRawData,
-				lineType = LineType.ANGLE
-			)
-			drawExtendedLine(
-				canvas,
-				x1,
-				y1,
-				x2,
-				y2,
-				0f,
-				0f,
-				greenPaint,
-				nullCheckRawData,
-				lineType = LineType.ANGLE
-			)
-		}
-
-
-//		if (dim.setedLine.contains(DrawLine.A_MANDIBULAR_CHIN)) {
-//			val leftEarFlap = dimFLS.landmarks[234]
-//			val rightEarFlap = dimFLS.landmarks[454]
-//			val leftMandibularBone = dimFLS.landmarks[58]
-//			val rightMandibularBone = dimFLS.landmarks[288]
-//			val midChin = dimFLS.landmarks[152]
-//
-//			val x00 = leftEarFlap.x
-//			val y00 = leftEarFlap.y
-//			val x01 = rightEarFlap.x
-//			val y01 = rightEarFlap.y
-//			val x10 = leftMandibularBone.x
-//			val y10 = leftMandibularBone.y
-//			val x11 = rightMandibularBone.x
-//			val y11 = rightMandibularBone.y
-//			val x12 = midChin.x
-//			val y12 = midChin.y
-//
-//			drawExtendedLine(canvas, x00, y00, x10, y10, 0f, 0f, whitePaint)
-//			drawExtendedLine(canvas, x10, y10, x12, y12, 0f, 0f, whitePaint)
-//			drawExtendedLine(canvas, x12, y12, x11, y11, 0f, 0f, whitePaint)
-//			drawExtendedLine(canvas, x11, y11, x01, y01, 0f, 0f, whitePaint)
-//		}
-
-		// ----------------------------------# 비율 계산기 #------------------------------------
-		if ( dim.setedLine.contains(DrawLine.A_RATIO_VERTI)) {
-
-			val leftFace = listOf(21, 162, 127, 234, 93, 132, 58)
-			val rightFace = listOf(251, 390, 356, 454, 323, 361)
-
-			val minLeftIndex = leftFace.maxByOrNull { index -> dimFLS.landmarks[index].x }
-			val minRightIndex = rightFace.minByOrNull { index -> dimFLS.landmarks[index].x }
-			val leftLm = minLeftIndex?.let { dimFLS.landmarks[it] }
-			val rightLm = minRightIndex?.let { dimFLS.landmarks[it] }
-			val x0 = leftLm?.x ?: 0f
-			val y0 = leftLm?.y ?: 0f
-
-			val x1 = rightLm?.x ?: 0f
-			val y1 = rightLm?.y ?: 0f
-			val leftEyeStart = dimFLS.landmarks[130]
-			val leftEyeEnd = dimFLS.landmarks[133]
-
-			val rightEyeStart = dimFLS.landmarks[362]
-			val rightEyeEnd = dimFLS.landmarks[359]
-
-			val x2 = leftEyeStart.x
-			val y2 = leftEyeStart.y
-			val x3 = leftEyeEnd.x
-			val y3 = leftEyeEnd.y
-			val x4 = rightEyeStart.x
-			val y4 = rightEyeStart.y
-			val x5 = rightEyeEnd.x
-			val y5 = rightEyeEnd.y
-
-			drawExtendedLine(canvas, x0, y2, x0, y2 + 1, 400f, 400f, greenPaint)
-			drawExtendedLine(canvas, x1, y2, x1, y2 + 1, 400f, 400f, greenPaint)
-			drawExtendedLine(canvas, x2, y2, x2, y2 + 1, 400f, 400f, greenPaint)
-			drawExtendedLine(canvas, x3, y2, x3, y2 + 1, 400f, 400f, greenPaint)
-			drawExtendedLine(canvas, x4, y2, x4, y2 + 1, 400f, 400f, greenPaint)
-			drawExtendedLine(canvas, x5, y2, x5, y2 + 1, 400f, 400f, greenPaint)
-		}
-
-
-		if (dim.setedLine.contains(DrawLine.A_RATIO_HORIZON)) {
-
-			val glabella = dimFLS.landmarks[8]
-			val subNazale = dimFLS.landmarks[2]
-//					val centerTopLips = dimFLS.landmarks[13]
-			val menton = dimFLS.landmarks[152]
-
-			val x0 = glabella.x
-			val y0 = glabella.y
-
-			val x1 = subNazale.x
-			val y1 = subNazale.y
-
-//					val x2 = centerTopLips.x
-//					val y2 = centerTopLips.y
-
-			val x3 = menton.x
-			val y4 = menton.y
-
-			val hairLine = dim.lms.hairLineLandmarks
-			Log.v("hairLine", "notExtract: ${hairLine}")
-			if (hairLine != null && hairLine.size == 7) {
-				drawExtendedLine(canvas, x1, hairLine[3].second, x1 + 1, hairLine[3].second, 300f, 300f, redPaint)
-				hairLine.forEach { point ->
-					canvas.drawCircle(point.first, point.second, 1f, yellowPaint)
-				}
-			}
-
-
-			drawExtendedLine(canvas, x1, y0, x1 + 1, y0, 300f, 300f, redPaint)
-			drawExtendedLine(canvas, x1, y1, x1 + 1, y1, 300f, 300f, redPaint)
-			drawExtendedLine(canvas, x1, y4, x1 + 1, y4, 300f, 300f, redPaint)
-		}
+		createRawDataBox(canvas, dim)
 		return drawDirectionUIOnBitmap(resultBitmap)
 	}
 
+//	fun drawExtendedLine(
+//		canvas: Canvas,
+//		x0: Float,
+//		y0: Float,
+//		x1: Float,
+//		y1: Float,
+//		startExtension: Float,
+//		endExtension: Float,
+//		paint: Paint,
+//		text: String = "",
+//		textPosition: Int = 2,
+//		lineType: LineType = LineType.LENGTH
+//	) {
+//		val dx = x1 - x0
+//		val dy = y1 - y0
+//		val length = hypot(dx.toDouble(), dy.toDouble()).toFloat()
+//
+//		if (length == 0f) return
+//
+//		val nx = dx / length
+//		val ny = dy / length
+//
+//		val extendedStartX = x0 - nx * startExtension
+//		val extendedStartY = y0 - ny * startExtension
+//		val extendedEndX = x1 + nx * endExtension
+//		val extendedEndY = y1 + ny * endExtension
+//
+//		// 점선 효과
+//		val dashedPaint = Paint(paint).apply {
+//			pathEffect = DashPathEffect(floatArrayOf(2f, 4f), 0f)
+//		}
+//		canvas.drawLine(extendedStartX, extendedStartY, extendedEndX, extendedEndY, dashedPaint)
+//
+//		// 끝점 마커
+//		when (lineType) {
+//			LineType.ANGLE -> {
+//				// ◆ 다이아몬드
+//				drawDiamond(canvas, extendedStartX, extendedStartY, paint)
+//				drawDiamond(canvas, extendedEndX, extendedEndY, paint)
+//
+//			}
+//			LineType.LENGTH -> {
+//				// ▼ ▲ 삼각형 화살표
+//				drawTriangleArrow(canvas, extendedStartX, extendedStartY, nx, ny, paint, isStart = true)
+//				drawTriangleArrow(canvas, extendedEndX, extendedEndY, nx, ny, paint, isStart = false)
+//			}
+//		}
+//
+//		// 텍스트 (기존 동일)
+//		if (text != "") {
+//			val textPaint = Paint().apply {
+//				color = Color.BLACK
+//				textSize = 16f
+//				isAntiAlias = true
+//			}
+//			val bgPaint = Paint().apply {
+//				color = Color.argb(100, 255, 255, 255)
+//				isAntiAlias = true
+//			}
+//
+//			val textOffset = 20f
+//			val (baseX, baseY) = when (textPosition) {
+//				0 -> Pair(extendedStartX - nx * textOffset, extendedStartY - ny * textOffset)
+//				1 -> Pair((extendedStartX + extendedEndX) / 2f, (extendedStartY + extendedEndY) / 2f)
+//				2 -> Pair(extendedEndX + nx * textOffset, extendedEndY + ny * textOffset)
+//				else -> Pair(extendedEndX + nx * textOffset, extendedEndY + ny * textOffset)
+//			}
+//
+//			val bounds = Rect()
+//			textPaint.getTextBounds(text, 0, text.length, bounds)
+//			val padding = 12f
+//
+//			val textX = when (textPosition) {
+//				0 -> baseX - bounds.width() - padding
+//				1 -> baseX - bounds.width() / 2f
+//				2 -> baseX
+//				else -> baseX
+//			}
+//			val textY = baseY
+//
+//			val left = textX - padding
+//			val top = textY + bounds.top - padding
+//			val right = textX + bounds.width() + padding
+//			val bottom = textY + bounds.bottom + padding
+//			val radius = minOf(right - left, bottom - top) / 2f
+//
+//			canvas.drawRoundRect(left, top, right, bottom, radius, radius, bgPaint)
+//			canvas.drawText(text, textX, textY, textPaint)
+//		}
+//	}
 	fun drawExtendedLine(
 		canvas: Canvas,
 		x0: Float,
@@ -1505,8 +1663,6 @@ object BitmapUtility {
 		startExtension: Float,
 		endExtension: Float,
 		paint: Paint,
-		text: String = "",
-		textPosition: Int = 2,
 		lineType: LineType = LineType.LENGTH
 	) {
 		val dx = x1 - x0
@@ -1525,67 +1681,25 @@ object BitmapUtility {
 
 		// 점선 효과
 		val dashedPaint = Paint(paint).apply {
-			pathEffect = DashPathEffect(floatArrayOf(6f, 4f), 0f)
+			pathEffect = DashPathEffect(floatArrayOf(2f, 4f), 0f)
 		}
 		canvas.drawLine(extendedStartX, extendedStartY, extendedEndX, extendedEndY, dashedPaint)
 
 		// 끝점 마커
 		when (lineType) {
 			LineType.ANGLE -> {
+				// ◆ 다이아몬드
+				drawDiamond(canvas, extendedStartX, extendedStartY, paint)
+				drawDiamond(canvas, extendedEndX, extendedEndY, paint)
+
+			}
+			LineType.LENGTH -> {
 				// ▼ ▲ 삼각형 화살표
 				drawTriangleArrow(canvas, extendedStartX, extendedStartY, nx, ny, paint, isStart = true)
 				drawTriangleArrow(canvas, extendedEndX, extendedEndY, nx, ny, paint, isStart = false)
 			}
-			LineType.LENGTH -> {
-				// ◆ 다이아몬드
-				drawDiamond(canvas, extendedStartX, extendedStartY, paint)
-				drawDiamond(canvas, extendedEndX, extendedEndY, paint)
-			}
-		}
-
-		// 텍스트 (기존 동일)
-		if (text != "") {
-			val textPaint = Paint().apply {
-				color = Color.BLACK
-				textSize = 16f
-				isAntiAlias = true
-			}
-			val bgPaint = Paint().apply {
-				color = Color.argb(100, 255, 255, 255)
-				isAntiAlias = true
-			}
-
-			val textOffset = 20f
-			val (baseX, baseY) = when (textPosition) {
-				0 -> Pair(extendedStartX - nx * textOffset, extendedStartY - ny * textOffset)
-				1 -> Pair((extendedStartX + extendedEndX) / 2f, (extendedStartY + extendedEndY) / 2f)
-				2 -> Pair(extendedEndX + nx * textOffset, extendedEndY + ny * textOffset)
-				else -> Pair(extendedEndX + nx * textOffset, extendedEndY + ny * textOffset)
-			}
-
-			val bounds = Rect()
-			textPaint.getTextBounds(text, 0, text.length, bounds)
-			val padding = 12f
-
-			val textX = when (textPosition) {
-				0 -> baseX - bounds.width() - padding
-				1 -> baseX - bounds.width() / 2f
-				2 -> baseX
-				else -> baseX
-			}
-			val textY = baseY
-
-			val left = textX - padding
-			val top = textY + bounds.top - padding
-			val right = textX + bounds.width() + padding
-			val bottom = textY + bounds.bottom + padding
-			val radius = minOf(right - left, bottom - top) / 2f
-
-			canvas.drawRoundRect(left, top, right, bottom, radius, radius, bgPaint)
-			canvas.drawText(text, textX, textY, textPaint)
 		}
 	}
-
 	private fun drawTriangleArrow(
 		canvas: Canvas,
 		x: Float,
@@ -1595,10 +1709,10 @@ object BitmapUtility {
 		paint: Paint,
 		isStart: Boolean
 	) {
-		val arrowSize = 2.5f
+		val arrowSize = 4f
 		// isStart면 ▲ (선 방향 반대), isStart 아니면 ▼ (선 방향)
-		val dirX = if (isStart) -nx else nx
-		val dirY = if (isStart) -ny else ny
+		val dirX = if (isStart) nx else -nx
+		val dirY = if (isStart) ny else -ny
 
 		// 수직 방향
 		val perpX = -dirY
@@ -2090,70 +2204,79 @@ object BitmapUtility {
 		val seqIndex = seqss.indexOf(dim.seq)
 
 		val keys = when (dl) {
-
-
-			DrawLine.A_TIP_OF_LIPS -> when (seq) {
-				Sequence.COMFORT -> listOf("comfort_tip_of_lips_horizontal_angle")
-				else -> listOf()
+			DrawLine.A_SAGGING_FACE -> listOf("comfort_left_sagging_scale", "comfort_right_sagging_scale")
+			DrawLine.A_SHOULDER -> when (seq) {
+				Sequence.COMFORT -> listOf("comfort_shoulder_horizontal_angle")
+				else -> listOf("neck_extention_shoulder_horizontal_angle")
 			}
 
-			DrawLine.A_CHIN -> when (seq) {
-				Sequence.COMFORT -> listOf("comfort_tip_of_chin_horizontal_angle")
-				else -> listOf()
+			DrawLine.NECK -> when (seq) {
+				Sequence.COMFORT -> listOf("comfort_neck_vertical_angle", "comfort_neck_length")
+				else -> listOf("neck_extention_neck_vertical_angle")
 			}
-
-			DrawLine.A_CANTHUS_ORAL -> {
-				when (seq) {
-					Sequence.COMFORT -> listOf(
-						"comfort_canthus_oral_left_vertical_angle",
-						"comfort_canthus_oral_right_vertical_angle"
-					)
-					else -> listOf()
-				}
+			DrawLine.FACE -> when (seq) {
+				Sequence.COMFORT -> listOf("comfort_face_vertical_angle", "comfort_face_length")
+				else -> listOf("neck_extention_face_vertical_angle")
 			}
-
-			DrawLine.A_SIDE_HEAD -> {
-				when (seq) {
-					Sequence.COMFORT -> listOf(
-						"comfort_side_head_left_angle",
-						"comfort_side_head_right_angle"
-					)
-					else -> listOf()
-				}
-			}
-
-			DrawLine.E_CHEEKS -> {
-				when (seq) {
-					Sequence.COMFORT -> listOf("comfort_left_cheeks_extent", "comfort_right_cheeks_extent")
-					else -> listOf()
-				}
-			}
-
-			DrawLine.E_CHEEKBONE -> when (seq) {
+			DrawLine.A_HORIZON -> when (seq) {
 				Sequence.COMFORT -> listOf(
-					"comfort_left_cheekbone_extent",
-					"comfort_right_cheekbone_extent"
+					"comfort_eye_horizontal_angle",
+					"comfort_earflaps_horizontal_angle",
+					"comfort_tip_of_lips_horizontal_angle",
+					"comfort_tip_of_chin_horizontal_angle"
 				)
-				else -> listOf()
+				else -> listOf("neck_extention_ear_horizontal_angle", "neck_extention_shoulder_horizontal_angle")
 			}
+			DrawLine.EYE -> listOf(
+				"comfort_left_eye_horizontal_angle",
+				"comfort_right_eye_horizontal_angle",
+				"comfort_left_medial_canthus_angle",
+				"comfort_right_medial_canthus_angle",
+				"comfort_left_lateral_canthus_angle",
+				"comfort_right_lateral_canthus_angle",
+				"comfort_left_eye_width",
+				"comfort_right_eye_width",
+				"comfort_left_eye_height",
+				"comfort_right_eye_height"
+				)
+			DrawLine.L_CORNEA -> listOf(
+				"comfort_left_cornea_length",
+				"comfort_right_cornea_length",
+				)
+			DrawLine.EYEBROW -> listOf(
+				"comfort_left_eyebrow_horizontal_angle",
+				"comfort_right_eyebrow_horizontal_angle",
+				"comfort_left_eyebrow_start_length",
+				"comfort_left_eyebrow_arch_length",
+				"comfort_left_eyebrow_end_length",
+				"comfort_right_eyebrow_start_length",
+				"comfort_right_eyebrow_arch_length",
+				"comfort_right_eyebrow_end_length",
+			)
+			DrawLine.NOSE -> listOf("comfort_nose_width",
+				"comfort_nose_height",
+				"comfort_alar_horizontal_angle",
+				"comfort_left_alar_length",
+				"comfort_right_alar_length"
+			)
+			DrawLine.A_CANTHUS_ORAL -> listOf("comfort_canthus_oral_left_vertical_angle", "comfort_canthus_oral_right_vertical_angle")
+			DrawLine.A_ALAR_ORAL -> listOf("comfort_alar_tip_of_lips_left_vertical_angle", "comfort_alar_tip_of_lips_right_vertical_angle")
+			DrawLine.A_SIDE_HEAD -> listOf("comfort_side_head_left_angle", "comfort_side_head_right_angle")
+			DrawLine.E_CHEEKS -> listOf("comfort_left_cheeks_extent", "comfort_right_cheeks_extent")
+			DrawLine.E_CHEEKBONE -> listOf("comfort_left_cheekbone_extent","comfort_right_cheekbone_extent")
+			DrawLine.MOUSE -> listOf(
+				"comfort_left_mouse_corner_angle",
+				"comfort_right_mouse_corner_angle",
+				"comfort_philtrum_length",
+				"comfort_mouse_width",
+				"comfort_upper_lips_height",
+				"comfort_lower_lips_height",
+			)
 
-			DrawLine.A_SHOULDER -> listOf("neck_extention_shoulder_horizontal_angle")
-			DrawLine.A_EAR -> listOf("neck_extention_ear_horizontal_angle")
+			DrawLine.A_FACIAL_AXIS -> listOf("comfort_length_symmetry_factor", "comfort_angle_symmetry_factor")
 
-			DrawLine.A_NECK -> when (seq) {
-				Sequence.COMFORT -> listOf("comfort_neck_vertical_angle")
-				Sequence.NECK_EXTENTION -> listOf("neck_extention_neck_vertical_angle")
-				else -> listOf()
-			}
-
-			DrawLine.A_FACE -> when (seq) {
-				Sequence.COMFORT -> listOf("comfort_face_vertical_angle")
-				Sequence.NECK_EXTENTION -> listOf("neck_extention_face_vertical_angle")
-				else -> listOf()
-			}
-			DrawLine.A_RATIO_VERTI -> listOf()
-			DrawLine.A_RATIO_HORIZON -> listOf()
-			else -> {listOf()}
+			DrawLine.A_RATIO_VERTI -> listOf("")
+			DrawLine.A_RATIO_HORIZON -> listOf("")
 		}
 		val jsonObject = fr.results.getJSONObject(seqIndex)
 		return keys.map { key -> df.format(jsonObject.getJSONObject("data").optDouble(key)) }
@@ -2188,5 +2311,168 @@ object BitmapUtility {
 				}
 			}
 		}
+	}
+
+	private fun drawSmoothCurve(canvas: Canvas, points:  List<FaceLandmarkResult.FaceLandmark>, paint: Paint) {
+		if (points.size < 2) return
+
+		val path = Path()
+		path.moveTo(points[0].x, points[0].y)
+
+		for (i in 0 until points.size - 1) {
+			val p0 = if (i > 0) points[i - 1] else points[i]
+			val p1 = points[i]
+			val p2 = points[i + 1]
+			val p3 = if (i + 2 < points.size) points[i + 2] else p2
+
+			val cp1x = p1.x + (p2.x - p0.x) / 6f
+			val cp1y = p1.y + (p2.y - p0.y) / 6f
+			val cp2x = p2.x - (p3.x - p1.x) / 6f
+			val cp2y = p2.y - (p3.y - p1.y) / 6f
+
+			path.cubicTo(cp1x, cp1y, cp2x, cp2y, p2.x, p2.y)
+		}
+		val dashedPaint = Paint(paint).apply {
+			pathEffect = DashPathEffect(floatArrayOf(2f, 4f), 0f)
+		}
+		canvas.drawPath(path, dashedPaint)
+	}
+
+
+
+ // 🔥🔥🔥🔥🔥🔥🔥 rawData 박스 만들기 🔥🔥🔥🔥🔥🔥🔥
+	 data class TextDrawInfo(
+		 val text: String,
+		 val baseX: Float,
+		 val baseY: Float,
+		 val textPosition: Int // 0: 왼쪽, 1: 중앙, 2: 오른쪽
+	 )
+	val textPaint = Paint().apply {
+		color = Color.BLACK
+		textSize = 16f
+		isAntiAlias = true
+	}
+	val bgPaint = Paint().apply {
+		color = Color.argb(100, 255, 255, 255)
+		isAntiAlias = true
+	}
+	val textOffset = 20f
+
+	private fun createRawDataBox(canvas: Canvas, dim: DrawImageUiModel) {
+		val dl = dim.setedLine
+		val flm = dim.lms.faceLandmarks.landmarks
+
+		val textDrawInfos = mutableListOf<TextDrawInfo>()
+
+		// 각 DrawLine에 따라 데이터와 위치 수집
+		if (dl.contains(DrawLine.A_SAGGING_FACE)) {
+			val boxLocation = flm[152]
+			val rawData = extractRawData(dim, DrawLine.A_SAGGING_FACE)
+
+			rawData.forEachIndexed { index, value ->
+				textDrawInfos.add(
+					TextDrawInfo(
+						text = value,
+						baseX = boxLocation.x,
+						baseY = boxLocation.y + (index * textOffset),
+						textPosition = 0 // 또는 원하는 위치
+					)
+				)
+			}
+		}
+
+		if (dl.contains(DrawLine.A_SHOULDER)) {
+			val boxLocation = flm
+			val rawData = extractRawData(dim, DrawLine.A_SHOULDER)
+
+			rawData.forEachIndexed { index, value ->
+				textDrawInfos.add(
+					TextDrawInfo(
+						text = value,
+						baseX = boxLocation.x,
+						baseY = boxLocation.y + (index * textOffset),
+						textPosition = 1
+					)
+				)
+			}
+		}
+
+		if (dl.contains(DrawLine.NECK)) {
+
+		}
+		if (dl.contains(DrawLine.FACE)) {
+
+		}
+		if (dl.contains(DrawLine.A_HORIZON)) {
+
+		}
+		if (dl.contains(DrawLine.EYE)) {
+
+		}
+		if (dl.contains(DrawLine.L_CORNEA)) {
+
+		}
+		if (dl.contains(DrawLine.EYEBROW)) {
+
+		}
+		if (dl.contains(DrawLine.NOSE)) {
+
+		}
+
+		if (dl.contains(DrawLine.E_CHEEKBONE)) {
+
+		}
+		if (dl.contains(DrawLine.A_ALAR_ORAL)) {
+
+		}
+		if (dl.contains(DrawLine.A_SIDE_HEAD)) {
+
+		}
+		if (dl.contains(DrawLine.A_CANTHUS_ORAL)) {
+
+		}
+		if (dl.contains(DrawLine.E_CHEEKS)) {
+
+		}
+		if (dl.contains(DrawLine.MOUSE)) {
+
+		}
+		if (dl.contains(DrawLine.A_FACIAL_AXIS)) {
+
+		}
+		if (dl.contains(DrawLine.A_RATIO_VERTI)) {
+
+		}
+		if (dl.contains(DrawLine.A_RATIO_HORIZON)) {
+
+		}
+
+		// 수집된 모든 텍스트를 한 번에 그리기
+		textDrawInfos.forEach { info ->
+			drawTextWithBackground(canvas, info)
+		}
+	}
+
+	private fun drawTextWithBackground(canvas: Canvas, info: TextDrawInfo) {
+		val bounds = Rect()
+		textPaint.getTextBounds(info.text, 0, info.text.length, bounds)
+		val padding = 12f
+
+		val textX = when (info.textPosition) {
+			0 -> info.baseX - bounds.width() - padding
+			1 -> info.baseX - bounds.width() / 2f
+			2 -> info.baseX
+			else -> info.baseX
+		}
+		val textY = info.baseY
+
+		val left = textX - padding
+		val top = textY + bounds.top - padding
+		val right = textX + bounds.width() + padding
+		val bottom = textY + bounds.bottom + padding
+		val radius = minOf(right - left, bottom - top) / 2f
+
+		canvas.drawRoundRect(left, top, right, bottom, radius, radius, bgPaint)
+		canvas.drawText(info.text, textX, textY, textPaint)
 	}
 }

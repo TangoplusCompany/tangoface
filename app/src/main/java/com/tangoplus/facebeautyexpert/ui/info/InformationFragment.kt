@@ -13,6 +13,8 @@ import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.tangoplus.facebeautyexpert.data.db.FaceDao
 import com.tangoplus.facebeautyexpert.data.db.FaceDatabase
+import com.tangoplus.facebeautyexpert.data.db.FaceShape
+import com.tangoplus.facebeautyexpert.data.db.FacialAxisShape
 import com.tangoplus.facebeautyexpert.databinding.FragmentInformationBinding
 import com.tangoplus.facebeautyexpert.domain.util.BitmapUtility.getCombineBitmap
 import com.tangoplus.facebeautyexpert.domain.util.FaceStaticUtility.addCommentInFCI
@@ -22,11 +24,13 @@ import com.tangoplus.facebeautyexpert.domain.vo.Sequence
 import com.tangoplus.facebeautyexpert.ui.main.vm.MainViewModel
 import kotlinx.coroutines.launch
 import com.tangoplus.facebeautyexpert.domain.util.BitmapUtility.setSSIV
+import com.tangoplus.facebeautyexpert.ui.adapter.FactorRVAdapter
 import com.tangoplus.facebeautyexpert.ui.adapter.SelectRVAdapter
 import com.tangoplus.facebeautyexpert.ui.info.vm.InformationViewModel
 import com.tangoplus.facebeautyexpert.ui.info.vm.SelectViewModel
 import com.tangoplus.facebeautyexpert.ui.info.vo.DrawLine
 import com.tangoplus.facebeautyexpert.ui.info.vo.FacialPart
+import com.tangoplus.facebeautyexpert.ui.info.vo.Factor
 import com.tangoplus.facebeautyexpert.ui.listener.OnFacialPartClickListener
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
@@ -78,6 +82,7 @@ class InformationFragment : Fragment(), OnFacialPartClickListener {
 		setResult()
 		setRatioBtn()
 	}
+
 	private fun setAdapter() {
 		val vLayoutManager = LinearLayoutManager(requireContext(), LinearLayoutManager.VERTICAL, false)
 		val sAdapter = SelectRVAdapter(svm, 0)
@@ -86,11 +91,26 @@ class InformationFragment : Fragment(), OnFacialPartClickListener {
 			adapter = sAdapter
 			layoutManager = vLayoutManager
 		}
+
+		val fAdapter = FactorRVAdapter(this@InformationFragment, mvm.currentResult.value?.factors ?: Factor(
+			FacialAxisShape.DEFAULT, FaceShape.DEFAULT, Pair(0f, 0f)))
+		val fLayoutManager = LinearLayoutManager(requireContext(), LinearLayoutManager.VERTICAL, false)
+		bd.rvGD2.apply {
+			adapter = fAdapter
+			layoutManager = fLayoutManager
+		}
 	}
+
 	private fun setRatioBtn() {
 		bd.btnIDClean.setOnSingleClickListener {
 			ivm.switchedLineOn()
 			bd.btnIDClean.text = if (ivm.getLineOn()) "🔍 가이드라인 끄기" else "🔍 가이드라인 켜기"
+			setImage()
+		}
+
+		bd.btnIDGrid.setOnSingleClickListener {
+			ivm.switchedGridLineOn()
+			bd.btnIDGrid.text = if (ivm.getGridLineOn()) "ꖛ 그리드 끄기" else "ꖛ 그리드 켜기 "
 			setImage()
 		}
 	}
@@ -189,15 +209,14 @@ class InformationFragment : Fragment(), OnFacialPartClickListener {
 		}
 	}
 
-
 	override fun onFacialPartClick(part: FacialPart) {
 		ivm.currentCheckedLines.clear()
 		val drawLines = when (part) {
-			FacialPart.DERIVE -> listOf( DrawLine.A_FACE, DrawLine.A_SAGGING_FACE, DrawLine.A_FACIAL_AXIS, DrawLine.A_HORIZON)
+			FacialPart.DERIVE -> listOf(DrawLine.NECK, DrawLine.FACE, DrawLine.A_SAGGING_FACE, DrawLine.A_FACIAL_AXIS, DrawLine.A_HORIZON)
 			FacialPart.RATIO -> listOf(DrawLine.A_RATIO_HORIZON, DrawLine.A_RATIO_VERTI, )
-			FacialPart.TOP -> listOf(DrawLine.A_EYE, DrawLine.L_EYE, DrawLine.A_EYEBROW, DrawLine.L_EYEBROW, DrawLine.L_CORNEA)
-			FacialPart.MIDDLE -> listOf(DrawLine.A_NOSE, DrawLine.L_NOSE, DrawLine.A_EARFLAP, DrawLine.A_ALAR_ORAL, DrawLine.A_SIDE_HEAD, DrawLine.E_CHEEKBONE, )
-			FacialPart.BOTTOM -> listOf(DrawLine.A_CHIN, DrawLine.E_CHEEKS, DrawLine.A_CANTHUS_ORAL)
+			FacialPart.TOP -> listOf(DrawLine.EYE,  DrawLine.EYEBROW,  DrawLine.L_CORNEA)
+			FacialPart.MIDDLE -> listOf(DrawLine.NOSE,DrawLine.A_ALAR_ORAL, DrawLine.A_SIDE_HEAD, DrawLine.E_CHEEKBONE, )
+			FacialPart.BOTTOM -> listOf(DrawLine.E_CHEEKS, DrawLine.A_CANTHUS_ORAL, DrawLine.MOUSE)
 		}
 		ivm.currentCheckedLines.addAll(drawLines)
 

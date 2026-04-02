@@ -7,7 +7,6 @@ import android.view.View
 import android.view.ViewGroup
 import android.view.WindowManager
 import androidx.fragment.app.activityViewModels
-import com.google.android.material.R
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
@@ -39,8 +38,8 @@ class DateSpinnerBSDialogFragment : BottomSheetDialogFragment() {
 
 		dialog?.setOnShowListener { dialogInterface ->
 			val bottomSheetDialog = dialogInterface as? BottomSheetDialog
-			val bottomSheet = bottomSheetDialog?.findViewById<View>(
-				R.id.design_bottom_sheet
+			val bottomSheet = bottomSheetDialog?.delegate?.findViewById<View>(
+				com.google.android.material.R.id.design_bottom_sheet
 			)
 			bottomSheet?.let {
 				val behavior = BottomSheetBehavior.from(it)

@@ -6,6 +6,8 @@ import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.provider.Settings
 import android.util.Log
 import androidx.fragment.app.Fragment
@@ -15,12 +17,15 @@ import android.view.ViewGroup
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.activityViewModels
+import androidx.viewpager2.widget.ViewPager2
 import com.tangoplus.facebeautyexpert.databinding.FragmentMainBinding
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.tangoplus.facebeautyexpert.R
 import com.tangoplus.facebeautyexpert.domain.util.FileUtility.setOnSingleClickListener
+import com.tangoplus.facebeautyexpert.ui.adapter.AdVPAdapter
 import com.tangoplus.facebeautyexpert.ui.measure.DepthCameraActivity
 import com.tangoplus.facebeautyexpert.ui.main.vm.MainViewModel
+import kotlin.math.abs
 
 
 class MainFragment : Fragment() {
@@ -42,7 +47,7 @@ class MainFragment : Fragment() {
 		bd.btnMainStart.setOnSingleClickListener {
 			checkStoragePermission()
 		}
-
+		setupViewPager()
 
 	}
 
@@ -105,6 +110,68 @@ class MainFragment : Fragment() {
 			}
 			.setNegativeButton("취소", null)
 			.show()
+	}
+	private val promoImages = listOf(
+		R.drawable.color_gradation_sub100,
+		R.drawable.color_gradation_bg,
+	)
+	private val autoScrollHandler = Handler(Looper.getMainLooper())
+	private var autoScrollRunnable: Runnable? = null
+
+	private fun setupViewPager() {
+
+		val adapter = AdVPAdapter(promoImages)
+		bd.vpM.adapter = adapter
+
+		// 중간 위치에서 시작 (무한 스크롤 효과)
+		val startPosition = Int.MAX_VALUE / 2
+		bd.vpM.setCurrentItem(startPosition - (startPosition % promoImages.size), false)
+
+		// 자동 스크롤 시작
+		startAutoScroll()
+
+		// 사용자가 터치하면 자동 스크롤 일시 중지 후 재시작
+		bd.vpM.registerOnPageChangeCallback(object : ViewPager2.OnPageChangeCallback() {
+			override fun onPageScrollStateChanged(state: Int) {
+				when (state) {
+					ViewPager2.SCROLL_STATE_DRAGGING -> stopAutoScroll()
+					ViewPager2.SCROLL_STATE_IDLE -> startAutoScroll()
+				}
+			}
+		})
+	}
+
+	private fun startAutoScroll() {
+		stopAutoScroll() // 기존 것 제거
+
+		autoScrollRunnable = object : Runnable {
+			override fun run() {
+				bd.vpM.currentItem = bd.vpM.currentItem + 1
+				autoScrollHandler.postDelayed(this, 7500) // 5초마다
+			}
+		}
+		autoScrollHandler.postDelayed(autoScrollRunnable!!, 7500)
+	}
+
+	private fun stopAutoScroll() {
+		autoScrollRunnable?.let {
+			autoScrollHandler.removeCallbacks(it)
+		}
+	}
+
+	override fun onResume() {
+		super.onResume()
+		startAutoScroll()
+	}
+
+	override fun onPause() {
+		super.onPause()
+		stopAutoScroll()
+	}
+
+	override fun onDestroyView() {
+		super.onDestroyView()
+		stopAutoScroll()
 	}
 
 }

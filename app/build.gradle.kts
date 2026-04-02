@@ -146,6 +146,7 @@ dependencies {
     implementation(libs.androidx.recyclerview)
     implementation(libs.androidx.cardview)
     implementation(libs.androidx.ui)
+    implementation(libs.androidx.viewpager2)
 //    implementation(project(":obsensor_jni"))
     if (findProject(":obsensor_jni") != null) {
         implementation(project(":obsensor_jni"))

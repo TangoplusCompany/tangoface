@@ -32,45 +32,36 @@
             app:layout_constraintTop_toTopOf="parent" />
 
         <TextView
-            android:id="@+id/tvMVIGrade"
-            android:layout_width="64dp"
-            android:layout_height="0dp"
-            android:layout_gravity="center"
-            android:layout_marginTop="20dp"
-            android:layout_marginEnd="20dp"
-            android:layout_marginBottom="20dp"
-            android:background="@drawable/effect_20"
-            android:backgroundTint="@color/bg"
-            android:gravity="center"
-            android:text="S"
-            android:textColor="@color/accent"
-            android:textSize="28sp"
-            app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintTop_toTopOf="parent" />
-
-        <TextView
             android:id="@+id/tvMVIAge"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="5dp"
-            android:layout_marginBottom="20dp"
+            android:layout_marginEnd="20dp"
             android:layout_weight="4"
             android:gravity="center"
             android:text="."
             android:textColor="@color/subColor500"
             android:textSize="20dp"
-            app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintStart_toStartOf="@+id/tvMVIName"
-            app:layout_constraintTop_toBottomOf="@+id/tvMVIName"
-            app:layout_constraintVertical_bias="0.0" />
+            app:layout_constraintBottom_toBottomOf="@+id/tvMVIName"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="@+id/tvMVIName" />
+
+        <TextView
+            android:id="@+id/tvMVIRegDate"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="5dp"
+            android:layout_marginEnd="20dp"
+            android:textColor="@color/subColor500"
+            android:textSize="18sp"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toBottomOf="@+id/tvMVIAge" />
 
         <TextView
             android:id="@+id/tvMVIGender"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginStart="10dp"
             android:layout_marginTop="5dp"
+            android:layout_marginBottom="20dp"
             android:layout_weight="4"
             android:gravity="center"
             android:maxLength="25"
@@ -78,7 +69,8 @@
             android:text="남성"
             android:textColor="@color/subColor500"
             android:textSize="20dp"
-            app:layout_constraintStart_toEndOf="@+id/tvMVIAge"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintStart_toStartOf="@+id/tvMVIName"
             app:layout_constraintTop_toBottomOf="@+id/tvMVIName" />
 
     </androidx.constraintlayout.widget.ConstraintLayout>

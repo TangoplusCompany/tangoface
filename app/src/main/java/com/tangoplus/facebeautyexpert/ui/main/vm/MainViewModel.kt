@@ -15,6 +15,7 @@ import com.tangoplus.facebeautyexpert.domain.vision.face.FaceLandmarkerHelper
 import com.tangoplus.facebeautyexpert.domain.vo.FaceResult
 import com.tangoplus.facebeautyexpert.domain.vo.Sequence
 import com.tangoplus.facebeautyexpert.ui.info.vo.DateDisplay
+import com.tangoplus.facebeautyexpert.ui.info.vo.Factor
 import com.tangoplus.facebeautyexpert.ui.main.vo.UserItem
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -179,6 +180,11 @@ class MainViewModel : ViewModel() {
 			ordinal?.let { seqs.add(it) }
 		}
 		val validData = faceStatics.find { it.media_file_name.isNotBlank() } ?: faceStatics[0]
+		val factors = Factor(
+			facialAxis = validData.comfort_facial_axis_shape,
+			faceShape = validData.comfort_face_shape,
+			saggingScale = Pair(validData.comfort_left_sagging_scale, validData.comfort_right_sagging_scale)
+		)
 		return FaceResult(
 			tempServerSn = validData.temp_server_sn,
 			userName = validData.name,
@@ -187,7 +193,8 @@ class MainViewModel : ViewModel() {
 			results = jsonArray,
 			depthResult = validData.depth_result,
 			seqs = seqs.toSet(),
-			regDate = validData.reg_date
+			regDate = validData.reg_date,
+			factors = factors
 		)
 	}
 

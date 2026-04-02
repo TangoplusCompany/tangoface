@@ -519,7 +519,22 @@ class MainActivity : AppCompatActivity() {
 			}
 		}
 	}
+	private var previousTabId = R.id.nav_main
+
 	private fun setCurrentFragment(itemId: Int) {
+		// 탭 순서 정의
+		val tabOrder = mapOf(
+			R.id.nav_main to 0,
+			R.id.nav_measure_history to 1,
+			R.id.nav_statistics to 2
+		)
+
+		val currentPosition = tabOrder[itemId] ?: 0
+		val previousPosition = tabOrder[previousTabId] ?: 0
+
+		// 방향 결정 (오른쪽으로 가는지, 왼쪽으로 가는지)
+		val isMovingRight = currentPosition > previousPosition
+
 		// 새로운 프래그먼트 생성
 		val fragment = when (itemId) {
 			R.id.nav_main -> MainFragment()
@@ -527,16 +542,35 @@ class MainActivity : AppCompatActivity() {
 			R.id.nav_statistics -> StatisticsFragment()
 			else -> MainFragment()
 		}
+
 		when (fragment) {
 			is MainFragment -> fvm.setCurrentFragment(FragmentViewModel.FragmentType.MAIN_FRAGMENT)
 			is MeasureHistoryFragment -> fvm.setCurrentFragment(FragmentViewModel.FragmentType.MEASURE_HISTORY_FRAGMENT)
 			is StatisticsFragment -> fvm.setCurrentFragment(FragmentViewModel.FragmentType.STATISTICS_FRAGMENT)
 		}
 
-		selectedTabId = itemId
 		supportFragmentManager.beginTransaction().apply {
+			// 방향에 따라 애니메이션 설정
+			if (isMovingRight) {
+				// 오른쪽으로 이동 (0->1, 1->2)
+				setCustomAnimations(
+					R.anim.fade_in_right,  // 새 프래그먼트 enter
+					R.anim.fade_out_left,  // 기존 프래그먼트 exit
+				)
+			} else {
+				// 왼쪽으로 이동 (2->1, 1->0)
+				setCustomAnimations(
+					R.anim.fade_in_left,   // 새 프래그먼트 enter
+					R.anim.fade_out_right, // 기존 프래그먼트 exit
+				)
+			}
+
 			replace(R.id.flMain, fragment)
 			commit()
 		}
+
+		// 현재 탭을 이전 탭으로 저장
+		previousTabId = itemId
+		selectedTabId = itemId
 	}
 }
