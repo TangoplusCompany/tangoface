@@ -5,6 +5,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
 import androidx.constraintlayout.widget.ConstraintLayout
+import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.RecyclerView
 import com.tangoplus.facebeautyexpert.R
 import com.tangoplus.facebeautyexpert.databinding.RvFacialPartItemBinding
@@ -21,6 +22,21 @@ class SelectRVAdapter(private val svm: SelectViewModel, private val case: Int) :
 
 		fun bind(currentItem: FacialPart) {
 			tvFHAI.text = currentItem.displayName
+			val isSelected = currentItem == svm.currentFacialPart.value
+
+			// 2. Context 가져오기 (색상 리소스 참조용)
+			val context = itemView.context
+
+			if (isSelected) {
+				// 선택된 상태: backgroundTint = accent, textColor = subColor700
+				clFHAI.backgroundTintList = ContextCompat.getColorStateList(context, R.color.accent)
+				tvFHAI.setTextColor(ContextCompat.getColor(context, R.color.subColor700))
+			} else {
+				// 선택되지 않은 상태: backgroundTint = 없앰(null), textColor = subColor100
+				clFHAI.backgroundTintList = null
+				tvFHAI.setTextColor(ContextCompat.getColor(context, R.color.subColor100))
+			}
+
 			clFHAI.setOnSingleClickListener {
 				onFacialPartClickListener?.onFacialPartClick(currentItem)
 			}

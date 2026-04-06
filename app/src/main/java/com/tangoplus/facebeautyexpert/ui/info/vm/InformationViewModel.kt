@@ -14,7 +14,6 @@ class InformationViewModel : ViewModel() {
 	// 체크가 가능한 전체 데이터 VO 항목 담는 곳
 	var currentFaceStaticsItem = mutableListOf<FaceStaticItem>()
 
-	// info의 우측 사진 하단의  정면,교합/턱이동/목폄,개구
 	private var currentSeq = Sequence.COMFORT
 	fun setSeq(seq: Sequence) {
 		currentSeq = seq

@@ -1,6 +1,7 @@
 package com.tangoplus.facebeautyexpert.ui.info
 
 import android.os.Bundle
+import android.util.Log
 import androidx.fragment.app.Fragment
 import android.view.LayoutInflater
 import android.view.View
@@ -50,7 +51,8 @@ class MeasureHistoryFragment : Fragment(), OnUserClickListener {
 				// 측정이 완료되고 바로 결과를 볼 때
 				if (mvm.isMeasureFinish && mvm.tempServerSnAfterMeasure != -1) {
 					lifecycleScope.launch(Dispatchers.IO) {
-						val statics = fDao.getStaticWithPlaceholders(mvm.tempServerSnAfterMeasure)
+						val statics = fDao.getStatic(mvm.tempServerSnAfterMeasure)
+
 						withContext(Dispatchers.Main) {
 							mvm.currentResult.value = mvm.convertToFaceResult(requireContext(), statics)
 							requireActivity().supportFragmentManager.beginTransaction().apply {
@@ -101,7 +103,8 @@ class MeasureHistoryFragment : Fragment(), OnUserClickListener {
 		}
 
 		lifecycleScope.launch(Dispatchers.IO) {
-			val statics = fDao.getStaticWithPlaceholders(tempServerSn)
+			val statics = fDao.getStatic(tempServerSn)
+			Log.v("목폄확인", "statics가져오기: ${statics.map { it.media_file_name }}")
 			val result = mvm.convertToFaceResult(requireContext(), statics)
 //        scrollToView(bd.ibtnMBack, bd.nsvM)
 			withContext(Dispatchers.Main) {

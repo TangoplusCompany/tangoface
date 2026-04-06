@@ -125,7 +125,7 @@
             android:paddingTop="24dp"
             android:text="↑"
             android:textColor="#FFFFFF"
-            android:textSize="64sp"
+            android:textSize="86sp"
             android:textStyle="bold" />
 
         <TextView
@@ -134,7 +134,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="-12dp"
             android:text="👀"
-            android:textSize="36sp" />
+            android:textSize="48sp" />
     </LinearLayout>
 
     <androidx.constraintlayout.widget.ConstraintLayout

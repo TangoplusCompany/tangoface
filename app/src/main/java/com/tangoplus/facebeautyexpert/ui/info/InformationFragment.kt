@@ -1,17 +1,22 @@
 package com.tangoplus.facebeautyexpert.ui.info
 
 import android.annotation.SuppressLint
+import android.graphics.PointF
 import android.os.Bundle
 import android.util.Log
 import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.ArrayAdapter
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.davemorrissey.labs.subscaleview.SubsamplingScaleImageView
+import com.tangoplus.facebeautyexpert.R
 import com.tangoplus.facebeautyexpert.data.db.FaceDao
 import com.tangoplus.facebeautyexpert.data.db.FaceDatabase
 import com.tangoplus.facebeautyexpert.data.db.FaceShape
@@ -66,6 +71,10 @@ class InformationFragment : Fragment(), OnFacialPartClickListener {
 		bd.ssiv.recycle()
 		mvm.comparisonDoubleItem = null
 		ivm.currentCheckedLines.clear()
+		svm.updateFacialPart(FacialPart.DERIVE)
+		svm.updateSequence(Sequence.COMFORT)
+		if (ivm.isAngleModeActive.value) ivm.toggleAngleMode()
+
 		ivm.setSeq(Sequence.COMFORT)
 		ivm.releaseUnitIdx()
 		if (!ivm.getLineOn()) ivm.switchedLineOn()
@@ -76,15 +85,13 @@ class InformationFragment : Fragment(), OnFacialPartClickListener {
 
 		val fd = FaceDatabase.getDatabase(requireContext())
 		fDao = fd.faceDao()
-		ivm.currentCheckedLines.addAll(DrawLine.entries)
-		ivm.currentCheckedLines.remove(DrawLine.A_RATIO_HORIZON)
-		ivm.currentCheckedLines.remove(DrawLine.A_RATIO_VERTI)
-		Log.v("currentCheckedLine", "${ivm.currentCheckedLines}")
+		ivm.currentCheckedLines.addAll(listOf(DrawLine.NECK, DrawLine.FACE, DrawLine.A_SAGGING_FACE, DrawLine.A_FACIAL_AXIS, DrawLine.A_HORIZON))
 		setAdapter()
 		setUserInfo()
 		setResult()
 		setRatioBtn()
 		initAngleTool()
+		observeViewModel()
 	}
 
 	private fun setAdapter() {
@@ -123,49 +130,47 @@ class InformationFragment : Fragment(), OnFacialPartClickListener {
 		bd.ssiv.recycle()
 
 		val isComparison = mvm.comparisonDoubleItem != null
-		val currentSeq = ivm.getSeq()
 
-		if (isComparison) {
-			val leftResult = mvm.comparisonDoubleItem?.first
-			val rightResult = mvm.comparisonDoubleItem?.second
-
-			val result = buildFaceStaticItemList(
-				ivm,
-				true,
-				leftResult?.results,
-				rightResult?.results,
-				leftResult?.seqs,
-				rightResult?.seqs
-			)?.toMutableList()
-
-			if (result != null) {
-				ivm.currentFaceStaticsItem = result
-			}
-
-			val unitIdxCompare = ivm.unitIdxFromCompare.value
-
-
-		} else {
-			val faceStaticJson = mvm.currentResult.value?.results
-			Log.v("setResult", "faceStaticJson: ${faceStaticJson?.length()}")
-			val result =
-				buildFaceStaticItemList(
-					ivm,
-					false,
-					faceStaticJson,
-					faceStaticJson,
-					mvm.currentResult.value?.seqs ?: setOf(),
-					null
-				)?.toMutableList()
-			if (result != null) {
-				ivm.currentFaceStaticsItem = result
-			}
-		}
+//		if (isComparison) {
+//			val leftResult = mvm.comparisonDoubleItem?.first
+//			val rightResult = mvm.comparisonDoubleItem?.second
+//
+//			val result = buildFaceStaticItemList(
+//				ivm,
+//				true,
+//				leftResult?.results,
+//				rightResult?.results,
+//				leftResult?.seqs,
+//				rightResult?.seqs
+//			)?.toMutableList()
+//
+//			if (result != null) {
+//				ivm.currentFaceStaticsItem = result
+//			}
+//
+//			val unitIdxCompare = ivm.unitIdxFromCompare.value
+//
+//
+//		} else {
+//			val faceStaticJson = mvm.currentResult.value?.results
+//			Log.v("setResult", "faceStaticJson: ${faceStaticJson?.length()}")
+//			val result =
+//				buildFaceStaticItemList(
+//					ivm,
+//					false,
+//					faceStaticJson,
+//					faceStaticJson,
+//					mvm.currentResult.value?.seqs ?: setOf(),
+//					null
+//				)?.toMutableList()
+//			if (result != null) {
+//				ivm.currentFaceStaticsItem = result
+//			}
+//		}
 //		Log.v("staticDatas", "${ivm.currentFaceStaticsItem}")
-		val basicInfo = if (isComparison) {
-			Pair(mvm.comparisonDoubleItem?.first?.regDate!!, mvm.comparisonDoubleItem?.second?.regDate!!)
-		} else null
-
+//		val basicInfo = if (isComparison) {
+//			Pair(mvm.comparisonDoubleItem?.first?.regDate!!, mvm.comparisonDoubleItem?.second?.regDate!!)
+//		} else null
 
 		ivm.currentFaceStaticsItem.forEach { addCommentInFCI(it, isComparison) }
 
@@ -175,6 +180,7 @@ class InformationFragment : Fragment(), OnFacialPartClickListener {
 			layoutManager = LinearLayoutManager(requireContext(), LinearLayoutManager.VERTICAL, false)
 
 		}
+		setupSequenceDropdown()
 	}
 
 
@@ -228,32 +234,47 @@ class InformationFragment : Fragment(), OnFacialPartClickListener {
 	}
 
 	private fun initAngleTool() {
-		// 1. ViewModel 상태 관찰
 		viewLifecycleOwner.lifecycleScope.launch {
 			ivm.isAngleModeActive.collect { isActive ->
-				// AngleMeasureView 가시성 조절
-				bd.angleMeasureView.visibility = if (isActive) View.VISIBLE else View.GONE
+				if (isActive) {
+					val savedScale = bd.ssiv.scale
+					val savedCenter = bd.ssiv.center?.let { PointF(it.x, it.y) }
 
-				// ⭐ SSIV 조작 잠금 ⭐
-				bd.ssiv.apply {
-					isPanEnabled = !isActive
-					isZoomEnabled = !isActive
+					android.util.Log.d("AngleDebug", "Saved - scale: $savedScale, center: $savedCenter")
+
+					bd.ssiv.apply {
+						isPanEnabled = false
+						isZoomEnabled = false
+						isQuickScaleEnabled = false
+					}
+
+					bd.angleMeasureView.visibility = View.VISIBLE
+
+					bd.angleMeasureView.post {
+						// ⭐ SSIV 위치 강제 복원
+						if (savedCenter != null) {
+							bd.ssiv.setScaleAndCenter(savedScale, savedCenter)
+						}
+
+						bd.angleMeasureView.postDelayed({
+							bd.angleMeasureView.resetToScreenCenter()
+						}, 50)
+					}
+
+				} else {
+					bd.angleMeasureView.visibility = View.GONE
+					bd.ssiv.apply {
+						isPanEnabled = true
+						isZoomEnabled = true
+						isQuickScaleEnabled = true
+					}
 				}
-
-				// 버튼 디자인 변경 (선택 사항)
-				bd.btnIDAngle.isSelected = isActive
 			}
 		}
 
-		// 2. 버튼 클릭 이벤트
 		bd.btnIDAngle.setOnClickListener {
 			ivm.toggleAngleMode()
 			bd.btnIDAngle.text = if (bd.btnIDAngle.text.contains("끄기")) "📐 각도계산 켜기" else "📐 각도계산 끄기"
-		}
-
-		// 3. 각도 변화 리스너 연결
-		bd.angleMeasureView.onAngleChangeListener = { angle ->
-			ivm.updateManualAngle(angle)
 		}
 	}
 
@@ -269,7 +290,39 @@ class InformationFragment : Fragment(), OnFacialPartClickListener {
 			FacialPart.BOTTOM -> listOf(DrawLine.E_CHEEKS, DrawLine.A_CANTHUS_ORAL, DrawLine.MOUSE)
 		}
 		ivm.currentCheckedLines.addAll(drawLines)
-
+		svm.updateFacialPart(part)
+		bd.rvGD1.adapter?.notifyDataSetChanged()
 		setImage()
+	}
+
+	private fun setupSequenceDropdown() {
+		// 1. 어댑터 설정 (표시할 이름들을 리스트로 추출)
+		val displayNames = svm.sequenceEntries.map { it.displayName }
+		val adapter = ArrayAdapter(requireContext(), R.layout.list_item_dropdown, displayNames)
+		bd.actvTSeq.setAdapter(adapter)
+
+		// 2. 드롭다운 아이템 클릭 리스너
+		bd.actvTSeq.setOnItemClickListener { _, _, position, _ ->
+			val selectedSeq = svm.sequenceEntries[position]
+
+			// ViewModel 업데이트
+			svm.updateSequence(selectedSeq)
+
+			// 🕊️ 여기서 사진을 바꾸는 로직을 추가하시면 됩니다.
+			ivm.setSeq(selectedSeq)
+			setResult()
+			bd.actvTSeq.clearFocus()
+		}
+	}
+
+	private fun observeViewModel() {
+		viewLifecycleOwner.lifecycleScope.launch {
+			viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+				svm.currentSequence.collect { seq ->
+					// 3. ViewModel 상태와 UI 텍스트 동기화 (필터링 방지를 위해 filter = false)
+					bd.actvTSeq.setText(seq.displayName, false)
+				}
+			}
+		}
 	}
 }

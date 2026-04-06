@@ -58,16 +58,16 @@ interface FaceDao {
 	@Query("SELECT * FROM t_face_static WHERE temp_server_sn == :tempServerSn ORDER BY seq ASC")
 	suspend fun getStatic(tempServerSn: Int): List<FaceStatic>
 
-	suspend fun getStaticWithPlaceholders(tempServerSn: Int): List<FaceStatic> {
-		val statics = getStatic(tempServerSn)
-
-		return (0..1).map { seq ->
-			statics.find { it.seq == seq } ?: FaceStatic(
-				temp_server_sn = tempServerSn,
-				seq = seq
-			)
-		}
-	}
+//	suspend fun getStaticWithPlaceholders(tempServerSn: Int): List<FaceStatic> {
+//		val statics = getStatic(tempServerSn)
+//
+//		return (0..1).map { seq ->
+//			statics.find { it.seq == seq } ?: FaceStatic(
+//				temp_server_sn = tempServerSn,
+//				seq = seq
+//			)
+//		}
+//	}
 
 	@Query("SELECT COUNT(DISTINCT temp_server_sn) FROM t_face_static WHERE activated = 1")
 	suspend fun getDataCount(): Int

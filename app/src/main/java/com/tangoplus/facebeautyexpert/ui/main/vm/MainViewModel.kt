@@ -148,17 +148,18 @@ class MainViewModel : ViewModel() {
 
 	//-------------------------------# info로 들어가는 dataClass 변환 #-------------------------------
 	fun convertToFaceResult(context: Context, faceStatics: List<FaceStatic>): FaceResult {
+
 		val mediaUri = mutableListOf<Uri?>()
 		val jsonArray = JSONArray()
 		val seqs = mutableSetOf<Sequence>()
 		faceStatics.filter { it.local_sn != 0 }.forEachIndexed { indexx, faceStatic ->
 			// 1. mediaFileUri를 Uri로 변환해서 추가
-			Log.v("result확인", faceStatic.media_file_name)
+			Log.v("result확인", "0: ${faceStatic.media_file_name}")
 			try {
 
 				val imageUri = FileUtility.getImageUriFromFileName(context, faceStatic.media_file_name)
 				mediaUri.add(imageUri)
-				Log.v("이미지URI", "$indexx ${faceStatic.media_file_name}")
+				Log.v("이미지URI", "1: $indexx ${faceStatic.media_file_name}")
 			} catch (e: Exception) {
 				mediaUri.add(null)
 				Log.e("FaceResultConverter", "이미지 URI 파싱 실패: ${faceStatic.media_file_name}", e)
@@ -175,9 +176,14 @@ class MainViewModel : ViewModel() {
 			}
 
 			// ---------# seqs #---------
-			val seqIndex = faceStatic.seq
+
+			val targetSequence = Sequence.fromId(faceStatic.seq)
+			// 2. 현재 활성화된 리스트(entries) 안에서 그 객체의 인덱스(1)를 구함
+			val seqIndex = targetSequence?.let { Sequence.entries.indexOf(it) } ?: 0
+
 			val ordinal = Sequence.Companion.fromIndex(seqIndex)
 			ordinal?.let { seqs.add(it) }
+			Log.v("시퀀스", "$seqIndex, ordinal: ${ordinal}")
 		}
 		val validData = faceStatics.find { it.media_file_name.isNotBlank() } ?: faceStatics[0]
 		val factors = Factor(
@@ -185,6 +191,7 @@ class MainViewModel : ViewModel() {
 			faceShape = validData.comfort_face_shape,
 			saggingScale = Pair(validData.comfort_left_sagging_scale, validData.comfort_right_sagging_scale)
 		)
+		Log.v("목폄확인", "$seqs")
 		return FaceResult(
 			tempServerSn = validData.temp_server_sn,
 			userName = validData.name,

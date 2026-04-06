@@ -38,12 +38,22 @@ class TextBoxOverlayView @JvmOverloads constructor(
 	// Fragment에서 설정해 줄 얼굴 영역 좌표
 	private var faceRectInPixels: FaceRect? = null
 
-	fun attachToImageView(imageView: SubsamplingScaleImageView) {
+	private var stateChangeCallback: (() -> Unit)? = null
+
+	fun attachToImageView(imageView: SubsamplingScaleImageView, onStateChanged: (() -> Unit)? = null) {
 		this.imageView = imageView
+		this.stateChangeCallback = onStateChanged
+
 		// SSIV 상태 변경 시 invalidate 호출
 		imageView.setOnStateChangedListener(object : SubsamplingScaleImageView.OnStateChangedListener {
-			override fun onScaleChanged(newScale: Float, origin: Int) = invalidate()
-			override fun onCenterChanged(newCenter: PointF?, origin: Int) = invalidate()
+			override fun onScaleChanged(newScale: Float, origin: Int) {
+				invalidate()
+				stateChangeCallback?.invoke()
+			}
+			override fun onCenterChanged(newCenter: PointF?, origin: Int) {
+				invalidate()
+				stateChangeCallback?.invoke()
+			}
 		})
 	}
 

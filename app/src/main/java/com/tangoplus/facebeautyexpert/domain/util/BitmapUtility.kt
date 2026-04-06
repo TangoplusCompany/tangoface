@@ -72,6 +72,8 @@ object BitmapUtility {
 		try {
 			val seqs = faceResult.seqs
 			val seqIndex = seqs.indexOf(seq)
+			Log.v("getCombindBitmap", "$seqs, ${seqIndex}, ${faceResult.mediaUri.getOrNull(seqIndex)}")
+
 			if (seqIndex == -1) {
 				return@withContext Triple(createInfoBitmap(fragment.context, 0), listOf(), null)
 			}
