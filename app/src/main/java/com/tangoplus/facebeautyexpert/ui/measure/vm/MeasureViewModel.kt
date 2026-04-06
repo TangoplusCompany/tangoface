@@ -434,8 +434,18 @@ class MeasureViewModel : ViewModel() {
 						calculateSlope(vmFlr[152].first, vmFlr[152].second, vmFlr[10].first, vmFlr[10].second)
 					val midShoulder3D =
 						Triple((plr3D[11].first + plr3D[12].first) / 2, (plr3D[11].second + plr3D[12].second) / 2, (plr3D[11].third + plr3D[12].third) / 2)
-					val neckLength = get3DDistance(midShoulder3D, flr3D[152])
-					val faceLength = get3DDistance(flr3D[152], currentHairLine3DCoordinate[3])
+					val neckHeight = get3DDistance(midShoulder3D, flr3D[152])
+					val faceHeight = get3DFloorDistance(flr3D[152], currentHairLine3DCoordinate[3])
+//					val neckWidth = get3DDistance(midShoulder3D, flr3D[152])
+
+					val leftFacePoint = listOf(162, 127, 234, 93, 132, 58)
+						.map { flr3D[it] }
+						.minByOrNull { it.first } ?: flr3D[234]
+					val rightFacePoint = listOf(389, 356, 454, 323, 401, 435)
+						.map { flr3D[it] }
+						.maxByOrNull { it.first } ?: flr3D[454]
+					val faceWidth = get3DDistance(leftFacePoint, rightFacePoint)
+
 					val faceShape = classifyFaceShape(vmFlr, currentHairLine3DCoordinate)
 					val facialAxisShape = classifyFacialAxis(vmFlr)
 					val horizontalRatio = calculateHorizontalRatio(vmFlr)
@@ -455,8 +465,9 @@ class MeasureViewModel : ViewModel() {
 						put("comfort_face_vertical_angle", faceVerticalAngle)
 						put("comfort_neck_vertical_angle", neckVerticalAngle)
 						put("comfort_shoulder_horizontal_angle", shoulderHorizon)
-						put("comfort_face_length", faceLength)
-						put("comfort_neck_length", neckLength)
+						put("comfort_face_height", faceHeight)
+						put("comfort_face_width", faceWidth)
+						put("comfort_neck_height", neckHeight)
 						put("comfort_left_mouse_corner_angle", mouseCornerAngle.first)
 						put("comfort_right_mouse_corner_angle", mouseCornerAngle.second)
 						put("comfort_philtrum_length", philtrumLength)
@@ -500,8 +511,8 @@ class MeasureViewModel : ViewModel() {
 						put("comfort_tip_of_chin_horizontal_angle", correctTipOfChinsAngle)
 						put("comfort_canthus_oral_left_vertical_angle", canthusOralAngle.first)
 						put("comfort_canthus_oral_right_vertical_angle", canthusOralAngle.second)
-						put("comfort_nasal_wing_tip_of_lips_left_vertical_angle", nasalWingLipsAngle.first)
-						put("comfort_nasal_wing_tip_of_lips_right_vertical_angle", nasalWingLipsAngle.second)
+						put("comfort_alar_tip_of_lips_left_vertical_angle", nasalWingLipsAngle.first)
+						put("comfort_alar_tip_of_lips_right_vertical_angle", nasalWingLipsAngle.second)
 						put("comfort_side_head_left_angle", sideHeadAngle.first)
 						put("comfort_side_head_right_angle", sideHeadAngle.second)
 						put("comfort_left_cheeks_extent", cheeksExtents.first)

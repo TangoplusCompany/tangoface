@@ -15,8 +15,8 @@ object MathHelpers {
 		SCALE_FACTOR = scale
 	}
 
-	fun getScaleFactor(): Float {
-		return SCALE_FACTOR
+	fun getScaleFactor(): String {
+		return "%.1f".format(SCALE_FACTOR)
 	}
 
 	// ------# 기울기 계산 #------

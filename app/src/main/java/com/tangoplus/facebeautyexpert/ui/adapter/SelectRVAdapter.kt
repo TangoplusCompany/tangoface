@@ -16,7 +16,7 @@ import com.tangoplus.facebeautyexpert.ui.listener.OnFacialPartClickListener
 class SelectRVAdapter(private val svm: SelectViewModel, private val case: Int) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
 	var onFacialPartClickListener : OnFacialPartClickListener? = null
 	inner class FacialPartViewHolder(view: View) : RecyclerView.ViewHolder(view) {
-		val clFHAI : ConstraintLayout = view.findViewById<ConstraintLayout>(R.id.clFHAI)
+		val clFHAI : ConstraintLayout = view.findViewById(R.id.clFHAI)
 		val tvFHAI: TextView = view.findViewById(R.id.tvFHAI)
 
 		fun bind(currentItem: FacialPart) {

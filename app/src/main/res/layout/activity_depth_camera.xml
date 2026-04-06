@@ -59,7 +59,7 @@
             android:layout_height="wrap_content"
             android:layout_marginStart="30dp"
             android:layout_marginEnd="30dp"
-            android:background="@drawable/effect_64"
+            android:background="@drawable/effect_20"
             android:backgroundTint="@color/bg15"
             android:gravity="center"
             android:lineSpacingExtra="12dp"
@@ -91,8 +91,8 @@
 
     <ImageView
         android:id="@+id/ivFrame"
-        android:layout_width="1116dp"
-        android:layout_height="1021dp"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
         android:alpha="0.5"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
@@ -102,6 +102,40 @@
         app:layout_constraintVertical_bias="0.0"
         app:layout_constraintWidth_percent="1.4"
         app:srcCompat="@drawable/drawable_seq_0" />
+
+    <LinearLayout
+        android:id="@+id/llLookUpContainer"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:elevation="10dp"
+        android:gravity="center"
+        android:orientation="vertical"
+        android:visibility="invisible"
+        app:layout_constraintBottom_toBottomOf="@+id/ivFrame"
+        app:layout_constraintEnd_toEndOf="@id/ivFrame"
+        app:layout_constraintHorizontal_bias="0.8"
+        app:layout_constraintStart_toStartOf="@id/ivFrame"
+        app:layout_constraintTop_toTopOf="@id/ivFrame"
+        app:layout_constraintVertical_bias="0.25">
+
+        <TextView
+            android:id="@+id/tvLookUpArrow"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:paddingTop="24dp"
+            android:text="↑"
+            android:textColor="#FFFFFF"
+            android:textSize="64sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/tvLookUpEyes"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="-12dp"
+            android:text="👀"
+            android:textSize="36sp" />
+    </LinearLayout>
 
     <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/clCountDown"

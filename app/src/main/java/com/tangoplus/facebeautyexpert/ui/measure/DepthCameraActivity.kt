@@ -4,6 +4,7 @@ import android.animation.Animator
 import android.animation.AnimatorListenerAdapter
 import android.animation.AnimatorSet
 import android.animation.ObjectAnimator
+import android.animation.ValueAnimator
 import android.annotation.SuppressLint
 import android.content.ContentValues
 import android.content.Context
@@ -346,15 +347,31 @@ class DepthCameraActivity : BaseActivity(), FaceLandmarkerHelper.LandmarkerListe
 								// 🕊️🕊️🕊️🕊️ 여기서 vertical 비율 넣기
 								absoluteLandmarkPairs?.let { pairs ->
 									val verticalRatio = calculateVerticalRatio(pairs, mvm.currentHairLine3DCoordinate)
-									mvm.staticJA.put(JSONObject().apply {
-										put("vertical_ratio", verticalRatio)
-									})
+									if (mvm.staticJA.length() > 0) {
+										// 2. 첫 번째(인덱스 0) JSONObject를 꺼내서 값을 추가(또는 덮어쓰기)
+										val firstJsonObject = mvm.staticJA.getJSONObject(0)
+										firstJsonObject.put("vertical_ratio", verticalRatio)
+									} else {
+										// 3. 만약 배열이 비어있다면 새로 만들어서 첫 번째로 넣어줌
+										mvm.staticJA.put(JSONObject().apply {
+											put("vertical_ratio", verticalRatio)
+										})
+									}
 									Log.v("스태틱", "${mvm.staticJA}")
 								}
 							}
 							mvm.currentHairLine3DCoordinate.clear()
-							viewModel.setSeqFinishedFlag(true)
-							updateUI()
+							bd.overlay.setOnScanFinishedListener {
+								// 이 블록 안의 코드는 애니메이션이 왕복을 마치고 완전히 멈췄을 때 실행됩니다.
+								viewModel.setSeqFinishedFlag(true)
+								updateUI()
+
+								// 리스너 재사용을 방지하고 싶다면 여기서 초기화
+								bd.overlay.setOnScanFinishedListener {}
+							}
+
+							// 3. 스캔 중단 요청 (OverlayView 내부 로직에 의해 왕복 후 멈춤)
+							bd.overlay.stopScanAnimation()
 						}
 					}
 				}
@@ -937,35 +954,51 @@ class DepthCameraActivity : BaseActivity(), FaceLandmarkerHelper.LandmarkerListe
 	// -------------------------# 타이머, UI업데이트, 이미지캡처, 결과처리 #-----------------------------
 	private fun hideViews() {
 		bd.clCountDown.visibility = View.INVISIBLE
-		startCameraShutterAnimation()
+		bd.overlay.startScanAnimation()
 	}
 
-	private fun startCameraShutterAnimation() {
-		// 첫 번째 애니메이션: VISIBLE로 만들고 alpha를 0에서 1로
-		bd.flCameraShutter.visibility = View.VISIBLE
-		bd.flCameraShutter.alpha = 0f
-		Handler(Looper.getMainLooper()).postDelayed({
-			val fadeIn = ObjectAnimator.ofFloat(bd.flCameraShutter, "alpha", 0f, 1f).apply {
-				duration = 100 // 0.1초
-				interpolator = AccelerateDecelerateInterpolator()
-			}
-			// 두 번째 애니메이션: alpha를 1에서 0으로 만들고, 끝난 후 INVISIBLE로 설정
-			val fadeOut = ObjectAnimator.ofFloat(bd.flCameraShutter, "alpha", 1f, 0f).apply {
-				duration = 100 // 0.1초
-				interpolator = AccelerateDecelerateInterpolator()
-				addListener(object : AnimatorListenerAdapter() {
-					override fun onAnimationEnd(animation: Animator) {
-						bd.flCameraShutter.visibility = View.INVISIBLE
+	private var lookUpAnimator: ValueAnimator? = null
+	fun startLookUpAnimation() {
+		val iv = bd.ivFrame
+		val container = bd.llLookUpContainer
+		val arrow = bd.tvLookUpArrow
+
+		iv.post {
+			// 1. 컨테이너(눈+화살표 전체)의 위치를 75%, 30% 지점으로 이동
+			val startX = iv.x + (iv.width * 0.8f) - (container.width / 2f)
+			val startY = iv.y + (iv.height * 0.25f)
+
+			container.x = startX
+			container.y = startY
+			container.visibility = View.VISIBLE
+
+			lookUpAnimator?.cancel()
+
+			lookUpAnimator = ValueAnimator.ofFloat(0f, 1f).apply {
+				duration = 1500 // 1.5초
+				repeatCount = ValueAnimator.INFINITE // 무한 반복
+
+				addUpdateListener { animator ->
+					val fraction = animator.animatedValue as Float
+
+					// 2. 화살표(arrow)만 위로 이동
+					arrow.translationY = -100f * fraction
+
+					// 3. 화살표(arrow)만 투명도 조절
+					arrow.alpha = when {
+						fraction < 0.2f -> fraction / 0.2f
+						fraction > 0.7f -> (1f - fraction) / 0.3f
+						else -> 1f
 					}
-				})
-			}
-			fadeIn.start()
-			fadeIn.addListener(object : AnimatorListenerAdapter() {
-				override fun onAnimationEnd(animation: Animator) {
-					fadeOut.start()
 				}
-			})
-		}, 0)
+			}
+			lookUpAnimator?.start()
+		}
+	}
+
+	fun stopLookUpAnimation() {
+		lookUpAnimator?.cancel()
+		bd.llLookUpContainer.visibility = View.INVISIBLE
 	}
 
 	private fun setGuideAnimation(seq: Sequence, isEnded: Boolean) {
@@ -989,6 +1022,7 @@ class DepthCameraActivity : BaseActivity(), FaceLandmarkerHelper.LandmarkerListe
 	// ------! 타이머 control 시작 !------
 	private fun startTimer() {
 		// 시작 버튼 후 시작
+		guideHandler.postDelayed({stopLookUpAnimation()}, 1000)
 		bd.btnShooting.isEnabled = false
 		bd.tvPrevious.isEnabled = false
 		bd.tvGoGallery.isEnabled = false
@@ -1020,6 +1054,7 @@ class DepthCameraActivity : BaseActivity(), FaceLandmarkerHelper.LandmarkerListe
 			bd.ivFrame.setImageDrawable(
 				ContextCompat.getDrawable(this@DepthCameraActivity, R.drawable.drawable_seq_1)
 			)
+			startLookUpAnimation()
 //			when (mvm.currentSeq) {
 //				Sequence.COMFORT,  -> {
 //					bd.fdgv.triggerOffAnimationIfNeeded()

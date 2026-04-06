@@ -43,54 +43,103 @@
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent">
 
-            <com.davemorrissey.labs.subscaleview.SubsamplingScaleImageView
-                android:id="@+id/ssiv"
+            <androidx.constraintlayout.widget.ConstraintLayout
                 android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:visibility="visible" />
+                android:layout_height="match_parent">
 
-            <LinearLayout
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_gravity="bottom|end"
-                android:layout_margin="10dp"
-                android:orientation="vertical">
+                <com.davemorrissey.labs.subscaleview.SubsamplingScaleImageView
+                    android:id="@+id/ssiv"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:visibility="visible"
+                    app:layout_constraintBottom_toBottomOf="parent"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toTopOf="parent" />
 
-                <TextView
-                    android:id="@+id/btnIDClean"
+                <com.tangoplus.facebeautyexpert.ui.view.TextBoxOverlayView
+                    android:id="@+id/overlayView"
+                    android:layout_width="0dp"
+                    android:layout_height="0dp"
+                    app:layout_constraintBottom_toBottomOf="@id/ssiv"
+                    app:layout_constraintEnd_toEndOf="@id/ssiv"
+                    app:layout_constraintStart_toStartOf="@id/ssiv"
+                    app:layout_constraintTop_toTopOf="@id/ssiv" />
+
+                <com.tangoplus.facebeautyexpert.ui.view.AngleMeasureView
+                    android:id="@+id/angleMeasureView"
+                    android:layout_width="0dp"
+                    android:layout_height="0dp"
+                    app:layout_constraintBottom_toBottomOf="@id/ssiv"
+                    app:layout_constraintEnd_toEndOf="@id/ssiv"
+                    app:layout_constraintStart_toStartOf="@id/ssiv"
+                    app:layout_constraintTop_toTopOf="@id/ssiv" />
+                <LinearLayout
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_gravity="bottom|end"
-                    android:layout_marginBottom="5dp"
-                    android:background="@drawable/effect_20"
-                    android:backgroundTint="#1A140000"
-                    android:gravity="center"
-                    android:paddingStart="16dp"
-                    android:paddingTop="8dp"
-                    android:paddingEnd="16dp"
-                    android:paddingBottom="8dp"
-                    android:text="🔍 가이드라인 끄기"
-                    android:textColor="@color/white"
-                    android:textSize="18dp" />
+                    android:layout_margin="10dp"
+                    android:layout_marginEnd="10dp"
+                    android:layout_marginBottom="10dp"
+                    android:orientation="vertical"
+                    app:layout_constraintBottom_toBottomOf="parent"
+                    app:layout_constraintEnd_toEndOf="parent">
 
-                <TextView
-                    android:id="@+id/btnIDGrid"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_gravity="bottom|end"
-                    android:layout_marginTop="5dp"
-                    android:background="@drawable/effect_20"
-                    android:backgroundTint="#1A140000"
-                    android:gravity="center"
-                    android:paddingStart="16dp"
-                    android:paddingTop="8dp"
-                    android:paddingEnd="16dp"
-                    android:paddingBottom="8dp"
-                    android:text="ꖛ 그리드 끄기 "
-                    android:textColor="@color/white"
-                    android:textSize="18dp" />
+                    <TextView
+                        android:id="@+id/btnIDClean"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="bottom|end"
+                        android:layout_marginBottom="5dp"
+                        android:background="@drawable/effect_20"
+                        android:backgroundTint="#1A140000"
+                        android:gravity="center"
+                        android:paddingStart="16dp"
+                        android:paddingTop="8dp"
+                        android:paddingEnd="16dp"
+                        android:paddingBottom="8dp"
+                        android:text="🔍 가이드라인 끄기"
+                        android:textColor="@color/white"
+                        android:textSize="18dp" />
 
-            </LinearLayout>
+
+                    <TextView
+                        android:id="@+id/btnIDGrid"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="bottom|end"
+                        android:layout_marginTop="5dp"
+                        android:layout_marginBottom="5dp"
+                        android:background="@drawable/effect_20"
+                        android:backgroundTint="#1A140000"
+                        android:gravity="center"
+                        android:paddingStart="16dp"
+                        android:paddingTop="8dp"
+                        android:paddingEnd="16dp"
+                        android:paddingBottom="8dp"
+                        android:text="ꖛ 그리드 끄기 "
+                        android:textColor="@color/white"
+                        android:textSize="18dp" />
+
+                    <TextView
+                        android:id="@+id/btnIDAngle"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="bottom|end"
+                        android:layout_marginTop="5dp"
+                        android:background="@drawable/effect_20"
+                        android:backgroundTint="#1A140000"
+                        android:gravity="center"
+                        android:paddingStart="16dp"
+                        android:paddingTop="8dp"
+                        android:paddingEnd="16dp"
+                        android:paddingBottom="8dp"
+                        android:text="📐 각도계산 켜기"
+                        android:textColor="@color/white"
+                        android:textSize="18dp" />
+
+                </LinearLayout>
+            </androidx.constraintlayout.widget.ConstraintLayout>
 
         </androidx.cardview.widget.CardView>
 

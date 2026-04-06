@@ -5,6 +5,8 @@ import androidx.lifecycle.ViewModel
 import com.tangoplus.facebeautyexpert.domain.vo.FaceStaticItem
 import com.tangoplus.facebeautyexpert.domain.vo.Sequence
 import com.tangoplus.facebeautyexpert.ui.info.vo.DrawLine
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
 
 class InformationViewModel : ViewModel() {
 	val currentCheckedLines = mutableSetOf<DrawLine>()
@@ -39,5 +41,20 @@ class InformationViewModel : ViewModel() {
 		unitIdxFromCompare.value = Pair(0, 0)
 	}
 
+	// angle pointer 모드
+	// 각도 측정 모드 활성화 여부
+	private val _isAngleModeActive = MutableStateFlow(false)
+	val isAngleModeActive = _isAngleModeActive.asStateFlow()
 
+	// 실시간으로 계산된 각도 (UI에서 관찰용)
+	private val _currentManualAngle = MutableStateFlow(180f)
+	val currentManualAngle = _currentManualAngle.asStateFlow()
+
+	fun toggleAngleMode() {
+		_isAngleModeActive.value = !_isAngleModeActive.value
+	}
+
+	fun updateManualAngle(angle: Float) {
+		_currentManualAngle.value = angle
+	}
 }

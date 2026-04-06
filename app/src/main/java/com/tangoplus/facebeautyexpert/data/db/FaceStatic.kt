@@ -98,8 +98,10 @@ data class FaceStatic(
 	val comfort_face_vertical_angle: Float = 0f, // 이마중심-턱중심 각도 // ✅
 	val comfort_neck_vertical_angle: Float = 0f, // ✅
 	val comfort_shoulder_horizontal_angle: Float = 0f, // ✅
-	val comfort_face_length: Float = 0f, // ✅
-	val comfort_neck_length: Float = 0f, // ✅
+	val comfort_face_width: Float = 0f, // ✅
+	val comfort_face_height: Float = 0f, // ✅
+//	val comfort_neck_width: Float = 0f, // ✅
+	val comfort_neck_height: Float = 0f, // ✅
 
 	// 상안부
 	val comfort_eye_horizontal_angle: Float = 0f, // ✅

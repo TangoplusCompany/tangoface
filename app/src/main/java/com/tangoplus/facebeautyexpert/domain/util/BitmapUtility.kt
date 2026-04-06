@@ -11,6 +11,7 @@ import android.graphics.DashPathEffect
 import android.graphics.Matrix
 import android.graphics.Paint
 import android.graphics.Path
+import android.graphics.PointF
 import android.graphics.Rect
 import android.hardware.display.DisplayManager
 import android.icu.text.DecimalFormat
@@ -49,6 +50,7 @@ import com.tangoplus.facebeautyexpert.domain.vo.BitmapFlag
 import com.tangoplus.facebeautyexpert.domain.vo.Landmarks
 import com.tangoplus.facebeautyexpert.domain.vo.Sequence
 import com.tangoplus.facebeautyexpert.ui.info.vo.LineType
+import com.tangoplus.facebeautyexpert.ui.view.TextBoxOverlayView
 import kotlinx.coroutines.withContext
 
 object BitmapUtility {
@@ -66,17 +68,15 @@ object BitmapUtility {
 		faceResult: FaceResult,
 		seq: Sequence,
 		ivm: InformationViewModel,
-	): Bitmap? = withContext(Dispatchers.Default) {
+	): Triple<Bitmap?, List<TextBoxData>, TextBoxOverlayView.FaceRect?> = withContext(Dispatchers.Default) {
 		try {
 			val seqs = faceResult.seqs
 			val seqIndex = seqs.indexOf(seq)
 			if (seqIndex == -1) {
-				return@withContext createInfoBitmap(fragment.context, 0)
+				return@withContext Triple(createInfoBitmap(fragment.context, 0), listOf(), null)
 			}
-			val imageUri = faceResult.mediaUri.getOrNull(seqIndex) ?: return@withContext createInfoBitmap(
-				fragment.context,
-				0
-			)
+			val imageUri = faceResult.mediaUri.getOrNull(seqIndex) ?:
+			return@withContext Triple(createInfoBitmap(fragment.context, 0), listOf(), null)
 
 
 			val path = getPathFromContentUri(fragment.requireContext(), imageUri)
@@ -98,7 +98,7 @@ object BitmapUtility {
 
 				// ⭐ 원본 크기와 처리된 비트맵을 Pair로 반환
 				Pair(processedBitmap, Pair(originalWidth, originalHeight))
-			} ?: return@withContext createInfoBitmap(fragment.context, 0)
+			} ?: return@withContext Triple(createInfoBitmap(fragment.context, 0), listOf(), null)
 
 			val processedBitmap = bitmap.first
 			val (originalWidth, originalHeight) = bitmap.second
@@ -133,7 +133,7 @@ object BitmapUtility {
 				isLineOn = isLineOn,
 				isGridLineOn = isGridLineOn
 			)
-			val combinedBitmap = combineImageAndOverlay(
+			val (combinedBitmap, textBoxes, faceRect) = combineImageAndOverlay(
 				DrawImageUiModel(
 					processedBitmap,
 					faceResult,
@@ -163,11 +163,11 @@ object BitmapUtility {
 				upscaledBitmap
 			}
 
-			finalBitmap.copy(finalBitmap.config ?: Bitmap.Config.ARGB_8888, true)
+			Triple(finalBitmap.copy(finalBitmap.config ?: Bitmap.Config.ARGB_8888, true), textBoxes, faceRect)
 
 		} catch (e: Exception) {
 			Log.e("getCombineBitmap", "Error: ${e.message}", e)
-			null
+			Triple(null, listOf(), null)
 		}
 	}
 
@@ -250,7 +250,7 @@ object BitmapUtility {
 	}
 	fun combineImageAndOverlay(
 		dim: DrawImageUiModel
-	): Bitmap {
+	): Triple<Bitmap, List<TextBoxData>, TextBoxOverlayView.FaceRect> {
 
 		val matrix = Matrix().apply {
 			preScale(-1f, 1f)
@@ -584,8 +584,6 @@ object BitmapUtility {
 			if (dim.setedLine.contains(DrawLine.A_SHOULDER)) {
 				val topLm0 = dimFLS.landmarks[11]
 				val bottomLm0 = dimFLS.landmarks[12]
-				val rawData = extractRawData(dim, DrawLine.A_SHOULDER)
-				val nullCheckRawData = if (rawData.isNotEmpty()) rawData[0] else ""
 				val x00 = topLm0.x
 				val y00 = topLm0.y
 				val x01 = bottomLm0.x
@@ -596,8 +594,6 @@ object BitmapUtility {
 			if (dim.setedLine.contains(DrawLine.NECK)) {
 				val topLm0 = dimPLS.landmarks[11]
 				val bottomLm0 = dimPLS.landmarks[12]
-				val rawData = extractRawData(dim, DrawLine.NECK)
-				val nullCheckRawData = if (rawData.isNotEmpty()) rawData[0] else ""
 
 				val middleShoulderX = (topLm0.x + bottomLm0.x) / 2
 				val middleShoulderY = (topLm0.y + bottomLm0.y) / 2
@@ -622,7 +618,6 @@ object BitmapUtility {
 				// height
 				val topLm0 = dimFLS.landmarks[152]
 				val bottomLm0 = dimFLS.landmarks[10]
-				val rawData = extractRawData(dim, DrawLine.FACE)
 				val x00 = topLm0.x
 				val y00 = topLm0.y
 				val x01 = bottomLm0.x
@@ -663,8 +658,6 @@ object BitmapUtility {
 			}
 
 			if (dim.setedLine.contains(DrawLine.A_HORIZON)) {
-				val rawData0 = extractRawData(dim, DrawLine.A_HORIZON)
-				val nullCheckRawData0 = if (rawData0.isNotEmpty()) rawData0[0] else ""
 				val leftLm0 = dimFLS.landmarks[33]
 				val rightLm0 = dimFLS.landmarks[263]
 				val x00 = leftLm0.x
@@ -684,7 +677,6 @@ object BitmapUtility {
 
 
 
-				val nullCheckRawData1 = if (rawData0.isNotEmpty()) rawData0[1] else ""
 				val leftLm1 = dimFLS.landmarks[234]
 				val rightLm1 = dimFLS.landmarks[454]
 				val x10 = leftLm1.x
@@ -703,7 +695,6 @@ object BitmapUtility {
 					lineType = LineType.ANGLE
 				)
 
-				val nullCheckRawData2 = if (rawData0.isNotEmpty()) rawData0[2] else ""
 				val leftLm2 = dimFLS.landmarks[61]
 				val rightLm2 = dimFLS.landmarks[291]
 				val x20 = leftLm2.x
@@ -727,7 +718,6 @@ object BitmapUtility {
 				drawExtendedLine(canvas, centerX, centerY, x21, y21, 100f, 100f, whitePaint)
 
 
-				val nullCheckRawData3 = if (rawData0.isNotEmpty()) rawData0[3] else ""
 				val topLm0 = dimFLS.landmarks[152]
 				val bottomLm0 = dimFLS.landmarks[152]
 				val x30 = topLm0.x
@@ -824,8 +814,6 @@ object BitmapUtility {
 
 			}
 			if (dim.setedLine.contains(DrawLine.L_CORNEA)) {
-				val rawData = extractRawData(dim, DrawLine.L_CORNEA)
-				val nullCheckRawData = if (rawData.isNotEmpty()) rawData[0] else ""
 				val leftLm0 = dimFLS.landmarks[470]
 				val rightLm0 = dimFLS.landmarks[472]
 				val x00 = leftLm0.x
@@ -863,8 +851,6 @@ object BitmapUtility {
 			}
 
 			if (dim.setedLine.contains(DrawLine.EYEBROW)) {
-				val rawData = extractRawData(dim, DrawLine.EYEBROW)
-				val nullCheckRawData = if (rawData.isNotEmpty()) rawData[0] else ""
 				val leftLm00 = dimFLS.landmarks[55]
 				val leftLm01 = dimFLS.landmarks[107]
 				val leftLm10 = dimFLS.landmarks[52]
@@ -1035,8 +1021,6 @@ object BitmapUtility {
 
 
 			if (dim.setedLine.contains(DrawLine.NOSE)) {
-				val rawData = extractRawData(dim, DrawLine.NOSE)
-				val nullCheckRawData = if (rawData.isNotEmpty()) rawData[0] else ""
 				val leftLm0 = dimFLS.landmarks[220]
 				val rightLm0 = dimFLS.landmarks[48]
 				val x00 = leftLm0.x
@@ -1251,8 +1235,6 @@ object BitmapUtility {
 				val midLm = dimFLS.landmarks[13]
 				val topLm0 = dimFLS.landmarks[61]
 				val bottomLm0 = dimFLS.landmarks[291]
-				val rawData = extractRawData(dim, DrawLine.MOUSE)
-				val nullCheckRawData = if (rawData.isNotEmpty()) rawData[0] else ""
 				val x0 = midLm.x
 				val y0 = midLm.y
 				val x00 = topLm0.x
@@ -1355,8 +1337,6 @@ object BitmapUtility {
 
 			// ----------------------------------# 목 폄 상태 #--------------------------------------
 			if (dim.setedLine.contains(DrawLine.A_FACIAL_AXIS)) {
-				val rawData = extractRawData(dim, DrawLine.A_FACIAL_AXIS)
-				val nullCheckRawData = if (rawData.isNotEmpty()) rawData[0] else ""
 				val lm0 = dimFLS.landmarks[168]
 				val lm1= dimFLS.landmarks[2]
 				val lm2 = dimFLS.landmarks[152]
@@ -1391,11 +1371,8 @@ object BitmapUtility {
 				)
 			}
 
-
-
-
 			// ----------------------------------# 비율 계산기 #------------------------------------
-			if ( dim.setedLine.contains(DrawLine.A_RATIO_VERTI)) {
+			if (dim.setedLine.contains(DrawLine.A_RATIO_VERTI)) {
 
 				val leftFace = listOf(21, 162, 127, 234, 93, 132, 58)
 				val rightFace = listOf(251, 390, 356, 454, 323, 361)
@@ -1560,8 +1537,8 @@ object BitmapUtility {
 //				}
 //			}
 // ------------------------------# 선택에 따라 바로 그리기 #----------------------------------
-		createRawDataBox(canvas, dim)
-		return drawDirectionUIOnBitmap(resultBitmap)
+		val (textBoxInfos, faceRect) = createRawDataBox(dim)
+		return Triple(drawDirectionUIOnBitmap(resultBitmap), textBoxInfos, faceRect)
 	}
 
 //	fun drawExtendedLine(
@@ -2215,7 +2192,7 @@ object BitmapUtility {
 				else -> listOf("neck_extention_neck_vertical_angle")
 			}
 			DrawLine.FACE -> when (seq) {
-				Sequence.COMFORT -> listOf("comfort_face_vertical_angle", "comfort_face_length")
+				Sequence.COMFORT -> listOf("comfort_face_vertical_angle", "comfort_face_width", "comfort_face_height")
 				else -> listOf("neck_extention_face_vertical_angle")
 			}
 			DrawLine.A_HORIZON -> when (seq) {
@@ -2253,8 +2230,9 @@ object BitmapUtility {
 				"comfort_right_eyebrow_arch_length",
 				"comfort_right_eyebrow_end_length",
 			)
-			DrawLine.NOSE -> listOf("comfort_nose_width",
+			DrawLine.NOSE -> listOf(
 				"comfort_nose_height",
+				"comfort_nose_width",
 				"comfort_alar_horizontal_angle",
 				"comfort_left_alar_length",
 				"comfort_right_alar_length"
@@ -2275,11 +2253,25 @@ object BitmapUtility {
 
 			DrawLine.A_FACIAL_AXIS -> listOf("comfort_length_symmetry_factor", "comfort_angle_symmetry_factor")
 
-			DrawLine.A_RATIO_VERTI -> listOf("")
-			DrawLine.A_RATIO_HORIZON -> listOf("")
+			DrawLine.A_RATIO_VERTI -> listOf("vertical_ratio")
+			DrawLine.A_RATIO_HORIZON -> listOf("horizontal_ratio")
 		}
+
 		val jsonObject = fr.results.getJSONObject(seqIndex)
-		return keys.map { key -> df.format(jsonObject.getJSONObject("data").optDouble(key)) }
+		val dataObject = jsonObject.getJSONObject("data")
+		return keys.map { key ->
+			when (key) {
+				// String 타입으로 저장된 비율 데이터인 경우
+				"vertical_ratio", "horizontal_ratio" -> {
+					dataObject.optString(key, "") // 포맷팅 없이 문자열 그대로 반환 (기본값 "")
+				}
+				// 그 외의 숫자 데이터인 경우 (기존 로직 유지)
+				else -> {
+					val numValue = dataObject.optDouble(key, 0.0) // 기본값 0.0 지정
+					df.format(numValue)
+				}
+			}
+		}
 	}
 	private fun createInfoBitmap(context: Context?, case: Int): Bitmap {
 		return createBitmap(1280, 720).apply {
@@ -2337,142 +2329,571 @@ object BitmapUtility {
 		}
 		canvas.drawPath(path, dashedPaint)
 	}
-
-
+/* 0 1 2 3 4
+*  5 6 7 8 9
+*  10 11 12 13 14
+*  15 16 17 18 19
+*  20 21 22 23 24
+*  25 26 27 28 29
+*  30 31 32 33 34 35
+* */
 
  // 🔥🔥🔥🔥🔥🔥🔥 rawData 박스 만들기 🔥🔥🔥🔥🔥🔥🔥
-	 data class TextDrawInfo(
-		 val text: String,
-		 val baseX: Float,
-		 val baseY: Float,
-		 val textPosition: Int // 0: 왼쪽, 1: 중앙, 2: 오른쪽
-	 )
-	val textPaint = Paint().apply {
-		color = Color.BLACK
-		textSize = 16f
-		isAntiAlias = true
-	}
-	val bgPaint = Paint().apply {
-		color = Color.argb(100, 255, 255, 255)
-		isAntiAlias = true
-	}
-	val textOffset = 20f
+ data class TextBoxData(
+	 val anchorX: Float,        // 최종 비트맵의 픽셀 좌표 (x)
+	 val anchorY: Float,        // 최종 비트맵의 픽셀 좌표 (y)
+	 val targetGridIndex: Int,  // 0 ~ 11 사이의 그리드 번호
+	 val info: TextDrawInfo
+ )
+ data class TextDrawInfo(
+	 val title: String,
+	 val items: List<TextItem>,
+ )
+	data class TextItem(
+		val label: String,    // "눈:", "귀:", "입술:" 등
+		val value: String     // "178.1°", "178.2°" 등
+	)
+	/**
+	 * FHD(1920x1080) 절대 좌표를 최종 가공된 비트맵(2.25배 확대 + 3:4 크롭)의 픽셀 좌표로 변환
+	 */
+	private fun calculateFinalPixel(
+		rawX: Float,
+		rawY: Float,
+		isPortrait: Boolean = true
+	): PointF {
+		val upscaleFactor = 2.25f
 
-	private fun createRawDataBox(canvas: Canvas, dim: DrawImageUiModel) {
-		val dl = dim.setedLine
-		val flm = dim.lms.faceLandmarks.landmarks
+		// 1. 2.25배 업스케일 적용
+		val upscaledX = rawX * upscaleFactor
+		val upscaledY = rawY * upscaleFactor
 
-		val textDrawInfos = mutableListOf<TextDrawInfo>()
+		// 2. Portrait 모드에서의 크롭 보정
+		// Logic: 가로(4320)가 세로(2430)보다 크면 3:4 비율로 가운데를 남기고 좌우를 자름
+		val upscaledW = 1920f * upscaleFactor // 4320
+		val upscaledH = 1080f * upscaleFactor // 2430
 
-		// 각 DrawLine에 따라 데이터와 위치 수집
-		if (dl.contains(DrawLine.A_SAGGING_FACE)) {
-			val boxLocation = flm[152]
-			val rawData = extractRawData(dim, DrawLine.A_SAGGING_FACE)
+		var finalX = upscaledX
+		var finalY = upscaledY
 
-			rawData.forEachIndexed { index, value ->
-				textDrawInfos.add(
-					TextDrawInfo(
-						text = value,
-						baseX = boxLocation.x,
-						baseY = boxLocation.y + (index * textOffset),
-						textPosition = 0 // 또는 원하는 위치
-					)
-				)
-			}
+		if (isPortrait && upscaledW > upscaledH) {
+			val targetWidth = (upscaledH * 0.75f).toInt() // 3:4 비율 너비
+			val cropXOffset = (upscaledW - targetWidth) / 2f
+
+			finalX -= cropXOffset // 잘려나간 왼쪽만큼 좌표를 왼쪽으로 이동
 		}
 
-		if (dl.contains(DrawLine.A_SHOULDER)) {
-			val boxLocation = flm
-			val rawData = extractRawData(dim, DrawLine.A_SHOULDER)
+		return PointF(finalX, finalY)
+	}
 
-			rawData.forEachIndexed { index, value ->
-				textDrawInfos.add(
-					TextDrawInfo(
-						text = value,
-						baseX = boxLocation.x,
-						baseY = boxLocation.y + (index * textOffset),
-						textPosition = 1
+	private fun createRawDataBox(dim: DrawImageUiModel) : Pair<List<TextBoxData>, TextBoxOverlayView.FaceRect> {
+		val dl = dim.setedLine
+		val flm = dim.lms.faceLandmarks.landmarks
+		val plm = dim.lms.poseLandmarks.landmarks
+		val textBoxes = mutableListOf<TextBoxData>()
+
+		if (dl.contains(DrawLine.A_SAGGING_FACE)) {
+			val boxLocation = flm[152]
+			val finalPos = calculateFinalPixel(boxLocation.x, boxLocation.y)
+			val rawData = extractRawData(dim, DrawLine.A_SAGGING_FACE)
+
+			textBoxes.add(
+				TextBoxData(
+					anchorX = finalPos.x,
+					anchorY = finalPos.y,
+					targetGridIndex = 27,
+					info = TextDrawInfo(
+						title = "처짐 지수",
+						items = listOf(
+							TextItem("왼쪽:", rawData.getOrNull(0) ?: ""),
+							TextItem("오른쪽:", rawData.getOrNull(1) ?: ""),
+						)
 					)
 				)
-			}
+			)
+		}
+		if (dl.contains(DrawLine.A_SHOULDER)) {
+			val rawX = (plm[11].x + plm[12].x) / 2
+			val rawY = (plm[11].y + plm[12].y) / 2
+			val finalPos = calculateFinalPixel(rawX, rawY)
+			val rawData = extractRawData(dim, DrawLine.A_SHOULDER)
+
+			textBoxes.add(TextBoxData(
+				anchorX = finalPos.x, anchorY = finalPos.y,
+				targetGridIndex = 32, // 중앙 하단부
+				info = TextDrawInfo("어깨 각도", listOf(TextItem("너비:", "${rawData.getOrNull(0) ?: ""}º")))
+			))
 		}
 
 		if (dl.contains(DrawLine.NECK)) {
+			val rawX = (plm[11].x + plm[12].x) / 2
+			val rawY = (plm[11].y + plm[12].y) / 2
+			val finalPos = calculateFinalPixel(rawX, rawY)
+			val rawData = extractRawData(dim, DrawLine.NECK)
 
+			textBoxes.add(TextBoxData(
+				anchorX = finalPos.x, anchorY = finalPos.y,
+				targetGridIndex = 32, // 목 근처 왼쪽
+				info = TextDrawInfo("목 각도", listOf(TextItem("", "${rawData.getOrNull(0) ?: ""}º")))
+			))
 		}
 		if (dl.contains(DrawLine.FACE)) {
+			val boxLocation = flm[234]
+			val finalPos = calculateFinalPixel(boxLocation.x, boxLocation.y)
+			val rawData = extractRawData(dim, DrawLine.FACE)
 
+			textBoxes.add(TextBoxData(
+				anchorX = finalPos.x, anchorY = finalPos.y,
+				targetGridIndex = 15, // 얼굴 왼쪽 구역
+				info = TextDrawInfo("얼굴 정보", listOf(
+					TextItem("너비:", "${rawData.getOrNull(1) ?: ""}cm"),
+					TextItem("높이:", "${rawData.getOrNull(2) ?: ""}cm"),
+					TextItem("각도:", "${rawData.getOrNull(0) ?: ""}º")
+				))
+			))
 		}
-		if (dl.contains(DrawLine.A_HORIZON)) {
 
+		if (dl.contains(DrawLine.A_HORIZON)) {
+			val boxLocation = flm[454]
+			val finalPos = calculateFinalPixel(boxLocation.x, boxLocation.y)
+			val rawData = extractRawData(dim, DrawLine.A_HORIZON)
+
+			textBoxes.add(TextBoxData(
+				anchorX = finalPos.x, anchorY = finalPos.y,
+				targetGridIndex = 19, // 얼굴 오른쪽 구역
+				info = TextDrawInfo("수평 각도", listOf(
+					TextItem("눈:", "${rawData.getOrNull(0) ?: ""}º"),
+					TextItem("귀:", "${rawData.getOrNull(1) ?: ""}º"),
+					TextItem("입술:", "${rawData.getOrNull(2) ?: ""}º"),
+					TextItem("턱:", "${rawData.getOrNull(3) ?: ""}º")
+				))
+			))
 		}
 		if (dl.contains(DrawLine.EYE)) {
+			val rawData = extractRawData(dim, DrawLine.EYE)
 
-		}
-		if (dl.contains(DrawLine.L_CORNEA)) {
+			// 왼쪽 눈 (233번)
+			val leftEyePos = calculateFinalPixel(flm[233].x, flm[233].y,)
+			textBoxes.add(TextBoxData(
+				anchorX = leftEyePos.x, anchorY = leftEyePos.y,
+				targetGridIndex = 16, // 좌측 상단
+				info = TextDrawInfo("왼쪽 눈", listOf(
+					TextItem("눈매:", "${rawData.getOrNull(0)}º"),
+					TextItem("너비 | 높이:", "${rawData.getOrNull(6)}cm | ${rawData.getOrNull(8)}cm"),
+					TextItem("눈꼬리 | 눈앞머리", "${rawData.getOrNull(4)}º | ${rawData.getOrNull(2)}º")
+				))
+			))
 
+			// 오른쪽 눈 (453번)
+			val rightEyePos = calculateFinalPixel(flm[453].x, flm[453].y,)
+			textBoxes.add(TextBoxData(
+				anchorX = rightEyePos.x, anchorY = rightEyePos.y,
+				targetGridIndex = 18, // 우측 상단
+				info = TextDrawInfo("오른쪽 눈", listOf(
+					TextItem("눈매:", "${rawData.getOrNull(1)}º"),
+					TextItem("너비 | 높이:", "${rawData.getOrNull(7)}cm | ${rawData.getOrNull(9)}cm"),
+					TextItem("눈앞머리 | 눈꼬리", "${rawData.getOrNull(3)} | ${rawData.getOrNull(5)}º")
+				))
+			))
 		}
 		if (dl.contains(DrawLine.EYEBROW)) {
+			val rawData = extractRawData(dim, DrawLine.EYEBROW)
 
+			// 왼쪽 눈 (233번)
+			val leftEyePos = calculateFinalPixel(flm[66].x, flm[66].y,)
+			textBoxes.add(TextBoxData(
+				anchorX = leftEyePos.x, anchorY = leftEyePos.y,
+				targetGridIndex = 1, // 좌측 상단
+				info = TextDrawInfo("왼쪽 눈썹", listOf(
+					TextItem("각도: ", "${rawData.getOrNull(0)}º"),
+					TextItem("두께: ", "${rawData.getOrNull(4)}cm | ${rawData.getOrNull(3)}cm | ${rawData.getOrNull(2)}cm")
+				))
+			))
+
+			// 오른쪽 눈 (453번)
+			val rightEyePos = calculateFinalPixel(flm[296].x, flm[296].y,)
+			textBoxes.add(TextBoxData(
+				anchorX = rightEyePos.x, anchorY = rightEyePos.y,
+				targetGridIndex = 3, // 우측 상단
+				info = TextDrawInfo("왼쪽 눈썹", listOf(
+					TextItem("각도: ", "${rawData.getOrNull(1)}º"),
+					TextItem("두께: ", "${rawData.getOrNull(5)}cm | ${rawData.getOrNull(6)}cm | ${rawData.getOrNull(7)}cm")
+				))
+			))
 		}
+//		if (dl.contains(DrawLine.EYEBROW)) {
+//			val boxLocation0 = flm[66]
+//			val boxLocation1 = flm[296]
+//			val rawData = extractRawData(dim, DrawLine.EYEBROW)
+//
+//			textBoxes.add(
+//				TextDrawInfo(
+//					title = "눈썹 각도",
+//					items = listOf(
+//						TextItem("", "${rawData.getOrNull(0) ?: ""}º"),
+//					),
+//					baseX = boxLocation0.x,
+//					baseY = boxLocation0.y,
+//					anchor = EdgePosition.TOP,
+//					offsetIndex = 0
+//				)
+//			)
+//			textBoxes.add(
+//				TextDrawInfo(
+//					title = "눈썹 두께",
+//					items = listOf(
+//						TextItem("", "${rawData.getOrNull(2) ?: ""}º"),
+//						TextItem("", "${rawData.getOrNull(3) ?: ""}º"),
+//						TextItem("", "${rawData.getOrNull(4) ?: ""}º"),
+//						),
+//					baseX = boxLocation0.x,
+//					baseY = boxLocation0.y,
+//					anchor = EdgePosition.TOP,
+//					offsetIndex = 1
+//				)
+//			)
+//
+//			textBoxes.add(
+//				TextDrawInfo(
+//					title = "눈썹 각도",
+//					items = listOf(
+//						TextItem("", "${rawData.getOrNull(1) ?: ""}º"),
+//					),
+//					baseX = boxLocation1.x,
+//					baseY = boxLocation1.y,
+//					anchor = EdgePosition.TOP,
+//					offsetIndex = 0
+//				)
+//			)
+//			textBoxes.add(
+//				TextDrawInfo(
+//					title = "눈썹 두께",
+//					items = listOf(
+//						TextItem("", "${rawData.getOrNull(5) ?: ""}º"),
+//						TextItem("", "${rawData.getOrNull(6) ?: ""}º"),
+//						TextItem("", "${rawData.getOrNull(7) ?: ""}º"),
+//					),
+//					baseX = boxLocation1.x,
+//					baseY = boxLocation1.y,
+//					anchor = EdgePosition.TOP,
+//					offsetIndex = 1
+//				)
+//			)
+//		}
 		if (dl.contains(DrawLine.NOSE)) {
-
+			val noseCenter = calculateFinalPixel(flm[164].x, flm[164].y)
+			val rawData = extractRawData(dim, DrawLine.NOSE)
+			textBoxes.add(TextBoxData(
+				anchorX = noseCenter.x, anchorY = noseCenter.y,
+				targetGridIndex = 18, // 중앙 상단 (얼굴 중앙)
+				info = TextDrawInfo("코 정보", listOf(
+					TextItem("길이/너비:", "${rawData.getOrNull(0)}/${rawData.getOrNull(1)}º"),
+					TextItem("콧날개 각:", "${rawData.getOrNull(2)}º")
+				))
+			))
 		}
-
-		if (dl.contains(DrawLine.E_CHEEKBONE)) {
-
-		}
+//
+//		if (dl.contains(DrawLine.E_CHEEKBONE)) {
+//
+//		}
 		if (dl.contains(DrawLine.A_ALAR_ORAL)) {
+			val boxLocation = flm[357] // 코 하단 중앙
+			val finalPos = calculateFinalPixel(boxLocation.x, boxLocation.y)
+			val rawData = extractRawData(dim, DrawLine.A_ALAR_ORAL)
 
+			textBoxes.add(TextBoxData(
+				anchorX = finalPos.x, anchorY = finalPos.y,
+				targetGridIndex = 22, // 중앙 하단부
+				info = TextDrawInfo("콧날개-입술끝 각도", listOf(
+					TextItem("좌측:", "${rawData.getOrNull(0) ?: ""}º"),
+					TextItem("우측:", "${rawData.getOrNull(1) ?: ""}º")
+				))
+			))
 		}
 		if (dl.contains(DrawLine.A_SIDE_HEAD)) {
+			val rawData = extractRawData(dim, DrawLine.A_SIDE_HEAD)
 
+			// 좌측 측두 (251번)
+			val leftPos = calculateFinalPixel(flm[251].x, flm[251].y)
+			textBoxes.add(TextBoxData(
+				anchorX = leftPos.x, anchorY = leftPos.y,
+				targetGridIndex = 10, // 왼쪽 중간
+				info = TextDrawInfo("측두 각도(좌)", listOf(TextItem("", "${rawData.getOrNull(0) ?: ""}º")))
+			))
+
+			// 우측 측두 (21번)
+			val rightPos = calculateFinalPixel(flm[21].x, flm[21].y)
+			textBoxes.add(TextBoxData(
+				anchorX = rightPos.x, anchorY = rightPos.y,
+				targetGridIndex = 14, // 오른쪽 중간
+				info = TextDrawInfo("측두 각도(우)", listOf(TextItem("", "${rawData.getOrNull(1) ?: ""}º")))
+			))
 		}
 		if (dl.contains(DrawLine.A_CANTHUS_ORAL)) {
+			val boxLocation = flm[18] // 하안면부 중앙
+			val finalPos = calculateFinalPixel(boxLocation.x, boxLocation.y)
+			val rawData = extractRawData(dim, DrawLine.A_CANTHUS_ORAL)
 
+			textBoxes.add(TextBoxData(
+				anchorX = finalPos.x, anchorY = finalPos.y,
+				targetGridIndex = 32, // 하단 중앙
+				info = TextDrawInfo("눈매끝-입꼬리 각도", listOf(
+					TextItem("좌측:", "${rawData.getOrNull(0) ?: ""}º"),
+					TextItem("우측:", "${rawData.getOrNull(1) ?: ""}º")
+				))
+			))
 		}
 		if (dl.contains(DrawLine.E_CHEEKS)) {
+			val rawData = extractRawData(dim, DrawLine.E_CHEEKS)
 
+			// 좌측 볼 (132번)
+			val leftPos = calculateFinalPixel(flm[132].x, flm[132].y,)
+			textBoxes.add(TextBoxData(
+				anchorX = leftPos.x, anchorY = leftPos.y,
+				targetGridIndex = 20, // 왼쪽 하단부
+				info = TextDrawInfo("볼 너비(좌)", listOf(TextItem("", "${rawData.getOrNull(0) ?: ""}㎠")))
+			))
+
+			// 우측 볼 (361번)
+			val rightPos = calculateFinalPixel(flm[361].x, flm[361].y,)
+			textBoxes.add(TextBoxData(
+				anchorX = rightPos.x, anchorY = rightPos.y,
+				targetGridIndex = 24, // 오른쪽 하단부
+				info = TextDrawInfo("볼 너비(우)", listOf(TextItem("", "${rawData.getOrNull(1) ?: ""}㎠")))
+			))
 		}
 		if (dl.contains(DrawLine.MOUSE)) {
-
+			val mousePos = calculateFinalPixel(flm[17].x, flm[17].y,)
+			val rawData = extractRawData(dim, DrawLine.MOUSE)
+			textBoxes.add(TextBoxData(
+				anchorX = mousePos.x, anchorY = mousePos.y,
+				targetGridIndex = 27, // 하단 중앙
+				info = TextDrawInfo("입 정보", listOf(
+					TextItem("인중 길이:", "${rawData.getOrNull(2)}cm"),
+					TextItem("입 길이", "${rawData.getOrNull(3)}cm"),
+					TextItem("입꼬리 각도:", "${rawData.getOrNull(0)}º / ${rawData.getOrNull(1)}º"),
+					TextItem("윗입술 두께", "${rawData.getOrNull(2)}cm"),
+					TextItem("아래입술 두께", "${rawData.getOrNull(2)}cm")
+				))
+			))
 		}
 		if (dl.contains(DrawLine.A_FACIAL_AXIS)) {
-
+			val mousePos = calculateFinalPixel(flm[17].x, flm[17].y,)
+			val rawData = extractRawData(dim, DrawLine.A_FACIAL_AXIS)
+			textBoxes.add(TextBoxData(
+				anchorX = mousePos.x, anchorY = mousePos.y,
+				targetGridIndex = 33, // 하단 중앙
+				info = TextDrawInfo("하관 비대칭", listOf(
+					TextItem("길이 비대칭 지수", "${rawData.getOrNull(0)}"),
+					TextItem("각도 비대칭 지수", "${rawData.getOrNull(1)}"),
+				))
+			))
 		}
 		if (dl.contains(DrawLine.A_RATIO_VERTI)) {
+			val rawData = extractRawData(dim, DrawLine.A_RATIO_VERTI)
+
+			val verticalRatio = rawData[0].split(":")
+			textBoxes.add(TextBoxData(
+				anchorX = 0f, anchorY = 0f,
+				targetGridIndex = 30, // 하단 중앙
+				info = TextDrawInfo("", listOf(
+					TextItem("", "${verticalRatio[0]}º"),
+				))
+			))
+			textBoxes.add(TextBoxData(
+				anchorX = 0f, anchorY = 0f,
+				targetGridIndex = 31, // 하단 중앙
+				info = TextDrawInfo("", listOf(
+					TextItem("", "${verticalRatio[1]}º"),
+				))
+			))
+			textBoxes.add(TextBoxData(
+				anchorX = 0f, anchorY = 0f,
+				targetGridIndex = 32, // 하단 중앙
+				info = TextDrawInfo("", listOf(
+					TextItem("", "${verticalRatio[2]}º"),
+				))
+			))
+			textBoxes.add(TextBoxData(
+				anchorX = 0f, anchorY = 0f,
+				targetGridIndex = 33, // 하단 중앙
+				info = TextDrawInfo("", listOf(
+					TextItem("", "${verticalRatio[3]}º"),
+				))
+			))
+			textBoxes.add(TextBoxData(
+				anchorX = 0f, anchorY = 0f,
+				targetGridIndex = 34, // 하단 중앙
+				info = TextDrawInfo("", listOf(
+					TextItem("", "${verticalRatio[4]}º"),
+				))
+			))
 
 		}
 		if (dl.contains(DrawLine.A_RATIO_HORIZON)) {
-
+			val rawData = extractRawData(dim, DrawLine.A_RATIO_HORIZON)
+			val verticalRatio = rawData[0].split(":")
+			textBoxes.add(TextBoxData(
+				anchorX = 0f, anchorY = 0f,
+				targetGridIndex = 9, // 하단 중앙
+				info = TextDrawInfo("", listOf(
+					TextItem("", "${verticalRatio[0]}º"),
+				))
+			))
+			textBoxes.add(TextBoxData(
+				anchorX = 0f, anchorY = 0f,
+				targetGridIndex = 19, // 하단 중앙
+				info = TextDrawInfo("", listOf(
+					TextItem("", "${verticalRatio[1]}º"),
+				))
+			))
+			textBoxes.add(TextBoxData(
+				anchorX = 0f, anchorY = 0f,
+				targetGridIndex = 29, // 하단 중앙
+				info = TextDrawInfo("", listOf(
+					TextItem("", "${verticalRatio[2]}º"),
+				))
+			))
 		}
 
-		// 수집된 모든 텍스트를 한 번에 그리기
-		textDrawInfos.forEach { info ->
-			drawTextWithBackground(canvas, info)
-		}
+		val faceXList = flm.map { it.x }
+		val faceYList = flm.map { it.y }
+
+		val minX = faceXList.minOrNull() ?: 0f
+		val maxX = faceXList.maxOrNull() ?: 0f
+		val minY = faceYList.minOrNull() ?: 0f
+		val maxY = faceYList.maxOrNull() ?: 0f
+
+// 2. 아까 만든 calculateFinalPixel 함수를 이용해 최종 비트맵 픽셀 좌표로 변환
+		val topLeft = calculateFinalPixel(minX, minY)
+		val bottomRight = calculateFinalPixel(maxX, maxY)
+
+// 3. FaceRect 객체 생성 (이걸 Fragment에서 OverlayView로 전달해야 함)
+		val faceRect = TextBoxOverlayView.FaceRect(
+			left = topLeft.x,
+			top = topLeft.y,
+			right = bottomRight.x,
+			bottom = bottomRight.y
+		)
+
+		return Pair(textBoxes, faceRect)
 	}
-
-	private fun drawTextWithBackground(canvas: Canvas, info: TextDrawInfo) {
-		val bounds = Rect()
-		textPaint.getTextBounds(info.text, 0, info.text.length, bounds)
-		val padding = 12f
-
-		val textX = when (info.textPosition) {
-			0 -> info.baseX - bounds.width() - padding
-			1 -> info.baseX - bounds.width() / 2f
-			2 -> info.baseX
-			else -> info.baseX
-		}
-		val textY = info.baseY
-
-		val left = textX - padding
-		val top = textY + bounds.top - padding
-		val right = textX + bounds.width() + padding
-		val bottom = textY + bounds.bottom + padding
-		val radius = minOf(right - left, bottom - top) / 2f
-
-		canvas.drawRoundRect(left, top, right, bottom, radius, radius, bgPaint)
-		canvas.drawText(info.text, textX, textY, textPaint)
-	}
+//
+//	private fun calculateBoxHeight(info: TextDrawInfo): Float {
+//		val padding = 12f
+//		val lineSpacing = 8f
+//
+//		val titleBounds = Rect()
+//		textPaint.getTextBounds(info.title, 0, info.title.length, titleBounds)
+//
+//		val itemsHeight = info.items.size * (titleBounds.height() + lineSpacing)
+//
+//		return titleBounds.height() + lineSpacing + itemsHeight + padding * 2
+//	}
+//
+//	private fun drawTextBoxWithBackground(canvas: Canvas, info: TextDrawInfo, offsetY: Float = 0f) {
+//		val padding = 12f
+//		val lineSpacing = 8f
+//		val labelValueSpacing = 8f
+//
+//		// 타이틀 bounds
+//		val titleBounds = Rect()
+//		textPaint.getTextBounds(info.title, 0, info.title.length, titleBounds)
+//
+//		// 각 아이템의 bounds 계산
+//		val itemBounds = info.items.map { item ->
+//			val labelBounds = Rect()
+//			val valueBounds = Rect()
+//			if (item.label.isNotEmpty()) {
+//				textPaint.getTextBounds(item.label, 0, item.label.length, labelBounds)
+//			}
+//			textPaint.getTextBounds(item.value, 0, item.value.length, valueBounds)
+//			Pair(labelBounds, valueBounds)
+//		}
+//
+//		// 전체 박스 크기 계산
+//		val maxItemWidth = itemBounds.maxOfOrNull { (labelBounds, valueBounds) ->
+//			val labelW = labelBounds.width()
+//			val valueW = valueBounds.width()
+//			if (labelW > 0) {
+//				labelW + labelValueSpacing.toInt() + valueW
+//			} else {
+//				valueW
+//			}
+//		} ?: 0
+//		val boxWidth = maxOf(titleBounds.width(), maxItemWidth).toFloat()
+//
+//		val titleHeight = titleBounds.height()
+//		val itemsHeight = itemBounds.sumOf { maxOf(it.first.height(), it.second.height()) } +
+//			(info.items.size - 1) * lineSpacing
+//		val totalHeight = titleHeight + lineSpacing + itemsHeight
+//
+//		// Anchor에 따른 시작 위치 (기준점 기준으로 박스가 어느 방향에 위치하는지)
+//		val (boxLeft, boxTop) = when (info.anchor) {
+//			EdgePosition.TOP -> {
+//				// 기준점이 박스 위쪽 = 박스가 아래에 위치
+//				Pair(
+//					info.baseX - boxWidth / 2f + info.marginX,
+//					info.baseY + info.marginY + offsetY
+//				)
+//			}
+//			EdgePosition.BOTTOM -> {
+//				// 기준점이 박스 아래쪽 = 박스가 위에 위치
+//				Pair(
+//					info.baseX - boxWidth / 2f + info.marginX,
+//					info.baseY - totalHeight - padding * 2 - info.marginY - offsetY
+//				)
+//			}
+//			EdgePosition.LEFT -> {
+//				// 기준점이 박스 왼쪽 = 박스가 오른쪽에 위치
+//				Pair(
+//					info.baseX + info.marginX + offsetY,
+//					info.baseY - totalHeight / 2f - padding + info.marginY
+//				)
+//			}
+//			EdgePosition.RIGHT -> {
+//				// 기준점이 박스 오른쪽 = 박스가 왼쪽에 위치
+//				Pair(
+//					info.baseX - boxWidth - padding * 2 - info.marginX - offsetY,
+//					info.baseY - totalHeight / 2f - padding + info.marginY
+//				)
+//			}
+//		}
+//
+//		// 박스 그리기
+//		val boxRight = boxLeft + boxWidth + padding * 2
+//		val boxBottom = boxTop + totalHeight + padding * 2
+//		val radius = 8f
+//
+//		canvas.drawRoundRect(boxLeft, boxTop, boxRight, boxBottom, radius, radius, bgPaint)
+//
+//		// 타이틀 그리기 (중앙 정렬)
+//		val titleX = boxLeft + (boxWidth - titleBounds.width()) / 2f + padding
+//		val titleY = boxTop + padding + titleBounds.height()
+//		canvas.drawText(info.title, titleX, titleY, textPaint)
+//
+//		// 각 아이템 그리기
+//		var currentY = titleY + lineSpacing
+//		info.items.forEachIndexed { index, item ->
+//			val (labelBounds, valueBounds) = itemBounds[index]
+//
+//			if (item.label.isNotEmpty()) {
+//				// 레이블이 있는 경우 (왼쪽 정렬)
+//				val labelX = boxLeft + padding
+//				val labelY = currentY + labelBounds.height()
+//				canvas.drawText(item.label, labelX, labelY, textPaint)
+//
+//				// 값 (오른쪽 정렬)
+//				val valueX = boxRight - padding - valueBounds.width()
+//				val valueY = currentY + valueBounds.height()
+//				canvas.drawText(item.value, valueX, valueY, textPaint)
+//			} else {
+//				// 레이블이 없는 경우 (중앙 정렬)
+//				val valueX = boxLeft + (boxWidth - valueBounds.width()) / 2f + padding
+//				val valueY = currentY + valueBounds.height()
+//				canvas.drawText(item.value, valueX, valueY, textPaint)
+//			}
+//
+//			currentY += maxOf(labelBounds.height(), valueBounds.height()) + lineSpacing
+//		}
+//	}
 }

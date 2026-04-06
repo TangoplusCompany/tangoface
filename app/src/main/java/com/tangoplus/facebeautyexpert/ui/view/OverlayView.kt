@@ -1,5 +1,8 @@
 package com.tangoplus.facebeautyexpert.ui.view
 
+import android.animation.Animator
+import android.animation.AnimatorListenerAdapter
+import android.animation.ValueAnimator
 import android.content.Context
 import android.graphics.BlurMaskFilter
 import android.graphics.Canvas
@@ -9,6 +12,7 @@ import android.graphics.PointF
 import android.util.AttributeSet
 import android.view.View
 import android.view.ViewGroup
+import android.view.animation.AccelerateDecelerateInterpolator
 import androidx.core.graphics.plus
 import androidx.core.graphics.times
 import androidx.core.graphics.toColorInt
@@ -17,6 +21,7 @@ import com.tangoplus.facebeautyexpert.domain.vision.face.FaceLandmarkResult
 import com.tangoplus.facebeautyexpert.orbbec.vo.Point3D
 import kotlin.math.max
 import kotlin.math.min
+import kotlin.math.pow
 
 class OverlayView(context: Context?, attrs: AttributeSet?) :
 	View(context, attrs) {
@@ -36,6 +41,31 @@ class OverlayView(context: Context?, attrs: AttributeSet?) :
 	private var horizontalLineSuccess = false
 	private var currentRunningMode: RunningMode = RunningMode.IMAGE
 
+	private var dotPaint = Paint()
+	private var scanAnimator: ValueAnimator? = null
+	private var isScanning = false
+	private var currentScanY = 0f
+	private var scanMinY = 0f
+	private var scanMaxY = 0f
+
+	private var currentRepeatCount = 0
+	private var isStopRequested = false
+
+	// 애니메이션 종료 시점을 Activity에 알리는 리스너
+	private var onScanFinishedListener: (() -> Unit)? = null
+
+	private val waveHeight = 250f // 빛이 퍼지는 범위
+	private val dotRadius = 1.5f    // 점의 크기
+
+	fun setOnScanFinishedListener(listener: () -> Unit) {
+		this.onScanFinishedListener = listener
+	}
+
+
+	private var trailPaint = Paint().apply {
+		style = Paint.Style.FILL
+		isAntiAlias = true
+	}
 
 	fun setVerti(isSuccess: Boolean) {
 		verticalLineSuccess = isSuccess
@@ -116,6 +146,15 @@ class OverlayView(context: Context?, attrs: AttributeSet?) :
 //            maskFilter = BlurMaskFilter(15f, BlurMaskFilter.Blur.NORMAL)
 		}
 
+		dotPaint = Paint().apply {
+			color = "#80FFFFFF".toColorInt() // 스캐너 느낌의 형광 민트/녹색
+			strokeWidth = 8f
+			style = Paint.Style.STROKE
+			strokeCap = Paint.Cap.ROUND
+			isAntiAlias = true
+			// 빛나는 효과(Glow) 추가
+			maskFilter = BlurMaskFilter(12f, BlurMaskFilter.Blur.SOLID)
+		}
 	}
 
 	override fun draw(canvas: Canvas) {
@@ -138,6 +177,34 @@ class OverlayView(context: Context?, attrs: AttributeSet?) :
 			outLinePaint,
 			trajectory1Paint,
 		)
+
+		if (isScanning) {
+			val faceLandmarks = results?.landmarks ?: return
+
+			faceLandmarks.forEach { landmark ->
+				val px = landmark.x * scaledImageWidth + offsetX
+				val py = landmark.y * scaledImageHeight + offsetY
+
+				// 중심점(currentScanY)과 현재 랜드마크의 Y축 거리 계산
+				val yDistance = Math.abs(currentScanY - py)
+
+				val alpha: Int
+				if (yDistance < waveHeight) {
+					// 파도 범위 안: 거리에 비례하여 중앙일수록 진하게 (제곱근 사용으로 더 극적인 대비)
+					val progress = (1f - (yDistance / waveHeight)).toDouble().pow(2.0).toFloat()
+					alpha = (progress * 255f).toInt().coerceIn(0, 255)
+				} else {
+					// 파도 범위 밖: 투명
+					alpha = 0
+				}
+
+				// 완전히 투명하지 않은 점들만 캔버스에 그리기
+				if (alpha > 5) {
+					dotPaint.alpha = alpha
+					canvas.drawCircle(px, py, dotRadius, dotPaint)
+				}
+			}
+		}
 	}
 //    val faceOutLineIndexes = listOf(
 //        151, 108, 69, 104, 68, 71, 139, 34, 227, 137, 177, 215, 138,135, 169, 170, 140, 171,
@@ -517,5 +584,79 @@ class OverlayView(context: Context?, attrs: AttributeSet?) :
 		layoutParams = params
 	}
 
+	fun startScanAnimation() {
+		// 🕊️ 중복 실행 방지: 이미 스캔 중이면 새로 시작하지 않음
+		if (isScanning) return
 
+		val currentResults = results ?: return
+		val faceLandmarks = currentResults.landmarks
+		if (faceLandmarks.isNullOrEmpty()) return
+
+		val scaledImageHeight = imageHeight * scaleFactor
+		val offsetY = (height - scaledImageHeight) / 2f
+
+		var minY = Float.MAX_VALUE
+		var maxY = Float.MIN_VALUE
+
+		// 얼굴의 가장 높은 곳과 낮은 곳 Y좌표 계산
+		faceLandmarks.forEach { lm ->
+			val y = lm.y * scaledImageHeight + offsetY
+			if (y < minY) minY = y
+			if (y > maxY) maxY = y
+		}
+
+		// 파도가 완전히 지나갈 수 있도록 상하 여유 공간 추가
+		scanMinY = minY - waveHeight
+		scanMaxY = maxY + waveHeight
+
+		isScanning = true
+		isStopRequested = false
+		currentRepeatCount = 0
+
+		scanAnimator?.cancel()
+
+		scanAnimator = ValueAnimator.ofFloat(scanMinY, scanMaxY).apply {
+			duration = 1800 // 점을 훑는 시간 (1.8초)
+			interpolator = AccelerateDecelerateInterpolator()
+			repeatMode = ValueAnimator.RESTART // 위에서 아래로만
+			repeatCount = ValueAnimator.INFINITE // 무한 반복
+
+			addUpdateListener { animator ->
+				currentScanY = animator.animatedValue as Float
+				invalidate() // 위치가 바뀔 때마다 다시 그리기
+			}
+
+			addListener(object : AnimatorListenerAdapter() {
+				override fun onAnimationRepeat(animation: Animator) {
+					currentRepeatCount++
+
+					// 1회 이상 파도가 지나갔고, 외부에서 중지 요청이 왔다면 멈춤
+					if (isStopRequested && currentRepeatCount >= 1) {
+						animation.cancel()
+					}
+				}
+
+				override fun onAnimationEnd(animation: Animator) {
+					isScanning = false
+					currentRepeatCount = 0
+					isStopRequested = false
+					invalidate() // 마지막 찌꺼기 점들을 지우기 위해 화면 갱신
+
+					// Activity에 애니메이션이 완전히 종료되었음을 알림
+					onScanFinishedListener?.invoke()
+				}
+			})
+		}
+		scanAnimator?.start()
+	}
+
+	fun stopScanAnimation() {
+		if (currentRepeatCount >= 1) {
+			// 이미 1번 이상 훑었다면 즉시 종료
+			scanAnimator?.cancel()
+		} else {
+			// 아직 한 번도 다 못 훑었다면, 이번 사이클이 끝날 때 종료되도록 예약
+			isStopRequested = true
+		}
+	}
 }

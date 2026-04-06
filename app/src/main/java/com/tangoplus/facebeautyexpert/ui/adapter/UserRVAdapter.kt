@@ -60,7 +60,7 @@ class UserRVAdapter(
 			val birthday = currentItem.birthday
 
 
-			holder.tvMVIRegDate.text = currentItem.regDate.substring(0, 11)
+			holder.tvMVIRegDate.text = currentItem.regDate.substring(0, 16)
 			val age = if (birthday?.length == 10) {
 				try {
 					val (birthYear, birthMonth, birthDay) = birthday.split("-").map { it.toInt() }
