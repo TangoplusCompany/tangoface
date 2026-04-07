@@ -307,7 +307,7 @@ object ClassifyUtility {
 		return Pair(lengthAsymmetry, angleAsymmetry)
 	}
 
-	fun calculateHorizontalRatio(
+	fun calculateVerticalRatio(
 		faceLandmarks: MutableList<Pair<Float, Float>>
 	): String {
 		val points = listOf(
@@ -325,7 +325,7 @@ object ClassifyUtility {
 		return ratios.joinToString(":") { "%.2f".format(it) }
 	}
 
-	fun calculateVerticalRatio(
+	fun calculateHorizontalRatio(
 		faceLandmarks: MutableList<Pair<Float, Float>>,
 		hairLine3DCoordinates: MutableList<Triple<Float, Float, Float>>
 	): String {
@@ -333,8 +333,8 @@ object ClassifyUtility {
 
 		val points = listOf(
 			Pair(0f, hairlineCenterY),                                              // 헤어라인
-			Pair(0f, (faceLandmarks[33].second + faceLandmarks[263].second) / 2f), // 눈끝 라인
-			Pair(0f, faceLandmarks[4].second),                                      // 코끝
+			Pair(0f, (faceLandmarks[55].second + faceLandmarks[285].second) / 2f), // 눈끝 라인
+			Pair(0f, faceLandmarks[2].second),                                      // 코끝
 			Pair(0f, faceLandmarks[152].second)                                     // 턱끝
 		)
 

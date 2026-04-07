@@ -46,27 +46,41 @@ object HairLineUtility {
 	fun convertHairlineTo3D(
 		hairlinePoints: List<HairlinePoint>,
 		depthData: ShortArray,
-		depthWidth: Int,
-		depthHeight: Int,
-		intrinsic: CameraIntrinsic
+		depthWidth: Int,  // 1280
+		depthHeight: Int, // 720
+		intrinsic: CameraIntrinsic // 640x360 기준 파라미터
 	): List<HairlinePoint3D> {
 		val result = mutableListOf<HairlinePoint3D>()
 
-		for (point in hairlinePoints) {
-			val x = point.point.x.toInt()
-			val y = point.point.y.toInt()
+		// Orbbec SDK의 Intrinsic 원본 해상도
+		val intrinsicWidth = 640f
+		val intrinsicHeight = 360f
 
-			if (x in 0 until depthWidth && y in 0 until depthHeight) {
-				val idx = y * depthWidth + x
-				val depthMm = depthData[idx].toInt() and 0xFFFF
-				val depthM = depthMm / 1000f
+		for (point in hairlinePoints) {
+			// 1. 원본 1920x1080(FHD) 좌표
+			val fhdX = point.point.x
+			val fhdY = point.point.y
+
+			// 2. Depth Map(1280x720) 배열 인덱스 참조용 (Z값 추출용)
+			val depthX = (fhdX * (depthWidth.toFloat() / 1920f)).toInt()
+			val depthY = (fhdY * (depthHeight.toFloat() / 1080f)).toInt()
+
+			// 3. 3D 투영을 위한 Intrinsic(640x360) 스케일링 좌표 (X, Y값 계산용)
+			val calcX = fhdX * (intrinsicWidth / 1920f)
+			val calcY = fhdY * (intrinsicHeight / 1080f)
+
+			if (depthX in 0 until depthWidth && depthY in 0 until depthHeight) {
+				val idx = depthY * depthWidth + depthX
+				val rawDepth = depthData[idx].toInt() and 0xFFFF
+				val depthM = rawDepth / 1000f
 
 				val point3D = if (depthM > 0) {
-					convertDepthPixelTo3D(intrinsic, x.toFloat(), y.toFloat(), depthM)
+					// ★ 핵심: fhdX 대신 calcX(640 기준)를 넣습니다.
+					convertDepthPixelTo3D(intrinsic, calcX, calcY, depthM)
 				} else {
-					val nearbyDepth = findNearbyDepth(depthData, x, y, depthWidth, depthHeight)
+					val nearbyDepth = findNearbyDepth(depthData, depthX, depthY, depthWidth, depthHeight)
 					if (nearbyDepth > 0) {
-						convertDepthPixelTo3D(intrinsic, x.toFloat(), y.toFloat(), nearbyDepth / 1000f)
+						convertDepthPixelTo3D(intrinsic, calcX, calcY, nearbyDepth / 1000f)
 					} else {
 						Point3D(0f, 0f, 0f)
 					}
@@ -78,7 +92,6 @@ object HairLineUtility {
 		}
 		return result
 	}
-
 	fun findHairline(
 		bitmap: Bitmap,
 		faceLandmarks: FaceLandmarkResult,

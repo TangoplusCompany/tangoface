@@ -130,7 +130,7 @@ class MainViewModel : ViewModel() {
 			}
 			currentUserItems = listOf()
 			val collator = Collator.getInstance(Locale.KOREAN)
-			val sorted = allData.sortedWith(compareBy(collator) { it.regDate })
+			val sorted = allData.sortedWith(compareByDescending(collator) { it.regDate })
 			currentUserItems = sorted
 			staticDataLoad.postValue(true)
 		}

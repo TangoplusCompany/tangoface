@@ -1,25 +1,11 @@
 package com.tangoplus.facebeautyexpert.ui.measure.vm
 
-import android.content.Context
 import android.graphics.Bitmap
-import android.net.Uri
 import android.util.Log
-import androidx.annotation.OptIn
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
-import androidx.media3.common.MediaItem
-import androidx.media3.common.MimeTypes
-import androidx.media3.common.audio.ChannelMixingAudioProcessor
-import androidx.media3.common.util.UnstableApi
-import androidx.media3.effect.ScaleAndRotateTransformation
-import androidx.media3.transformer.Composition
-import androidx.media3.transformer.EditedMediaItem
-import androidx.media3.transformer.Effects
-import androidx.media3.transformer.ExportException
-import androidx.media3.transformer.ExportResult
-import androidx.media3.transformer.Transformer
 import com.orbbec.obsensor.types.CameraIntrinsic
-import com.tangoplus.facebeautyexpert.domain.util.ClassifyUtility.calculateHorizontalRatio
+import com.tangoplus.facebeautyexpert.domain.util.ClassifyUtility.calculateVerticalRatio
 import com.tangoplus.facebeautyexpert.domain.util.ClassifyUtility.classifyFaceShape
 import com.tangoplus.facebeautyexpert.domain.util.ClassifyUtility.classifyFacialAsymmetry
 import com.tangoplus.facebeautyexpert.domain.util.ClassifyUtility.classifyFacialAxis
@@ -38,12 +24,8 @@ import com.tangoplus.facebeautyexpert.domain.vision.face.FaceLandmarkerHelper
 import com.tangoplus.facebeautyexpert.domain.vo.Sequence
 import com.tangoplus.facebeautyexpert.orbbec.vo.Point3D
 import com.tangoplus.facebeautyexpert.ui.view.OverlayView
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 import org.json.JSONArray
 import org.json.JSONObject
-import java.io.File
 import java.math.RoundingMode
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
@@ -414,7 +396,7 @@ class MeasureViewModel : ViewModel() {
 						calculateSlope(vmFlr[61].first, vmFlr[61].second, vmFlr[13].first, vmFlr[13].second),
 						calculateSlope(vmFlr[291].first, vmFlr[291].second, vmFlr[13].first, vmFlr[13].second)
 					)
-					val philtrumLength = get3DFloorDistance(flr3D[2], flr3D[0])
+					val philtrumLength = get3DDistance(flr3D[2], flr3D[0])
 					val mouseWidth = get3DDistance(flr3D[61], flr3D[291])
 					val lipsLengths = Pair(
 						get3DDistance(flr3D[0], flr3D[13]),
@@ -437,25 +419,25 @@ class MeasureViewModel : ViewModel() {
 					val neckHeight = get3DDistance(midShoulder3D, flr3D[152])
 					val faceHeight = get3DFloorDistance(flr3D[152], currentHairLine3DCoordinate[3])
 //					val neckWidth = get3DDistance(midShoulder3D, flr3D[152])
-
+					Log.v("faceHeight", "${flr3D[152]}, ${currentHairLine3DCoordinate[3]}")
 					val leftFacePoint = listOf(162, 127, 234, 93, 132, 58)
 						.map { flr3D[it] }
 						.minByOrNull { it.first } ?: flr3D[234]
 					val rightFacePoint = listOf(389, 356, 454, 323, 401, 435)
 						.map { flr3D[it] }
 						.maxByOrNull { it.first } ?: flr3D[454]
-					val faceWidth = get3DDistance(leftFacePoint, rightFacePoint)
 
+					val faceWidth = get3DFloorDistance(leftFacePoint, rightFacePoint)
+					Log.v("faceWidth", "${leftFacePoint}, ${rightFacePoint} : ${faceWidth}")
 					val faceShape = classifyFaceShape(vmFlr, currentHairLine3DCoordinate)
 					val facialAxisShape = classifyFacialAxis(vmFlr)
-					val horizontalRatio = calculateHorizontalRatio(vmFlr)
+					val verticalRatio = calculateVerticalRatio(vmFlr)
 					val seggingDepths = classifySaggingDepth(vmFlr)
 					val asymmetrys = classifyFacialAsymmetry(vmFlr)
 					// 양쪾을 벌렸을 때 7.2 안벌렸을 때 4.6
 					val tempStatic = JSONObject().apply {
 
-						put("horizontal_ratio", horizontalRatio)
-
+						put("vertical_ratio", verticalRatio)
 						put("comfort_face_shape", faceShape.shape)
 						put("comfort_left_sagging_scale", seggingDepths.first)
 						put("comfort_right_sagging_scale", seggingDepths.second)

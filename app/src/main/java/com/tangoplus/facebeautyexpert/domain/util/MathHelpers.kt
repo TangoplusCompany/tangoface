@@ -172,11 +172,9 @@ object MathHelpers {
 		return (sqrt(dx.pow(2) + dy.pow(2) + dz.pow(2))) * 100
 	}
 	fun get3DFloorDistance(p1: Triple<Float, Float, Float>, p2: Triple<Float, Float, Float>): Float {
-		val dx = p2.first - p1.first   // 가로 차이
-		// dy (높이 차이)는 무시합니다.
-		val dz = p2.third - p1.third   // 깊이 차이
-		val distance = sqrt(dx.pow(2) + dz.pow(2))
-
+		val dx = p2.first - p1.first
+		val dy = p2.second - p1.second
+		val distance = sqrt(dx.pow(2) + dy.pow(2))
 		return distance * 100
 	}
 	fun calculate3DAngle(

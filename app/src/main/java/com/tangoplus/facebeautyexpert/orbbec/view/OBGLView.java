@@ -21,7 +21,7 @@ public class OBGLView extends GLSurfaceView {
 	private OBRender mOBRender;
 	private Handler mHandler;
 	private boolean mCenterCrop = false;
-
+	private int mRotationDegrees = 0;
 	public void setCenterCrop(boolean enable) {
 		mCenterCrop = enable;
 	}
@@ -44,6 +44,12 @@ public class OBGLView extends GLSurfaceView {
 		mHandler = new Handler(Looper.getMainLooper());
 	}
 
+	public void setRotation(int degrees) {
+		mRotationDegrees = degrees;
+		if (mOBRender != null) {
+			mOBRender.setRotation(degrees);
+		}
+	}
 	/**
 	 * Render frame
 	 *
@@ -54,7 +60,10 @@ public class OBGLView extends GLSurfaceView {
 	 * @param data   Frame data
 	 */
 	public void update(int w, int h, StreamType type, Format format, byte[] data, float scale) {
-		if (checkViewSize(w, h) && null != mOBRender) {
+		int effectiveW = (mRotationDegrees == 90 || mRotationDegrees == 270) ? h : w;
+		int effectiveH = (mRotationDegrees == 90 || mRotationDegrees == 270) ? w : h;
+
+		if (checkViewSize(effectiveW, effectiveH) && null != mOBRender) {
 			mOBRender.update(w, h, type, format, data, scale);
 		}
 	}
@@ -69,7 +78,10 @@ public class OBGLView extends GLSurfaceView {
 	 * @param buffer Frame data
 	 */
 	public void update(int w, int h, StreamType type, Format format, ByteBuffer buffer, float scale) {
-		if (checkViewSize(w, h) && null != mOBRender) {
+		int effectiveW = (mRotationDegrees == 90 || mRotationDegrees == 270) ? h : w;
+		int effectiveH = (mRotationDegrees == 90 || mRotationDegrees == 270) ? w : h;
+
+		if (checkViewSize(effectiveW, effectiveH) && null != mOBRender) {
 			mOBRender.update(w, h, type, format, buffer, scale);
 		}
 	}
@@ -182,5 +194,4 @@ public class OBGLView extends GLSurfaceView {
 			Log.d("DEBUG_SIZE", "Margins = left:" + dx + ", top:" + dy);
 		}
 	}
-
 }

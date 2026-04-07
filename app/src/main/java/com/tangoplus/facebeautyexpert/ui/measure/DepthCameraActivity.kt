@@ -1,9 +1,6 @@
 package com.tangoplus.facebeautyexpert.ui.measure
 
-import android.animation.Animator
-import android.animation.AnimatorListenerAdapter
 import android.animation.AnimatorSet
-import android.animation.ObjectAnimator
 import android.animation.ValueAnimator
 import android.annotation.SuppressLint
 import android.content.ContentValues
@@ -24,7 +21,6 @@ import android.util.JsonWriter
 import android.util.Log
 import android.view.View
 import android.view.WindowManager
-import android.view.animation.AccelerateDecelerateInterpolator
 import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.enableEdgeToEdge
@@ -56,10 +52,8 @@ import com.tangoplus.facebeautyexpert.data.db.FaceDao
 import com.tangoplus.facebeautyexpert.data.db.FaceDatabase
 import com.tangoplus.facebeautyexpert.data.db.FaceStatic.Companion.getCurrentDateTime
 import com.tangoplus.facebeautyexpert.databinding.ActivityDepthCameraBinding
-import com.tangoplus.facebeautyexpert.domain.util.AnimationUtility.animateTextViewToTopLeft
 import com.tangoplus.facebeautyexpert.domain.util.AnimationUtility.startFadeIn
 import com.tangoplus.facebeautyexpert.domain.util.AnimationUtility.startFadeOut
-import com.tangoplus.facebeautyexpert.domain.util.BitmapUtility.getScreenOrientation
 import com.tangoplus.facebeautyexpert.domain.util.FileUtility.getFileName
 import com.tangoplus.facebeautyexpert.ui.view.OverlayView
 import com.tangoplus.facebeautyexpert.domain.util.FileUtility.setOnSingleClickListener
@@ -108,7 +102,6 @@ import com.tangoplus.facebeautyexpert.orbbec.vo.Point3D
 import com.tangoplus.facebeautyexpert.orbbec.vo.ScaledIntrinsic
 import com.tangoplus.facebeautyexpert.orbbec.BaseActivity
 import com.tangoplus.facebeautyexpert.ui.main.MainActivity
-import com.tangoplus.facebeautyexpert.ui.main.vo.UserItem
 import com.tangoplus.facebeautyexpert.ui.measure.vm.InputViewModel
 import com.tangoplus.facebeautyexpert.ui.measure.vm.MeasureViewModel
 import java.io.FileOutputStream
@@ -119,11 +112,10 @@ import kotlin.lazy
 import kotlin.math.abs
 import androidx.core.graphics.scale
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
-import com.tangoplus.facebeautyexpert.domain.util.ClassifyUtility.calculateVerticalRatio
+import com.tangoplus.facebeautyexpert.domain.util.ClassifyUtility.calculateHorizontalRatio
 import com.tangoplus.facebeautyexpert.domain.util.HairLineUtility.convertHairlineTo3D
 import com.tangoplus.facebeautyexpert.domain.util.MediaUtility.convertDepthPixelTo3D
 import com.tangoplus.facebeautyexpert.domain.util.MediaUtility.findNearbyDepth
-import com.tangoplus.facebeautyexpert.domain.util.SoundManager
 import com.tangoplus.facebeautyexpert.domain.util.clearAll
 import com.tangoplus.facebeautyexpert.ui.main.vm.MainViewModel
 import com.tangoplus.facebeautyexpert.ui.statistics.GyroDialogFragment
@@ -346,15 +338,15 @@ class DepthCameraActivity : BaseActivity(), FaceLandmarkerHelper.LandmarkerListe
 								}?.toMutableList()
 								// 🕊️🕊️🕊️🕊️ 여기서 vertical 비율 넣기
 								absoluteLandmarkPairs?.let { pairs ->
-									val verticalRatio = calculateVerticalRatio(pairs, mvm.currentHairLine3DCoordinate)
+									val horizontalRatio = calculateHorizontalRatio(pairs, mvm.currentHairLine3DCoordinate)
 									if (mvm.staticJA.length() > 0) {
 										// 2. 첫 번째(인덱스 0) JSONObject를 꺼내서 값을 추가(또는 덮어쓰기)
 										val firstJsonObject = mvm.staticJA.getJSONObject(0)
-										firstJsonObject.put("vertical_ratio", verticalRatio)
+										firstJsonObject.put("horizontal_ratio", horizontalRatio)
 									} else {
 										// 3. 만약 배열이 비어있다면 새로 만들어서 첫 번째로 넣어줌
 										mvm.staticJA.put(JSONObject().apply {
-											put("vertical_ratio", verticalRatio)
+											put("horizontal_ratio", horizontalRatio)
 										})
 									}
 									Log.v("스태틱", "${mvm.staticJA}")
@@ -504,6 +496,7 @@ class DepthCameraActivity : BaseActivity(), FaceLandmarkerHelper.LandmarkerListe
 							buffer?.clear()
 							frame.getData(buffer)
 							bd.obglvC.setCenterCrop(true)
+							bd.obglvC.setRotation(0)
 							bd.obglvC.update(
 								frame.getWidth(),
 								frame.getHeight(),
@@ -514,7 +507,7 @@ class DepthCameraActivity : BaseActivity(), FaceLandmarkerHelper.LandmarkerListe
 							)
 							// ✅ Bitmap 생성 (한 번만!)
 							if (scaledIntrinsic != null && colorDistortion != null) {
-								bitmap = colorFrameToBitmapSafe(frame)
+								bitmap = colorFrameToBitmapSafe(frame, 0)
 
 								bitmap?.let { bmp ->
 									// 1️⃣ MPImage 생성 (Face Detection용)
@@ -576,7 +569,7 @@ class DepthCameraActivity : BaseActivity(), FaceLandmarkerHelper.LandmarkerListe
 								&& params != null
 							) {
 								val paramsUnit = params.getCameraParam(0) // 캘리브 원해상도 기준
-								val base = paramsUnit.colorIntrinsic
+								val base = paramsUnit.depthIntrinsic
 								mvm.latestIntrinsic = base
 								last3DCalculateTime = currentTime
 								val landmarks3D = convertFaceLandmarksTo3D(
@@ -733,9 +726,9 @@ class DepthCameraActivity : BaseActivity(), FaceLandmarkerHelper.LandmarkerListe
 						val jsonPath = saveJsonToStorage(
 							mergedJSON,
 							if (i == staticJos.size - 1 && currentStatic.seq == 9) {
-								mvm.hsvMediaFileName.replace(".png", "").replace(".mp4", "")
+								mvm.hsvMediaFileName.replace(".webp", "").replace(".mp4", "")
 							} else {
-								mvm.mediaFileNames[i].replace(".png", "").replace(".mp4", "")
+								mvm.mediaFileNames[i].replace(".webp", "").replace(".mp4", "")
 							}
 						)
 
@@ -1186,9 +1179,9 @@ class DepthCameraActivity : BaseActivity(), FaceLandmarkerHelper.LandmarkerListe
 					bitmap.setPixels(pixels, 0, width, 0, 0, width, height)
 
 					// 임시 파일 저장
-					val tempFile = File.createTempFile("color_capture", ".png", cacheDir)
+					val tempFile = File.createTempFile("color_capture", ".webp", cacheDir)
 					FileOutputStream(tempFile).use { fos ->
-						bitmap.compress(Bitmap.CompressFormat.JPEG, 100, fos)
+						bitmap.compress(Bitmap.CompressFormat.WEBP_LOSSY, 100, fos)
 					}
 					val tempUri = Uri.fromFile(tempFile)
 					saveMediaToStorage(this@DepthCameraActivity, tempUri, name, true)
@@ -1245,13 +1238,13 @@ class DepthCameraActivity : BaseActivity(), FaceLandmarkerHelper.LandmarkerListe
 	private suspend fun saveMediaToStorage(context: Context, uri: Uri, fileName: String, isImage: Boolean) {
 		withContext(Dispatchers.IO) {
 			try {
-				val extension = if (isImage) ".png" else ".mp4"
+				val extension = if (isImage) ".webp" else ".mp4"
 //			val file = File(context.cacheDir, "$fileName$extension")
 
 				if (isImage) {
 					val contentValues = ContentValues().apply {
 						put(MediaStore.MediaColumns.DISPLAY_NAME, "$fileName$extension")
-						put(MediaStore.MediaColumns.MIME_TYPE, "image/png")
+						put(MediaStore.MediaColumns.MIME_TYPE, "image/webp")
 						put(MediaStore.Images.Media.RELATIVE_PATH, "Pictures/TangoPlus")
 					}
 					val inputStream = context.contentResolver.openInputStream(uri)
@@ -1298,7 +1291,7 @@ class DepthCameraActivity : BaseActivity(), FaceLandmarkerHelper.LandmarkerListe
 					}
 
 					// ★★★ 좌우반전 ★★★
-					matrix.postScale(1f, 1f, bitmap.width / 2f, bitmap.height / 2f)
+//					matrix.postScale(1f, 1f, bitmap.width / 2f, bitmap.height / 2f)
 
 					// 모든 변환을 한번에 적용
 					bitmap = Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true)
@@ -1329,7 +1322,7 @@ class DepthCameraActivity : BaseActivity(), FaceLandmarkerHelper.LandmarkerListe
 									depthData      = mvm.latestDepthData!!,
 									depthWidth     = mvm.latestDepthWidth,
 									depthHeight    = mvm.latestDepthHeight,
-									intrinsic      = mvm.latestIntrinsic!!
+									intrinsic      = mvm.latestIntrinsic!!,
 								)
 
 								hairline3D.forEach { hp ->
@@ -1400,7 +1393,7 @@ class DepthCameraActivity : BaseActivity(), FaceLandmarkerHelper.LandmarkerListe
 					// -------------------------# 목젖 위치를 잡기 위한 detectAsync 끝 #-----------------------
 					imageUri?.let { imageURI ->
 						context.contentResolver.openOutputStream(imageURI)?.use { outputStream ->
-							bitmap.compress(Bitmap.CompressFormat.JPEG, 90, outputStream)
+							bitmap.compress(Bitmap.CompressFormat.WEBP_LOSSY, 100, outputStream)
 							outputStream.flush()
 						}
 						Log.d("SaveMedia", "Image saved to Pictures: ${mvm.currentSeq} ->  $fileName$extension")
@@ -1633,7 +1626,7 @@ class DepthCameraActivity : BaseActivity(), FaceLandmarkerHelper.LandmarkerListe
 		return originJo.apply {
 			put("temp_server_sn", prefsUtil.getLastTempServerSn())
 			put("media_file_name", mediaFileName)
-			put("json_file_name", mediaFileName.replace(".png", ".json").replace(".mp4", ".json"))
+			put("json_file_name", mediaFileName.replace(".webp", ".json").replace(".mp4", ".json"))
 			put("seq", seqInt)
 			put("uuid", mvm.currentUUID)
 			put("name", ivm.nameValue.value)

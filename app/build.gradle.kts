@@ -21,7 +21,7 @@ android {
 
     defaultConfig {
         applicationId = "com.tangoplus.facebeautyexpert"
-        minSdk = 29
+        minSdk = 30
         targetSdk = 35
         versionCode = 4
         versionName = "1.03"

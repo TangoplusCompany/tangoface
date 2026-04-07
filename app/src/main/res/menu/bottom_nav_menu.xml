@@ -4,16 +4,16 @@
     <item
         android:id="@+id/nav_main"
         android:icon="@drawable/ic_measure"
-        android:title="측정"/>
+        android:title="Measure" />
 
     <item
         android:id="@+id/nav_measure_history"
         android:icon="@drawable/ic_record"
-        android:title="기록 확인"/>
+        android:title="History" />
 
     <item
         android:id="@+id/nav_statistics"
         android:icon="@drawable/ic_stats"
-        android:title="통계"/>
+        android:title="Statistics" />
 
 </menu>

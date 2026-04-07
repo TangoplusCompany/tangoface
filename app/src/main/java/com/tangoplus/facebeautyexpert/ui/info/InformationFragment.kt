@@ -86,7 +86,7 @@ class InformationFragment : Fragment(), OnFacialPartClickListener {
 		val fd = FaceDatabase.getDatabase(requireContext())
 		fDao = fd.faceDao()
 		ivm.currentCheckedLines.addAll(listOf(DrawLine.NECK, DrawLine.FACE, DrawLine.A_SAGGING_FACE, DrawLine.A_FACIAL_AXIS, DrawLine.A_HORIZON))
-		setAdapter()
+
 		setUserInfo()
 		setResult()
 		setRatioBtn()
@@ -95,8 +95,9 @@ class InformationFragment : Fragment(), OnFacialPartClickListener {
 	}
 
 	private fun setAdapter() {
+		val selectCase = if (ivm.getSeq() == Sequence.COMFORT) 0 else 1
 		val vLayoutManager = LinearLayoutManager(requireContext(), LinearLayoutManager.VERTICAL, false)
-		val sAdapter = SelectRVAdapter(svm, 0)
+		val sAdapter = SelectRVAdapter(svm, selectCase)
 		sAdapter.onFacialPartClickListener = this@InformationFragment
 		bd.rvGD1.apply {
 			adapter = sAdapter
@@ -128,53 +129,8 @@ class InformationFragment : Fragment(), OnFacialPartClickListener {
 
 	private fun setResult() {
 		bd.ssiv.recycle()
-
 		val isComparison = mvm.comparisonDoubleItem != null
-
-//		if (isComparison) {
-//			val leftResult = mvm.comparisonDoubleItem?.first
-//			val rightResult = mvm.comparisonDoubleItem?.second
-//
-//			val result = buildFaceStaticItemList(
-//				ivm,
-//				true,
-//				leftResult?.results,
-//				rightResult?.results,
-//				leftResult?.seqs,
-//				rightResult?.seqs
-//			)?.toMutableList()
-//
-//			if (result != null) {
-//				ivm.currentFaceStaticsItem = result
-//			}
-//
-//			val unitIdxCompare = ivm.unitIdxFromCompare.value
-//
-//
-//		} else {
-//			val faceStaticJson = mvm.currentResult.value?.results
-//			Log.v("setResult", "faceStaticJson: ${faceStaticJson?.length()}")
-//			val result =
-//				buildFaceStaticItemList(
-//					ivm,
-//					false,
-//					faceStaticJson,
-//					faceStaticJson,
-//					mvm.currentResult.value?.seqs ?: setOf(),
-//					null
-//				)?.toMutableList()
-//			if (result != null) {
-//				ivm.currentFaceStaticsItem = result
-//			}
-//		}
-//		Log.v("staticDatas", "${ivm.currentFaceStaticsItem}")
-//		val basicInfo = if (isComparison) {
-//			Pair(mvm.comparisonDoubleItem?.first?.regDate!!, mvm.comparisonDoubleItem?.second?.regDate!!)
-//		} else null
-
 		ivm.currentFaceStaticsItem.forEach { addCommentInFCI(it, isComparison) }
-
-
 		setImage()
 		bd.rvGD2.apply {
 			layoutManager = LinearLayoutManager(requireContext(), LinearLayoutManager.VERTICAL, false)
@@ -182,7 +138,6 @@ class InformationFragment : Fragment(), OnFacialPartClickListener {
 		}
 		setupSequenceDropdown()
 	}
-
 
 	@SuppressLint("UseKtx")
 	private fun setImage() {
@@ -240,7 +195,7 @@ class InformationFragment : Fragment(), OnFacialPartClickListener {
 					val savedScale = bd.ssiv.scale
 					val savedCenter = bd.ssiv.center?.let { PointF(it.x, it.y) }
 
-					android.util.Log.d("AngleDebug", "Saved - scale: $savedScale, center: $savedCenter")
+					Log.d("AngleDebug", "Saved - scale: $savedScale, center: $savedCenter")
 
 					bd.ssiv.apply {
 						isPanEnabled = false
@@ -249,15 +204,13 @@ class InformationFragment : Fragment(), OnFacialPartClickListener {
 					}
 
 					bd.angleMeasureView.visibility = View.VISIBLE
-
 					bd.angleMeasureView.post {
-						// ⭐ SSIV 위치 강제 복원
 						if (savedCenter != null) {
 							bd.ssiv.setScaleAndCenter(savedScale, savedCenter)
 						}
 
 						bd.angleMeasureView.postDelayed({
-							bd.angleMeasureView.resetToScreenCenter()
+							bd.angleMeasureView.resetSelectedLine()
 						}, 50)
 					}
 
@@ -289,8 +242,14 @@ class InformationFragment : Fragment(), OnFacialPartClickListener {
 			FacialPart.MIDDLE -> listOf(DrawLine.NOSE,DrawLine.A_ALAR_ORAL, DrawLine.A_SIDE_HEAD, DrawLine.E_CHEEKBONE, )
 			FacialPart.BOTTOM -> listOf(DrawLine.E_CHEEKS, DrawLine.A_CANTHUS_ORAL, DrawLine.MOUSE)
 		}
+
+		// item 클릭 후 facialPart, Adapter전부 확인
 		ivm.currentCheckedLines.addAll(drawLines)
 		svm.updateFacialPart(part)
+		if (ivm.isAngleModeActive.value) {
+			ivm.toggleAngleMode()
+			bd.btnIDAngle.text = "📐 각도계산 켜기"
+		}
 		bd.rvGD1.adapter?.notifyDataSetChanged()
 		setImage()
 	}
@@ -313,6 +272,7 @@ class InformationFragment : Fragment(), OnFacialPartClickListener {
 			setResult()
 			bd.actvTSeq.clearFocus()
 		}
+		setAdapter()
 	}
 
 	private fun observeViewModel() {

@@ -215,7 +215,7 @@ object BitmapUtility {
 		style = Paint.Style.STROKE
 	}
 	val orangeAlphaPaint = Paint().apply {
-		color = "#32FFAE00".toColorInt()
+		color = "#1AFFAE00".toColorInt()
 		strokeWidth = strokeWidthh
 		strokeCap = Paint.Cap.ROUND
 		style = Paint.Style.FILL
@@ -268,269 +268,6 @@ object BitmapUtility {
 		)
 		val resultBitmap = flippedBitmap.copy(Bitmap.Config.ARGB_8888, true)
 		val canvas = Canvas(resultBitmap)
-
-//        if (!dim.face3DLandmarks.isNullOrEmpty()) {
-//            val startTime = System.currentTimeMillis()
-//            Log.d("FaceContour", "=== 시작 ===")
-//
-//            // 1. 2D 좌표 추출 (이미 FHD로 스케일링된 절대 좌표)
-//            val ptsHD = extractLandmarkPoints(faceLandmarks)
-//            if (ptsHD.isEmpty()) {
-//                Log.e("FaceContour", "포인트가 비어있음")
-//
-//            }
-//
-//            // 스케일링 없이 그대로 사용
-//            val pts = ptsHD
-//
-//            Log.d("FaceContour", "포인트 개수: ${pts.size}")
-//            Log.d("FaceContour", "첫 포인트: ${pts.firstOrNull()}")
-//
-//            // 2. Z값 검증 및 정규화
-//            if (face3DLandmarks.size != pts.size) {
-//                Log.e("FaceContour", "2D와 3D 포인트 개수 불일치: ${pts.size} vs ${face3DLandmarks.size}")
-//
-//            }
-//
-//            val zValues = face3DLandmarks.map { it.third }
-//            val minZ = zValues.minOrNull() ?: 0f
-//            val maxZ = zValues.maxOrNull() ?: 1f
-//            val zRange = maxZ - minZ
-//
-//            Log.d("FaceContour", "Z 범위: $minZ ~ $maxZ (range: $zRange)")
-//
-//            if (zRange < 0.001f) {
-//                Log.e("FaceContour", "Z값 범위가 너무 작음")
-//
-//            }
-
-//            val heights = face3DLandmarks.map { (it.third - minZ) / zRange }
-//
-//            // 3. 얼굴 외곽 Path
-//            val facePath = Path()
-//            if (faceOutLineIndexes.isNotEmpty()) {
-//                facePath.moveTo(pts[faceOutLineIndexes[0]].x, pts[faceOutLineIndexes[0]].y)
-//                for (i in 1 until faceOutLineIndexes.size) {
-//                    val idx = faceOutLineIndexes[i]
-//                    if (idx < pts.size) {
-//                        facePath.lineTo(pts[idx].x, pts[idx].y)
-//                    }
-//                }
-//                facePath.close()
-//            }
-//
-//            Log.d("FaceContour", "외곽선 포인트 개수: ${faceOutLineIndexes.size}")
-//            Log.d("FaceContour", "첫 외곽 포인트: ${pts.getOrNull(faceOutLineIndexes.firstOrNull() ?: 0)}")
-//
-//            // 4. BBox 계산
-//            val bbox = calculateBBox(pts, faceOutLineIndexes)
-//            Log.d("FaceContour", "BBox: ${bbox.width()} x ${bbox.height()}")
-//            Log.d("FaceContour", "BBox 좌표: (${bbox.left}, ${bbox.top}) ~ (${bbox.right}, ${bbox.bottom})")
-//            Log.d("FaceContour", "비트맵 크기: ${resultBitmap.width} x ${resultBitmap.height}")
-//
-//            // 5. 그리드 필드 생성 (해상도 줄임)
-//            val cellPx = 10f // 15 → 10으로 감소 (더 촘촘하게)
-//            val fieldW = max(2, min(80, (bbox.width() / cellPx).toInt())) // 50 → 80
-//            val fieldH = max(2, min(80, (bbox.height() / cellPx).toInt()))
-//
-//            Log.d("FaceContour", "그리드 크기: $fieldW x $fieldH")
-//
-//            val field = Array(fieldH + 1) { FloatArray(fieldW + 1) }
-//
-//            // 6. IDW 보간 (최적화)
-//            val kNearest = 5 // 8 → 5로 감소
-//            for (gy in 0..fieldH) {
-//                val py = bbox.top + gy * cellPx
-//                for (gx in 0..fieldW) {
-//                    val px = bbox.left + gx * cellPx
-//
-//                    // 거리 계산 (제곱근 생략 버전)
-//                    val distList = pts.indices.map { i ->
-//                        val dx = pts[i].x - px
-//                        val dy = pts[i].y - py
-//                        i to (dx * dx + dy * dy) // 제곱근 생략
-//                    }.sortedBy { it.second }.take(kNearest)
-//
-//                    var sum = 0f
-//                    var weightSum = 0f
-//                    for ((i, distSq) in distList) {
-//                        val weight = 1f / (sqrt(distSq) + 1f)
-//                        sum += heights[i] * weight
-//                        weightSum += weight
-//                    }
-//
-//                    field[gy][gx] = if (weightSum > 0) sum / weightSum else 0f
-//                }
-//            }
-//
-//            Log.d("FaceContour", "보간 완료 (${System.currentTimeMillis() - startTime}ms)")
-//
-//            // 필드 값 범위 확인
-//            var fieldMin = Float.POSITIVE_INFINITY
-//            var fieldMax = Float.NEGATIVE_INFINITY
-//            for (row in field) {
-//                for (v in row) {
-//                    if (v < fieldMin) fieldMin = v
-//                    if (v > fieldMax) fieldMax = v
-//                }
-//            }
-//            Log.d("FaceContour", "필드 값 범위: $fieldMin ~ $fieldMax")
-//
-//            // 7. 등고선 레벨 (전체 범위를 균등하게 커버)
-//            val numLevels = 20 // 12 → 20으로 증가
-//            val levels = (0 until numLevels).map { i ->
-//                fieldMin + (fieldMax - fieldMin) * (i / (numLevels - 1f))
-//            }
-//            Log.d("FaceContour", "등고선 레벨: ${levels.take(3)}... ~ ${levels.takeLast(2)}")
-//
-//            // 8. 등고선 그리기
-//            canvas.save()
-//            canvas.clipPath(facePath) // clip 다시 활성화
-//
-//            val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-//                style = Paint.Style.STROKE
-//                strokeWidth = 2.5f
-//            }
-//
-//            var drawnLines = 0
-//            for (level in levels) {
-//                paint.color = getContourColor(level)
-//                paint.alpha = 160
-//
-//                val paths = marchingSquares(field, bbox, cellPx, level)
-//                paths.forEach {
-//                    canvas.drawPath(it, paint)
-//                    drawnLines++
-//                }
-//            }
-//
-//            canvas.restore()
-//
-//            Log.d("FaceContour", "완료! 총 ${drawnLines}개 선분 그림 (${System.currentTimeMillis() - startTime}ms)")
-//
-//
-//            val ptsHD = dim.faceLandmarks.landmarks.map { _Pt2(it.x, it.y) }
-//            val (sx, sy) = _inferScaleToBitmap(ptsHD, resultBitmap.width, resultBitmap.height)
-//            val pts = ptsHD.map { _Pt2(it.x * sx, it.y * sy) }
-//
-//            // 2) 외곽점으로 "얼굴 기준 평면" z = a x + b y + c 피팅 (z>1 이상치는 제외)
-//            val planeSamples = faceOutLineIndexes.mapNotNull { idx ->
-//                val z = dim.face3DLandmarks.getOrNull(idx)?.third ?: return@mapNotNull null
-//                if (z > 1f) null else Triple(pts[idx].x, pts[idx].y, z)
-//            }
-//            if (planeSamples.size >= 3) {
-//
-//                val (a, b, c) = _fitPlane2D(planeSamples)
-//
-//                // 3) 잔차 r = z - (a x + b y + c) (코/중앙이 +로 커짐)
-//                val residual = FloatArray(dim.face3DLandmarks.size) { i ->
-//                    val z = dim.face3DLandmarks[i].third
-//                    (z - (a * pts[i].x + b * pts[i].y + c))
-//                }
-//
-//                // 4) 얼굴 내부만 그리도록 Path로 clip
-//                val facePath = Path().apply {
-//                    moveTo(pts[faceOutLineIndexes.first()].x, pts[faceOutLineIndexes.first()].y)
-//                    for (k in 1 until faceOutLineIndexes.size) {
-//                        val idx = faceOutLineIndexes[k]
-//                        lineTo(pts[idx].x, pts[idx].y)
-//                    }
-//                    close()
-//                }
-//
-//                // 5) 얼굴 bbox (약간 패딩)
-//                val bbox = run {
-//                    var minX = Float.POSITIVE_INFINITY; var minY = Float.POSITIVE_INFINITY
-//                    var maxX = Float.NEGATIVE_INFINITY; var maxY = Float.NEGATIVE_INFINITY
-//                    for (idx in faceOutLineIndexes) {
-//                        val p = pts[idx]
-//                        if (p.x < minX) minX = p.x
-//                        if (p.y < minY) minY = p.y
-//                        if (p.x > maxX) maxX = p.x
-//                        if (p.y > maxY) maxY = p.y
-//                    }
-//                    val pad = 10f
-//                    RectF(
-//                        max(0f, minX - pad), max(0f, minY - pad),
-//                        min(resultBitmap.width.toFloat(),  maxX + pad),
-//                        min(resultBitmap.height.toFloat(), maxY + pad)
-//                    )
-//                }
-//
-//                // 6) IDW(1/d)로 잔차 필드 보간 (그리드 해상도: cellPx)
-//                val cellPx = 6                // 더 촘촘히(얼굴 중심 디테일 위해)
-//                val fieldW = max(2, (bbox.width()  / cellPx).roundToInt())
-//                val fieldH = max(2, (bbox.height() / cellPx).roundToInt())
-//                val field = Array(fieldH + 1) { FloatArray(fieldW + 1) }
-//
-//                val kNearest = 15
-//                for (gy in 0..fieldH) {
-//                    val py = bbox.top + gy * cellPx
-//                    for (gx in 0..fieldW) {
-//                        val px = bbox.left + gx * cellPx
-//                        val nearest = pts.indices.asSequence()
-//                            .map { i -> i to hypot((pts[i].x - px).toDouble(), (pts[i].y - py).toDouble()) }
-//                            .sortedBy { it.second }
-//                            .take(kNearest)
-//                            .toList()
-//                        var num = 0.0; var den = 0.0; val eps = 1e-4
-//                        for ((i, d) in nearest) {
-//                            val w = 1.0 / max(d, eps)
-//                            num += w * residual[i]
-//                            den += w
-//                        }
-//                        field[gy][gx] = if (den == 0.0) 0f else (num / den).toFloat()
-//                    }
-//                }
-//
-//                // 6-1) 가벼운 스무딩(엣지 톱니 제거)
-//                _smoothField3x3(field)
-//
-//                // 7) 레벨 자동 생성: 데이터 실제 범위 기반(절삭으로 이상치 완화)
-//                val targetLines = 30             // 원하는 선 개수
-//                val winsor = 0.1f               // 5% 절삭(선택)
-//                var fmin = Float.POSITIVE_INFINITY
-//                var fmax = Float.NEGATIVE_INFINITY
-//                for (row in field) for (v in row) { if (v < fmin) fmin = v; if (v > fmax) fmax = v }
-//
-//                run {
-//                    val flat = FloatArray(field.size * field[0].size)
-//                    var t = 0
-//                    for (row in field) for (v in row) flat[t++] = v
-//                    flat.sort()
-//                    val loIdx = ((flat.size - 1) * winsor).toInt().coerceIn(0, flat.size - 1)
-//                    val hiIdx = ((flat.size - 1) * (1f - winsor)).toInt().coerceIn(0, flat.size - 1)
-//                    fmin = max(fmin, flat[loIdx])
-//                    fmax = min(fmax, flat[hiIdx])
-//                }
-//                if (fmax - fmin < 1e-6f) { fmin -= 0.001f; fmax += 0.001f }
-//                val amp = max(abs(fmin), abs(fmax))
-//                val levels = (0 until targetLines).map { i ->
-//                    val t = i / (targetLines - 1f)
-//                    -amp + (2f * amp) * t
-//                }
-//
-//                // 8) 등고선 그리기 (얼굴 내부 clip)
-//                canvas.save()
-//                canvas.clipPath(facePath)
-//
-//                val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-//                    style = Paint.Style.STROKE
-//                    strokeWidth = 1.8f
-//                }
-//
-//                for (iso in levels) {
-//                    paint.color = _contourColor(iso, amp / max(1f, targetLines / 2f), targetLines / 2).apply {
-//                        // 투명도
-//                    }
-//                    paint.alpha = 127
-//                    val paths = _marchingSquares(field, bbox, cellPx, iso)
-//                    paths.forEach { canvas.drawPath(it, paint) }
-//                }
-//                canvas.restore()
-//            }
-//        }
-
 		// ----------# 선택한 항목이 없을 때 기본 축 #------------
 		val dimPLS = dim.lms.poseLandmarks
 		val dimFLS = dim.lms.faceLandmarks
@@ -1444,195 +1181,11 @@ object BitmapUtility {
 				drawExtendedLine(canvas, x1, y4, x1 + 1, y4, 300f, 300f, redPaint)
 			}
 		}
-//			if (dim.setedLine.isEmpty()) {
-//				// ----------# 얼굴 외곽 선 #----------
-//				if (dim.seq !in listOf(Sequence.SIDE_LEFT, Sequence.SIDE_RIGHT)) {
-//					val outLinePath = Path()
-//					if (dim.lms.faceLandmarks.landmarks.isNotEmpty()) {
-//						faceOutLineIndexes.forEachIndexed { i, landmarkIndex ->
-//							val landmark = dimFLS.landmarks[landmarkIndex]
-//
-//							val x = landmark.x
-//							val y = landmark.y
-//
-//							if (i == 0) {
-//								outLinePath.moveTo(x, y) // 시작점
-//							} else {
-//								outLinePath.lineTo(x, y) // 선 연결
-//							}
-//						}
-//						canvas.drawPath(outLinePath, outLinePaint)
-//					}
-//
-//					// -----------# 쇄골 중심 선 #------------
-//					if (dimPLS.landmarks.isNotEmpty()) {
-//						val midShoulderX = (dimPLS.landmarks[11].x + dimPLS.landmarks[12].x) / 2
-//						val midShoulderY = (dimPLS.landmarks[11].y + dimPLS.landmarks[12].y) / 2
-//						drawExtendedLine(
-//							canvas,
-//							midShoulderX,
-//							midShoulderY,
-//							midShoulderX,
-//							midShoulderY + 1,
-//							1500f,
-//							1500f,
-//							neckDashedPaint
-//						)
-//						canvas.drawCircle(dimPLS.landmarks[11].x, dimPLS.landmarks[11].y, 12f, circlePaint)
-//						canvas.drawCircle(dimPLS.landmarks[12].x, dimPLS.landmarks[12].y, 12f, circlePaint)
-//
-//						val centerForehead = dimFLS.landmarks[10]
-//						val betweenEyeBrows = dimFLS.landmarks[9]
-//						// 얼굴 대칭 선 길이 계산
-//						val length = abs(centerForehead.y - betweenEyeBrows.y)
-//						val topLength = when (dim.seq) {
-//							Sequence.JAW_OPENING, Sequence.NECK_EXTENTION -> length * 3f
-//							else -> length * 1.5f
-//						}
-//						val bottomLength = when (dim.seq) {
-//							Sequence.JAW_OPENING, Sequence.NECK_EXTENTION -> length * 10f
-//							else -> length * 5f
-//						}
-//						drawExtendedLine(
-//							canvas,
-//							centerForehead.x,
-//							centerForehead.y,
-//							betweenEyeBrows.x,
-//							betweenEyeBrows.y,
-//							topLength,
-//							bottomLength,
-//							faceDashedPaint
-//						)
-//					}
-//				} else if (dim.seq == Sequence.SIDE_LEFT) {
-//					if (dimPLS.landmarks.isNotEmpty()) {
-//						val pls = dimPLS.landmarks
-//						canvas.drawCircle(pls[0].x, pls[0].y, 12f, circlePaint)
-//						canvas.drawCircle(pls[11].x, pls[11].y, 12f, circlePaint)
-//						drawExtendedLine(
-//							canvas,
-//							pls[11].x,
-//							pls[11].y - 1,
-//							pls[11].x,
-//							pls[11].y + 1,
-//							1500f,
-//							1500f,
-//							faceDashedPaint
-//						)
-//					}
-//				} else if (dim.seq == Sequence.SIDE_RIGHT) {
-//					if (dimPLS.landmarks.isNotEmpty()) {
-//						val pls = dimPLS.landmarks
-//						canvas.drawCircle(pls[0].x, pls[0].y, 12f, circlePaint)
-//						canvas.drawCircle(pls[12].x, pls[12].y, 12f, circlePaint)
-//						drawExtendedLine(
-//							canvas,
-//							pls[12].x,
-//							pls[12].y - 1,
-//							pls[12].x,
-//							pls[12].y + 1,
-//							1500f,
-//							1500f,
-//							faceDashedPaint
-//						)
-//					}
-//				}
-//			}
 // ------------------------------# 선택에 따라 바로 그리기 #----------------------------------
 		val (textBoxInfos, faceRect) = createRawDataBox(dim)
 		return Triple(drawDirectionUIOnBitmap(resultBitmap), textBoxInfos, faceRect)
 	}
 
-//	fun drawExtendedLine(
-//		canvas: Canvas,
-//		x0: Float,
-//		y0: Float,
-//		x1: Float,
-//		y1: Float,
-//		startExtension: Float,
-//		endExtension: Float,
-//		paint: Paint,
-//		text: String = "",
-//		textPosition: Int = 2,
-//		lineType: LineType = LineType.LENGTH
-//	) {
-//		val dx = x1 - x0
-//		val dy = y1 - y0
-//		val length = hypot(dx.toDouble(), dy.toDouble()).toFloat()
-//
-//		if (length == 0f) return
-//
-//		val nx = dx / length
-//		val ny = dy / length
-//
-//		val extendedStartX = x0 - nx * startExtension
-//		val extendedStartY = y0 - ny * startExtension
-//		val extendedEndX = x1 + nx * endExtension
-//		val extendedEndY = y1 + ny * endExtension
-//
-//		// 점선 효과
-//		val dashedPaint = Paint(paint).apply {
-//			pathEffect = DashPathEffect(floatArrayOf(2f, 4f), 0f)
-//		}
-//		canvas.drawLine(extendedStartX, extendedStartY, extendedEndX, extendedEndY, dashedPaint)
-//
-//		// 끝점 마커
-//		when (lineType) {
-//			LineType.ANGLE -> {
-//				// ◆ 다이아몬드
-//				drawDiamond(canvas, extendedStartX, extendedStartY, paint)
-//				drawDiamond(canvas, extendedEndX, extendedEndY, paint)
-//
-//			}
-//			LineType.LENGTH -> {
-//				// ▼ ▲ 삼각형 화살표
-//				drawTriangleArrow(canvas, extendedStartX, extendedStartY, nx, ny, paint, isStart = true)
-//				drawTriangleArrow(canvas, extendedEndX, extendedEndY, nx, ny, paint, isStart = false)
-//			}
-//		}
-//
-//		// 텍스트 (기존 동일)
-//		if (text != "") {
-//			val textPaint = Paint().apply {
-//				color = Color.BLACK
-//				textSize = 16f
-//				isAntiAlias = true
-//			}
-//			val bgPaint = Paint().apply {
-//				color = Color.argb(100, 255, 255, 255)
-//				isAntiAlias = true
-//			}
-//
-//			val textOffset = 20f
-//			val (baseX, baseY) = when (textPosition) {
-//				0 -> Pair(extendedStartX - nx * textOffset, extendedStartY - ny * textOffset)
-//				1 -> Pair((extendedStartX + extendedEndX) / 2f, (extendedStartY + extendedEndY) / 2f)
-//				2 -> Pair(extendedEndX + nx * textOffset, extendedEndY + ny * textOffset)
-//				else -> Pair(extendedEndX + nx * textOffset, extendedEndY + ny * textOffset)
-//			}
-//
-//			val bounds = Rect()
-//			textPaint.getTextBounds(text, 0, text.length, bounds)
-//			val padding = 12f
-//
-//			val textX = when (textPosition) {
-//				0 -> baseX - bounds.width() - padding
-//				1 -> baseX - bounds.width() / 2f
-//				2 -> baseX
-//				else -> baseX
-//			}
-//			val textY = baseY
-//
-//			val left = textX - padding
-//			val top = textY + bounds.top - padding
-//			val right = textX + bounds.width() + padding
-//			val bottom = textY + bounds.bottom + padding
-//			val radius = minOf(right - left, bottom - top) / 2f
-//
-//			canvas.drawRoundRect(left, top, right, bottom, radius, radius, bgPaint)
-//			canvas.drawText(text, textX, textY, textPaint)
-//		}
-//	}
 	fun drawExtendedLine(
 		canvas: Canvas,
 		x0: Float,
@@ -1881,300 +1434,8 @@ object BitmapUtility {
 		}
 	}
 
-//	private data class _Pt2(val x: Float, val y: Float)
-//
-//	/** 좌표가 [0..1] or [0..2] 정규화돼 있으면 비트맵 크기에 맞게 자동 스케일 */
-//	private fun _inferScaleToBitmap(pts: List<_Pt2>, bmpW: Int, bmpH: Int): Pair<Float, Float> {
-//		val maxX = pts.maxOf { it.x }
-//		val maxY = pts.maxOf { it.y }
-//		// MP 포즈/페이스는 보통 0..width/height 픽셀로 오는 경우와 0..1 정규화 둘 다 존재
-//		return when {
-//			maxX <= 2f && maxY <= 2f -> bmpW.toFloat() to bmpH.toFloat()
-//			else -> 1f to 1f
-//		}
-//	}
-//
-//	/** 외곽 2D 점들로 z = a*x + b*y + c 평면 피팅(최소제곱) */
-//	private fun _fitPlane2D(samples: List<Triple<Float, Float, Float>>): Triple<Float, Float, Float> {
-//		var Sx = 0.0;
-//		var Sy = 0.0;
-//		var Sz = 0.0
-//		var Sxx = 0.0;
-//		var Syy = 0.0;
-//		var Sxy = 0.0
-//		var Sxz = 0.0;
-//		var Syz = 0.0
-//		val n = samples.size.toDouble()
-//		for ((x, y, z) in samples) {
-//			val xd = x.toDouble();
-//			val yd = y.toDouble();
-//			val zd = z.toDouble()
-//			Sx += xd; Sy += yd; Sz += zd
-//			Sxx += xd * xd; Syy += yd * yd; Sxy += xd * yd
-//			Sxz += xd * zd; Syz += yd * zd
-//		}
-//		fun det(
-//			a: Double,
-//			b: Double,
-//			c: Double,
-//			d: Double,
-//			e: Double,
-//			f: Double,
-//			g: Double,
-//			h: Double,
-//			i: Double
-//		) =
-//			a * (e * i - f * h) - b * (d * i - f * g) + c * (d * h - e * g)
-//
-//		val D = det(Sxx, Sxy, Sx, Sxy, Syy, Sy, Sx, Sy, n)
-//		val Da = det(Sxz, Sxy, Sx, Syz, Syy, Sy, Sz, Sy, n)
-//		val Db = det(Sxx, Sxz, Sx, Sxy, Syz, Sy, Sx, Sz, n)
-//		val Dc = det(Sxx, Sxy, Sxz, Sxy, Syy, Syz, Sx, Sy, Sz)
-//		return Triple((Da / D).toFloat(), (Db / D).toFloat(), (Dc / D).toFloat())
-//	}
-//
-//	/** 3×3 박스블러 1회 (그리드 톱니/끊김 완화) */
-//	private fun _smoothField3x3(field: Array<FloatArray>) {
-//		val h = field.size;
-//		val w = field[0].size
-//		val copy = Array(h) { field[it].clone() }
-//		for (y in 1 until h - 1) for (x in 1 until w - 1) {
-//			var s = 0f
-//			for (dy in -1..1) for (dx in -1..1) s += copy[y + dy][x + dx]
-//			field[y][x] = s / 9f
-//		}
-//	}
-//
-//	/** Marching Squares → Path 목록 */
-//	private fun _marchingSquares(
-//		field: Array<FloatArray>, bbox: RectF, cellPx: Int, iso: Float
-//	): List<Path> {
-//		val H = field.size - 1
-//		val W = field[0].size - 1
-//		fun v(gx: Int, gy: Int) = field[gy][gx]
-//		fun interp(ax: Float, ay: Float, bx: Float, by: Float, av: Float, bv: Float): PointF {
-//			val t = if (abs(bv - av) < 1e-6f) .5f else (iso - av) / (bv - av)
-//			return PointF(ax + (bx - ax) * t, ay + (by - ay) * t)
-//		}
-//
-//		val segs = ArrayList<Pair<PointF, PointF>>()
-//		for (gy in 0 until H) for (gx in 0 until W) {
-//			val x0 = bbox.left + gx * cellPx;
-//			val y0 = bbox.top + gy * cellPx
-//			val x1 = x0 + cellPx;
-//			val y1 = y0 + cellPx
-//			val vTL = v(gx, gy);
-//			val vTR = v(gx + 1, gy);
-//			val vBR = v(gx + 1, gy + 1);
-//			val vBL = v(gx, gy + 1)
-//			var idx = 0
-//			if (vTL > iso) idx = idx or 1; if (vTR > iso) idx = idx or 2
-//			if (vBR > iso) idx = idx or 4; if (vBL > iso) idx = idx or 8
-//			if (idx == 0 || idx == 15) continue
-//			fun top() = interp(x0, y0, x1, y0, vTL, vTR)
-//			fun right() = interp(x1, y0, x1, y1, vTR, vBR)
-//			fun bottom() = interp(x0, y1, x1, y1, vBL, vBR)
-//			fun left() = interp(x0, y0, x0, y1, vTL, vBL)
-//			when (idx) {
-//				1, 14 -> segs += (top() to left())
-//				2, 13 -> segs += (top() to right())
-//				3, 12 -> segs += (right() to left())
-//				4, 11 -> segs += (right() to bottom())
-//				5 -> {
-//					val a = top();
-//					val b = right();
-//					val c = bottom();
-//					val d = left(); segs += (a to b); segs += (d to c)
-//				}
-//
-//				6, 9 -> segs += (top() to bottom())
-//				7, 8 -> segs += (bottom() to left())
-//				10 -> {
-//					val a = right();
-//					val b = bottom();
-//					val c = top();
-//					val d = left(); segs += (a to b); segs += (c to d)
-//				}
-//			}
-//		}
-//		// 세그먼트 → Path (허용오차 2.5px로 연결성 강화)
-//		fun near(a: PointF, b: PointF, tol: Float = 2.5f) =
-//			abs(a.x - b.x) <= tol && abs(a.y - b.y) <= tol
-//
-//		val left = segs.toMutableList()
-//		val paths = ArrayList<Path>()
-//		while (left.isNotEmpty()) {
-//			val (s0, e0) = left.removeAt(left.lastIndex)
-//			val pts = arrayListOf(s0, e0)
-//			var extended = true
-//			while (extended) {
-//				extended = false;
-//				var i = 0
-//				while (i < left.size) {
-//					val (a, b) = left[i]
-//					when {
-//						near(pts.last(), a) -> {
-//							pts.add(b);left.removeAt(i);extended = true;continue
-//						}
-//
-//						near(pts.last(), b) -> {
-//							pts.add(a);left.removeAt(i);extended = true;continue
-//						}
-//
-//						near(pts.first(), a) -> {
-//							pts.add(0, b);left.removeAt(i);extended = true;continue
-//						}
-//
-//						near(pts.first(), b) -> {
-//							pts.add(0, a);left.removeAt(i);extended = true;continue
-//						}
-//
-//						else -> i++
-//					}
-//				}
-//			}
-//			val path = Path().apply {
-//				moveTo(pts[0].x, pts[0].y); for (k in 1 until pts.size) lineTo(
-//				pts[k].x,
-//				pts[k].y
-//			)
-//			}
-//			paths += path
-//		}
-//		return paths
-//	}
-//
-//	/** 레벨별 색상 (0 근처 연녹, +는 따뜻한 톤, -는 차가운 톤) */
-//	private fun _contourColor(level: Float, step: Float, n: Int): Int {
-//		val t = (level / (step * max(1, n))).coerceIn(-1f, 1f)
-//		return if (t >= 0f) {
-//			val r = (200 + 40 * t).toInt()
-//			val g = (180 - 140 * t).toInt()
-//			val b = (140 - 100 * t).toInt()
-//			Color.rgb(r, g, b)
-//		} else {
-//			val u = -t
-//			val r = (80 - 60 * u).toInt()
-//			val g = (180 + 40 * u).toInt()
-//			val b = (220 + 20 * u).toInt()
-//			Color.rgb(r, g, b)
-//		}
-//	}
-//
-//	fun drawNoseDepthContour(
-//		canvas: Canvas,
-//		depthData: ShortArray,
-//		depthWidth: Int,
-//		depthHeight: Int,
-//		faceLandmarks: FaceLandmarkResult,
-//		scaleX: Float,
-//		scaleY: Float,
-//		roiSizePx: Int = 100,      // 코 주변 ROI 크기
-//		levelCount: Int = 10,      // 등고선 개수
-//		lineColor: Int = Color.argb(200, 255, 220, 180),
-//		strokePx: Float = 2f
-//	) {
-//		val nose = faceLandmarks.landmarks.getOrNull(4) ?: return
-//		val cx = (nose.x * depthWidth).toInt()
-//		val cy = (nose.y * depthHeight).toInt()
-//
-//		val half = roiSizePx / 2
-//		val x0 = (cx - half).coerceAtLeast(0)
-//		val y0 = (cy - half).coerceAtLeast(0)
-//		val x1 = (cx + half).coerceAtMost(depthWidth - 1)
-//		val y1 = (cy + half).coerceAtMost(depthHeight - 1)
-//		val w = x1 - x0
-//		val h = y1 - y0
-//		if (w <= 4 || h <= 4) return
-//
-//		// 1️⃣ depth ROI 추출 (mm → m)
-//		val zmap = Array(h) { y ->
-//			FloatArray(w) { x ->
-//				val idx = (y0 + y) * depthWidth + (x0 + x)
-//				val d = depthData[idx].toInt() and 0xFFFF
-//				if (d > 0) d / 1000f else Float.NaN
-//			}
-//		}
-//
-//		// 2️⃣ 유효 z 평균
-//		val values = zmap.flatMap { it.filter { v -> v.isFinite() } }
-//		if (values.isEmpty()) return
-//		val zMin = values.minOrNull() ?: return
-//		val zMax = values.maxOrNull() ?: return
-//
-//		// 3️⃣ 등고선 레벨 정의
-//		val levels = (0 until levelCount).map { i ->
-//			zMin + (zMax - zMin) * (i / (levelCount - 1f))
-//		}
-//
-//		val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-//			style = Paint.Style.STROKE
-//			strokeWidth = strokePx
-//			color = lineColor
-//		}
-//
-//		// 4️⃣ marching squares로 등고선 계산
-//		for (level in levels) {
-//			val path = Path()
-//			for (y in 0 until h - 1) {
-//				for (x in 0 until w - 1) {
-//					val v = FloatArray(4)
-//					for (k in 0..3) {
-//						val (xx, yy) = when (k) {
-//							0 -> Pair(x, y)
-//							1 -> Pair(x + 1, y)
-//							2 -> Pair(x + 1, y + 1)
-//							else -> Pair(x, y + 1)
-//						}
-//						v[k] = zmap[yy][xx]
-//					}
-//					if (v.any { it.isNaN() }) continue
-//					val mask = (if (v[0] < level) 1 else 0) or
-//						(if (v[1] < level) 2 else 0) or
-//						(if (v[2] < level) 4 else 0) or
-//						(if (v[3] < level) 8 else 0)
-//					if (mask == 0 || mask == 15) continue
-//
-//					fun interp(p1: Float, p2: Float, t1: Float, t2: Float): Float {
-//						return if (abs(p2 - p1) < 1e-6f) p1
-//						else p1 + (level - t1) * (p2 - p1) / (t2 - t1)
-//					}
-//
-//					val edges = mutableListOf<Pair<Float, Float>>()
-//					if ((mask and 1) != (mask and 2)) {
-//						val fx = interp(x.toFloat(), x + 1f, v[0], v[1])
-//						edges += Pair(fx, y.toFloat())
-//					}
-//					if ((mask and 2) != (mask and 4)) {
-//						val fy = interp(y.toFloat(), y + 1f, v[1], v[2])
-//						edges += Pair(x + 1f, fy)
-//					}
-//					if ((mask and 4) != (mask and 8)) {
-//						val fx = interp(x.toFloat(), x + 1f, v[3], v[2])
-//						edges += Pair(fx, y + 1f)
-//					}
-//					if ((mask and 8) != (mask and 1)) {
-//						val fy = interp(y.toFloat(), y + 1f, v[0], v[3])
-//						edges += Pair(x.toFloat(), fy)
-//					}
-//
-//					if (edges.size >= 2) {
-//						val (p1, p2) = edges
-//						val px1 = (x0 + p1.first) * (scaleX / depthWidth)
-//						val py1 = (y0 + p1.second) * (scaleY / depthHeight)
-//						val px2 = (x0 + p2.first) * (scaleX / depthWidth)
-//						val py2 = (y0 + p2.second) * (scaleY / depthHeight)
-//						path.moveTo(px1, py1)
-//						path.lineTo(px2, py2)
-//					}
-//				}
-//			}
-//			canvas.drawPath(path, paint)
-//		}
-//	}
-
-
-	val df = DecimalFormat("#.#")
+	val df = DecimalFormat("#.##")
+	// TODO 전부 COMFORT 분기 처리
 	private fun extractRawData(dim: DrawImageUiModel, dl: DrawLine): List<String> {
 		val fr = dim.faceResult
 
@@ -2183,7 +1444,11 @@ object BitmapUtility {
 		val seqIndex = seqss.indexOf(dim.seq)
 
 		val keys = when (dl) {
-			DrawLine.A_SAGGING_FACE -> listOf("comfort_left_sagging_scale", "comfort_right_sagging_scale")
+			DrawLine.A_SAGGING_FACE ->
+				when (seq) {
+					Sequence.COMFORT -> listOf("comfort_left_sagging_scale", "comfort_right_sagging_scale")
+					else -> listOf()
+				}
 			DrawLine.A_SHOULDER -> when (seq) {
 				Sequence.COMFORT -> listOf("comfort_shoulder_horizontal_angle")
 				else -> listOf("neck_extention_shoulder_horizontal_angle")
@@ -2206,57 +1471,105 @@ object BitmapUtility {
 				)
 				else -> listOf("neck_extention_ear_horizontal_angle", "neck_extention_shoulder_horizontal_angle")
 			}
-			DrawLine.EYE -> listOf(
-				"comfort_left_eye_horizontal_angle",
-				"comfort_right_eye_horizontal_angle",
-				"comfort_left_medial_canthus_angle",
-				"comfort_right_medial_canthus_angle",
-				"comfort_left_lateral_canthus_angle",
-				"comfort_right_lateral_canthus_angle",
-				"comfort_left_eye_width",
-				"comfort_right_eye_width",
-				"comfort_left_eye_height",
-				"comfort_right_eye_height"
-				)
-			DrawLine.L_CORNEA -> listOf(
-				"comfort_left_cornea_length",
-				"comfort_right_cornea_length",
-				)
-			DrawLine.EYEBROW -> listOf(
-				"comfort_left_eyebrow_horizontal_angle",
-				"comfort_right_eyebrow_horizontal_angle",
-				"comfort_left_eyebrow_start_length",
-				"comfort_left_eyebrow_arch_length",
-				"comfort_left_eyebrow_end_length",
-				"comfort_right_eyebrow_start_length",
-				"comfort_right_eyebrow_arch_length",
-				"comfort_right_eyebrow_end_length",
-			)
-			DrawLine.NOSE -> listOf(
-				"comfort_nose_height",
-				"comfort_nose_width",
-				"comfort_alar_horizontal_angle",
-				"comfort_left_alar_length",
-				"comfort_right_alar_length"
-			)
-			DrawLine.A_CANTHUS_ORAL -> listOf("comfort_canthus_oral_left_vertical_angle", "comfort_canthus_oral_right_vertical_angle")
-			DrawLine.A_ALAR_ORAL -> listOf("comfort_alar_tip_of_lips_left_vertical_angle", "comfort_alar_tip_of_lips_right_vertical_angle")
-			DrawLine.A_SIDE_HEAD -> listOf("comfort_side_head_left_angle", "comfort_side_head_right_angle")
-			DrawLine.E_CHEEKS -> listOf("comfort_left_cheeks_extent", "comfort_right_cheeks_extent")
-			DrawLine.E_CHEEKBONE -> listOf("comfort_left_cheekbone_extent","comfort_right_cheekbone_extent")
-			DrawLine.MOUSE -> listOf(
-				"comfort_left_mouse_corner_angle",
-				"comfort_right_mouse_corner_angle",
-				"comfort_philtrum_length",
-				"comfort_mouse_width",
-				"comfort_upper_lips_height",
-				"comfort_lower_lips_height",
-			)
+			DrawLine.EYE ->
+				when (seq) {
+					Sequence.COMFORT -> listOf(
+						"comfort_left_eye_horizontal_angle",
+						"comfort_right_eye_horizontal_angle",
+						"comfort_left_medial_canthus_angle",
+						"comfort_right_medial_canthus_angle",
+						"comfort_left_lateral_canthus_angle",
+						"comfort_right_lateral_canthus_angle",
+						"comfort_left_eye_width",
+						"comfort_right_eye_width",
+						"comfort_left_eye_height",
+						"comfort_right_eye_height"
+					)
+					else -> listOf()
+				}
 
-			DrawLine.A_FACIAL_AXIS -> listOf("comfort_length_symmetry_factor", "comfort_angle_symmetry_factor")
 
-			DrawLine.A_RATIO_VERTI -> listOf("vertical_ratio")
-			DrawLine.A_RATIO_HORIZON -> listOf("horizontal_ratio")
+			DrawLine.L_CORNEA -> when (seq) {
+				Sequence.COMFORT -> listOf(
+					"comfort_left_cornea_length",
+					"comfort_right_cornea_length",
+				)
+				else -> listOf()
+			}
+			DrawLine.EYEBROW -> when (seq) {
+					Sequence.COMFORT -> listOf(
+						"comfort_left_eyebrow_horizontal_angle",
+						"comfort_right_eyebrow_horizontal_angle",
+						"comfort_left_eyebrow_start_length",
+						"comfort_left_eyebrow_arch_length",
+						"comfort_left_eyebrow_end_length",
+						"comfort_right_eyebrow_start_length",
+						"comfort_right_eyebrow_arch_length",
+						"comfort_right_eyebrow_end_length",
+					)
+					else -> listOf()
+				}
+
+
+			DrawLine.NOSE -> when (seq) {
+				Sequence.COMFORT -> listOf(
+					"comfort_nose_height",
+					"comfort_nose_width",
+					"comfort_alar_horizontal_angle",
+					"comfort_left_alar_length",
+					"comfort_right_alar_length"
+				)
+				else -> listOf()
+			}
+			DrawLine.A_CANTHUS_ORAL -> when (seq) {
+				Sequence.COMFORT -> listOf(
+					"comfort_canthus_oral_left_vertical_angle",
+					"comfort_canthus_oral_right_vertical_angle"
+				)
+				else -> listOf()
+			}
+			DrawLine.A_ALAR_ORAL -> when (seq) {
+				Sequence.COMFORT -> listOf("comfort_alar_tip_of_lips_left_vertical_angle", "comfort_alar_tip_of_lips_right_vertical_angle")
+				else -> listOf()
+			}
+			DrawLine.A_SIDE_HEAD -> when (seq) {
+				Sequence.COMFORT -> listOf("comfort_side_head_left_angle", "comfort_side_head_right_angle")
+				else -> listOf()
+			}
+			DrawLine.E_CHEEKS -> when (seq) {
+				Sequence.COMFORT -> listOf("comfort_left_cheeks_extent", "comfort_right_cheeks_extent")
+				else -> listOf()
+			}
+			DrawLine.E_CHEEKBONE -> when (seq) {
+				Sequence.COMFORT -> listOf("comfort_left_cheekbone_extent","comfort_right_cheekbone_extent")
+				else -> listOf()
+			}
+			DrawLine.MOUSE -> when (seq) {
+				Sequence.COMFORT -> listOf(
+					"comfort_left_mouse_corner_angle",
+					"comfort_right_mouse_corner_angle",
+					"comfort_philtrum_length",
+					"comfort_mouse_width",
+					"comfort_upper_lips_height",
+					"comfort_lower_lips_height",
+				)
+				else -> listOf()
+			}
+
+
+			DrawLine.A_FACIAL_AXIS -> when (seq) {
+				Sequence.COMFORT -> listOf("comfort_length_symmetry_factor", "comfort_angle_symmetry_factor")
+				else -> listOf()
+			}
+
+			DrawLine.A_RATIO_VERTI -> when (seq) {
+				Sequence.COMFORT -> listOf("vertical_ratio")
+				else -> listOf()
+			}
+			DrawLine.A_RATIO_HORIZON -> when (seq) {
+				Sequence.COMFORT -> listOf("horizontal_ratio")
+				else -> listOf()
+			}
 		}
 
 		val jsonObject = fr.results.getJSONObject(seqIndex)
@@ -2397,33 +1710,36 @@ object BitmapUtility {
 			val boxLocation = flm[152]
 			val finalPos = calculateFinalPixel(boxLocation.x, boxLocation.y)
 			val rawData = extractRawData(dim, DrawLine.A_SAGGING_FACE)
-
-			textBoxes.add(
-				TextBoxData(
-					anchorX = finalPos.x,
-					anchorY = finalPos.y,
-					targetGridIndex = 27,
-					info = TextDrawInfo(
-						title = "처짐 지수",
-						items = listOf(
-							TextItem("왼쪽:", rawData.getOrNull(0) ?: ""),
-							TextItem("오른쪽:", rawData.getOrNull(1) ?: ""),
+			if (rawData.isNotEmpty()) {
+				textBoxes.add(
+					TextBoxData(
+						anchorX = finalPos.x,
+						anchorY = finalPos.y,
+						targetGridIndex = 27,
+						info = TextDrawInfo(
+							title = "처짐 지수",
+							items = listOf(
+								TextItem("왼쪽:", rawData.getOrNull(0) ?: ""),
+								TextItem("오른쪽:", rawData.getOrNull(1) ?: ""),
+							)
 						)
 					)
 				)
-			)
+			}
+
 		}
 		if (dl.contains(DrawLine.A_SHOULDER)) {
 			val rawX = (plm[11].x + plm[12].x) / 2
 			val rawY = (plm[11].y + plm[12].y) / 2
 			val finalPos = calculateFinalPixel(rawX, rawY)
 			val rawData = extractRawData(dim, DrawLine.A_SHOULDER)
-
-			textBoxes.add(TextBoxData(
-				anchorX = finalPos.x, anchorY = finalPos.y,
-				targetGridIndex = 32, // 중앙 하단부
-				info = TextDrawInfo("어깨 각도", listOf(TextItem("너비:", "${rawData.getOrNull(0) ?: ""}º")))
-			))
+			if (rawData.isNotEmpty()) {
+				textBoxes.add(TextBoxData(
+					anchorX = finalPos.x, anchorY = finalPos.y,
+					targetGridIndex = 32, // 중앙 하단부
+					info = TextDrawInfo("어깨 각도", listOf(TextItem("너비:", "${rawData.getOrNull(0) ?: ""}º")))
+				))
+			}
 		}
 
 		if (dl.contains(DrawLine.NECK)) {
@@ -2431,167 +1747,129 @@ object BitmapUtility {
 			val rawY = (plm[11].y + plm[12].y) / 2
 			val finalPos = calculateFinalPixel(rawX, rawY)
 			val rawData = extractRawData(dim, DrawLine.NECK)
-
-			textBoxes.add(TextBoxData(
-				anchorX = finalPos.x, anchorY = finalPos.y,
-				targetGridIndex = 32, // 목 근처 왼쪽
-				info = TextDrawInfo("목 각도", listOf(TextItem("", "${rawData.getOrNull(0) ?: ""}º")))
-			))
+			if (rawData.isNotEmpty()) {
+				textBoxes.add(TextBoxData(
+					anchorX = finalPos.x, anchorY = finalPos.y,
+					targetGridIndex = 32, // 목 근처 왼쪽
+					info = TextDrawInfo("목 각도", listOf(TextItem("", "${rawData.getOrNull(0) ?: ""}º")))
+				))
+			}
 		}
 		if (dl.contains(DrawLine.FACE)) {
 			val boxLocation = flm[234]
 			val finalPos = calculateFinalPixel(boxLocation.x, boxLocation.y)
 			val rawData = extractRawData(dim, DrawLine.FACE)
-
-			textBoxes.add(TextBoxData(
-				anchorX = finalPos.x, anchorY = finalPos.y,
-				targetGridIndex = 15, // 얼굴 왼쪽 구역
-				info = TextDrawInfo("얼굴 정보", listOf(
-					TextItem("너비:", "${rawData.getOrNull(1) ?: ""}cm"),
-					TextItem("높이:", "${rawData.getOrNull(2) ?: ""}cm"),
-					TextItem("각도:", "${rawData.getOrNull(0) ?: ""}º")
+			if (rawData.isNotEmpty()) {
+				textBoxes.add(TextBoxData(
+					anchorX = finalPos.x, anchorY = finalPos.y,
+					targetGridIndex = 15, // 얼굴 왼쪽 구역
+					info = TextDrawInfo("얼굴 정보", if (dim.seq == Sequence.COMFORT) {
+						listOf(
+							TextItem("너비:", "${rawData.getOrNull(1) ?: ""}cm"),
+							TextItem("높이:", "${rawData.getOrNull(2) ?: ""}cm"),
+							TextItem("각도:", "${rawData.getOrNull(0) ?: ""}º")
+						)
+					} else  listOf(
+						TextItem("각도:", "${rawData.getOrNull(0) ?: ""}º")
+					))
 				))
-			))
+			}
 		}
 
 		if (dl.contains(DrawLine.A_HORIZON)) {
 			val boxLocation = flm[454]
 			val finalPos = calculateFinalPixel(boxLocation.x, boxLocation.y)
 			val rawData = extractRawData(dim, DrawLine.A_HORIZON)
+			if (rawData.isNotEmpty()) {
+				textBoxes.add(TextBoxData(
+					anchorX = finalPos.x, anchorY = finalPos.y,
+					targetGridIndex = 19, // 얼굴 오른쪽 구역
+					info = TextDrawInfo("수평 각도",  if (dim.seq == Sequence.COMFORT) {
+						listOf(
+							TextItem("눈:", "${rawData.getOrNull(0) ?: ""}º"),
+							TextItem("귀:", "${rawData.getOrNull(1) ?: ""}º"),
+							TextItem("입술:", "${rawData.getOrNull(2) ?: ""}º"),
+							TextItem("턱:", "${rawData.getOrNull(3) ?: ""}º")
+						)
+					} else  listOf(
+						TextItem("눈:", "${rawData.getOrNull(0) ?: ""}º"),
+						TextItem("귀:", "${rawData.getOrNull(1) ?: ""}º"),
+					))
 
-			textBoxes.add(TextBoxData(
-				anchorX = finalPos.x, anchorY = finalPos.y,
-				targetGridIndex = 19, // 얼굴 오른쪽 구역
-				info = TextDrawInfo("수평 각도", listOf(
-					TextItem("눈:", "${rawData.getOrNull(0) ?: ""}º"),
-					TextItem("귀:", "${rawData.getOrNull(1) ?: ""}º"),
-					TextItem("입술:", "${rawData.getOrNull(2) ?: ""}º"),
-					TextItem("턱:", "${rawData.getOrNull(3) ?: ""}º")
 				))
-			))
+			}
 		}
 		if (dl.contains(DrawLine.EYE)) {
 			val rawData = extractRawData(dim, DrawLine.EYE)
-
-			// 왼쪽 눈 (233번)
-			val leftEyePos = calculateFinalPixel(flm[233].x, flm[233].y,)
-			textBoxes.add(TextBoxData(
-				anchorX = leftEyePos.x, anchorY = leftEyePos.y,
-				targetGridIndex = 16, // 좌측 상단
-				info = TextDrawInfo("왼쪽 눈", listOf(
-					TextItem("눈매:", "${rawData.getOrNull(0)}º"),
-					TextItem("너비 | 높이:", "${rawData.getOrNull(6)}cm | ${rawData.getOrNull(8)}cm"),
-					TextItem("눈꼬리 | 눈앞머리", "${rawData.getOrNull(4)}º | ${rawData.getOrNull(2)}º")
+			if (rawData.isNotEmpty()) {
+				// 왼쪽 눈 (233번)
+				val leftEyePos = calculateFinalPixel(flm[233].x, flm[233].y,)
+				textBoxes.add(TextBoxData(
+					anchorX = leftEyePos.x, anchorY = leftEyePos.y,
+					targetGridIndex = 16, // 좌측 상단
+					info = TextDrawInfo("왼쪽 눈", listOf(
+						TextItem("눈매:", "${rawData.getOrNull(0)}º"),
+						TextItem("너비 | 높이:", "${rawData.getOrNull(6)}cm | ${rawData.getOrNull(8)}cm"),
+						TextItem("눈꼬리 | 눈앞머리", "${rawData.getOrNull(4)}º | ${rawData.getOrNull(2)}º")
+					))
 				))
-			))
 
-			// 오른쪽 눈 (453번)
-			val rightEyePos = calculateFinalPixel(flm[453].x, flm[453].y,)
-			textBoxes.add(TextBoxData(
-				anchorX = rightEyePos.x, anchorY = rightEyePos.y,
-				targetGridIndex = 18, // 우측 상단
-				info = TextDrawInfo("오른쪽 눈", listOf(
-					TextItem("눈매:", "${rawData.getOrNull(1)}º"),
-					TextItem("너비 | 높이:", "${rawData.getOrNull(7)}cm | ${rawData.getOrNull(9)}cm"),
-					TextItem("눈앞머리 | 눈꼬리", "${rawData.getOrNull(3)} | ${rawData.getOrNull(5)}º")
+				// 오른쪽 눈 (453번)
+				val rightEyePos = calculateFinalPixel(flm[453].x, flm[453].y,)
+				textBoxes.add(TextBoxData(
+					anchorX = rightEyePos.x, anchorY = rightEyePos.y,
+					targetGridIndex = 18, // 우측 상단
+					info = TextDrawInfo("오른쪽 눈", listOf(
+						TextItem("눈매:", "${rawData.getOrNull(1)}º"),
+						TextItem("너비 | 높이:", "${rawData.getOrNull(7)}cm | ${rawData.getOrNull(9)}cm"),
+						TextItem("눈앞머리 | 눈꼬리", "${rawData.getOrNull(3)} | ${rawData.getOrNull(5)}º")
+					))
 				))
-			))
+			}
+
+
 		}
 		if (dl.contains(DrawLine.EYEBROW)) {
 			val rawData = extractRawData(dim, DrawLine.EYEBROW)
-
-			// 왼쪽 눈 (233번)
-			val leftEyePos = calculateFinalPixel(flm[66].x, flm[66].y,)
-			textBoxes.add(TextBoxData(
-				anchorX = leftEyePos.x, anchorY = leftEyePos.y,
-				targetGridIndex = 1, // 좌측 상단
-				info = TextDrawInfo("왼쪽 눈썹", listOf(
-					TextItem("각도: ", "${rawData.getOrNull(0)}º"),
-					TextItem("두께: ", "${rawData.getOrNull(4)}cm | ${rawData.getOrNull(3)}cm | ${rawData.getOrNull(2)}cm")
+			if (rawData.isNotEmpty()) {
+				// 왼쪽 눈 (233번)
+				val leftEyePos = calculateFinalPixel(flm[66].x, flm[66].y,)
+				textBoxes.add(TextBoxData(
+					anchorX = leftEyePos.x, anchorY = leftEyePos.y,
+					targetGridIndex = 1, // 좌측 상단
+					info = TextDrawInfo("왼쪽 눈썹", listOf(
+						TextItem("각도: ", "${rawData.getOrNull(0)}º"),
+						TextItem("두께: ", "${rawData.getOrNull(4)}cm | ${rawData.getOrNull(3)}cm | ${rawData.getOrNull(2)}cm")
+					))
 				))
-			))
 
-			// 오른쪽 눈 (453번)
-			val rightEyePos = calculateFinalPixel(flm[296].x, flm[296].y,)
-			textBoxes.add(TextBoxData(
-				anchorX = rightEyePos.x, anchorY = rightEyePos.y,
-				targetGridIndex = 3, // 우측 상단
-				info = TextDrawInfo("왼쪽 눈썹", listOf(
-					TextItem("각도: ", "${rawData.getOrNull(1)}º"),
-					TextItem("두께: ", "${rawData.getOrNull(5)}cm | ${rawData.getOrNull(6)}cm | ${rawData.getOrNull(7)}cm")
+				// 오른쪽 눈 (453번)
+				val rightEyePos = calculateFinalPixel(flm[296].x, flm[296].y,)
+				textBoxes.add(TextBoxData(
+					anchorX = rightEyePos.x, anchorY = rightEyePos.y,
+					targetGridIndex = 3, // 우측 상단
+					info = TextDrawInfo("오른쪽 눈썹", listOf(
+						TextItem("각도: ", "${rawData.getOrNull(1)}º"),
+						TextItem("두께: ", "${rawData.getOrNull(5)}cm | ${rawData.getOrNull(6)}cm | ${rawData.getOrNull(7)}cm")
+					))
 				))
-			))
+			}
 		}
-//		if (dl.contains(DrawLine.EYEBROW)) {
-//			val boxLocation0 = flm[66]
-//			val boxLocation1 = flm[296]
-//			val rawData = extractRawData(dim, DrawLine.EYEBROW)
-//
-//			textBoxes.add(
-//				TextDrawInfo(
-//					title = "눈썹 각도",
-//					items = listOf(
-//						TextItem("", "${rawData.getOrNull(0) ?: ""}º"),
-//					),
-//					baseX = boxLocation0.x,
-//					baseY = boxLocation0.y,
-//					anchor = EdgePosition.TOP,
-//					offsetIndex = 0
-//				)
-//			)
-//			textBoxes.add(
-//				TextDrawInfo(
-//					title = "눈썹 두께",
-//					items = listOf(
-//						TextItem("", "${rawData.getOrNull(2) ?: ""}º"),
-//						TextItem("", "${rawData.getOrNull(3) ?: ""}º"),
-//						TextItem("", "${rawData.getOrNull(4) ?: ""}º"),
-//						),
-//					baseX = boxLocation0.x,
-//					baseY = boxLocation0.y,
-//					anchor = EdgePosition.TOP,
-//					offsetIndex = 1
-//				)
-//			)
-//
-//			textBoxes.add(
-//				TextDrawInfo(
-//					title = "눈썹 각도",
-//					items = listOf(
-//						TextItem("", "${rawData.getOrNull(1) ?: ""}º"),
-//					),
-//					baseX = boxLocation1.x,
-//					baseY = boxLocation1.y,
-//					anchor = EdgePosition.TOP,
-//					offsetIndex = 0
-//				)
-//			)
-//			textBoxes.add(
-//				TextDrawInfo(
-//					title = "눈썹 두께",
-//					items = listOf(
-//						TextItem("", "${rawData.getOrNull(5) ?: ""}º"),
-//						TextItem("", "${rawData.getOrNull(6) ?: ""}º"),
-//						TextItem("", "${rawData.getOrNull(7) ?: ""}º"),
-//					),
-//					baseX = boxLocation1.x,
-//					baseY = boxLocation1.y,
-//					anchor = EdgePosition.TOP,
-//					offsetIndex = 1
-//				)
-//			)
-//		}
+
 		if (dl.contains(DrawLine.NOSE)) {
 			val noseCenter = calculateFinalPixel(flm[164].x, flm[164].y)
 			val rawData = extractRawData(dim, DrawLine.NOSE)
-			textBoxes.add(TextBoxData(
-				anchorX = noseCenter.x, anchorY = noseCenter.y,
-				targetGridIndex = 18, // 중앙 상단 (얼굴 중앙)
-				info = TextDrawInfo("코 정보", listOf(
-					TextItem("길이/너비:", "${rawData.getOrNull(0)}/${rawData.getOrNull(1)}º"),
-					TextItem("콧날개 각:", "${rawData.getOrNull(2)}º")
+			if (rawData.isNotEmpty()) {
+				textBoxes.add(TextBoxData(
+					anchorX = noseCenter.x, anchorY = noseCenter.y,
+					targetGridIndex = 18, // 중앙 상단 (얼굴 중앙)
+					info = TextDrawInfo("코 정보", listOf(
+						TextItem("길이 | 너비:", "${rawData.getOrNull(0)}cm | ${rawData.getOrNull(1)}º"),
+						TextItem("콧날개 각:", "${rawData.getOrNull(2)}º")
+					))
 				))
-			))
+			}
+
 		}
 //
 //		if (dl.contains(DrawLine.E_CHEEKBONE)) {
@@ -2601,160 +1879,173 @@ object BitmapUtility {
 			val boxLocation = flm[357] // 코 하단 중앙
 			val finalPos = calculateFinalPixel(boxLocation.x, boxLocation.y)
 			val rawData = extractRawData(dim, DrawLine.A_ALAR_ORAL)
-
-			textBoxes.add(TextBoxData(
-				anchorX = finalPos.x, anchorY = finalPos.y,
-				targetGridIndex = 22, // 중앙 하단부
-				info = TextDrawInfo("콧날개-입술끝 각도", listOf(
-					TextItem("좌측:", "${rawData.getOrNull(0) ?: ""}º"),
-					TextItem("우측:", "${rawData.getOrNull(1) ?: ""}º")
+			if (rawData.isNotEmpty()) {
+				textBoxes.add(TextBoxData(
+					anchorX = finalPos.x, anchorY = finalPos.y,
+					targetGridIndex = 27, // 중앙 하단부
+					info = TextDrawInfo("콧날개-입술끝 각도", listOf(
+						TextItem("좌측:", "${rawData.getOrNull(0) ?: ""}º"),
+						TextItem("우측:", "${rawData.getOrNull(1) ?: ""}º")
+					))
 				))
-			))
+			}
 		}
 		if (dl.contains(DrawLine.A_SIDE_HEAD)) {
 			val rawData = extractRawData(dim, DrawLine.A_SIDE_HEAD)
+			if (rawData.isNotEmpty()) {
+				// 좌측 측두 (251번)
+				val leftPos = calculateFinalPixel(flm[251].x, flm[251].y)
+				textBoxes.add(TextBoxData(
+					anchorX = leftPos.x, anchorY = leftPos.y,
+					targetGridIndex = 10, // 왼쪽 중간
+					info = TextDrawInfo("측두 각도(좌)", listOf(TextItem("", "${rawData.getOrNull(0) ?: ""}º")))
+				))
 
-			// 좌측 측두 (251번)
-			val leftPos = calculateFinalPixel(flm[251].x, flm[251].y)
-			textBoxes.add(TextBoxData(
-				anchorX = leftPos.x, anchorY = leftPos.y,
-				targetGridIndex = 10, // 왼쪽 중간
-				info = TextDrawInfo("측두 각도(좌)", listOf(TextItem("", "${rawData.getOrNull(0) ?: ""}º")))
-			))
-
-			// 우측 측두 (21번)
-			val rightPos = calculateFinalPixel(flm[21].x, flm[21].y)
-			textBoxes.add(TextBoxData(
-				anchorX = rightPos.x, anchorY = rightPos.y,
-				targetGridIndex = 14, // 오른쪽 중간
-				info = TextDrawInfo("측두 각도(우)", listOf(TextItem("", "${rawData.getOrNull(1) ?: ""}º")))
-			))
+				// 우측 측두 (21번)
+				val rightPos = calculateFinalPixel(flm[21].x, flm[21].y)
+				textBoxes.add(TextBoxData(
+					anchorX = rightPos.x, anchorY = rightPos.y,
+					targetGridIndex = 14, // 오른쪽 중간
+					info = TextDrawInfo("측두 각도(우)", listOf(TextItem("", "${rawData.getOrNull(1) ?: ""}º")))
+				))
+			}
 		}
 		if (dl.contains(DrawLine.A_CANTHUS_ORAL)) {
 			val boxLocation = flm[18] // 하안면부 중앙
 			val finalPos = calculateFinalPixel(boxLocation.x, boxLocation.y)
 			val rawData = extractRawData(dim, DrawLine.A_CANTHUS_ORAL)
-
-			textBoxes.add(TextBoxData(
-				anchorX = finalPos.x, anchorY = finalPos.y,
-				targetGridIndex = 32, // 하단 중앙
-				info = TextDrawInfo("눈매끝-입꼬리 각도", listOf(
-					TextItem("좌측:", "${rawData.getOrNull(0) ?: ""}º"),
-					TextItem("우측:", "${rawData.getOrNull(1) ?: ""}º")
+			if (rawData.isNotEmpty()) {
+				textBoxes.add(TextBoxData(
+					anchorX = finalPos.x, anchorY = finalPos.y,
+					targetGridIndex = 32, // 하단 중앙
+					info = TextDrawInfo("눈매끝-입꼬리 각도", listOf(
+						TextItem("좌측:", "${rawData.getOrNull(0) ?: ""}º"),
+						TextItem("우측:", "${rawData.getOrNull(1) ?: ""}º")
+					))
 				))
-			))
+			}
 		}
 		if (dl.contains(DrawLine.E_CHEEKS)) {
 			val rawData = extractRawData(dim, DrawLine.E_CHEEKS)
 
 			// 좌측 볼 (132번)
-			val leftPos = calculateFinalPixel(flm[132].x, flm[132].y,)
-			textBoxes.add(TextBoxData(
-				anchorX = leftPos.x, anchorY = leftPos.y,
-				targetGridIndex = 20, // 왼쪽 하단부
-				info = TextDrawInfo("볼 너비(좌)", listOf(TextItem("", "${rawData.getOrNull(0) ?: ""}㎠")))
-			))
+			if (rawData.isNotEmpty()) {
+				val leftPos = calculateFinalPixel(flm[132].x, flm[132].y,)
+				textBoxes.add(TextBoxData(
+					anchorX = leftPos.x, anchorY = leftPos.y,
+					targetGridIndex = 20, // 왼쪽 하단부
+					info = TextDrawInfo("볼 너비(좌)", listOf(TextItem("", "${rawData.getOrNull(0) ?: ""}㎠")))
+				))
 
-			// 우측 볼 (361번)
-			val rightPos = calculateFinalPixel(flm[361].x, flm[361].y,)
-			textBoxes.add(TextBoxData(
-				anchorX = rightPos.x, anchorY = rightPos.y,
-				targetGridIndex = 24, // 오른쪽 하단부
-				info = TextDrawInfo("볼 너비(우)", listOf(TextItem("", "${rawData.getOrNull(1) ?: ""}㎠")))
-			))
+				// 우측 볼 (361번)
+				val rightPos = calculateFinalPixel(flm[361].x, flm[361].y,)
+				textBoxes.add(TextBoxData(
+					anchorX = rightPos.x, anchorY = rightPos.y,
+					targetGridIndex = 24, // 오른쪽 하단부
+					info = TextDrawInfo("볼 너비(우)", listOf(TextItem("", "${rawData.getOrNull(1) ?: ""}㎠")))
+				))
+			}
 		}
 		if (dl.contains(DrawLine.MOUSE)) {
 			val mousePos = calculateFinalPixel(flm[17].x, flm[17].y,)
 			val rawData = extractRawData(dim, DrawLine.MOUSE)
-			textBoxes.add(TextBoxData(
-				anchorX = mousePos.x, anchorY = mousePos.y,
-				targetGridIndex = 27, // 하단 중앙
-				info = TextDrawInfo("입 정보", listOf(
-					TextItem("인중 길이:", "${rawData.getOrNull(2)}cm"),
-					TextItem("입 길이", "${rawData.getOrNull(3)}cm"),
-					TextItem("입꼬리 각도:", "${rawData.getOrNull(0)}º / ${rawData.getOrNull(1)}º"),
-					TextItem("윗입술 두께", "${rawData.getOrNull(2)}cm"),
-					TextItem("아래입술 두께", "${rawData.getOrNull(2)}cm")
+			if (rawData.isNotEmpty()) {
+				textBoxes.add(TextBoxData(
+					anchorX = mousePos.x, anchorY = mousePos.y,
+					targetGridIndex = 27, // 하단 중앙
+					info = TextDrawInfo("입 정보", listOf(
+						TextItem("인중 길이:", "${rawData.getOrNull(2)}cm"),
+						TextItem("입 길이", "${rawData.getOrNull(3)}cm"),
+						TextItem("입꼬리 각도:", "${rawData.getOrNull(0)}º / ${rawData.getOrNull(1)}º"),
+						TextItem("윗입술 두께", "${rawData.getOrNull(4)}cm"),
+						TextItem("아래입술 두께", "${rawData.getOrNull(5)}cm")
+					))
 				))
-			))
+			}
 		}
 		if (dl.contains(DrawLine.A_FACIAL_AXIS)) {
 			val mousePos = calculateFinalPixel(flm[17].x, flm[17].y,)
 			val rawData = extractRawData(dim, DrawLine.A_FACIAL_AXIS)
-			textBoxes.add(TextBoxData(
-				anchorX = mousePos.x, anchorY = mousePos.y,
-				targetGridIndex = 33, // 하단 중앙
-				info = TextDrawInfo("하관 비대칭", listOf(
-					TextItem("길이 비대칭 지수", "${rawData.getOrNull(0)}"),
-					TextItem("각도 비대칭 지수", "${rawData.getOrNull(1)}"),
+			if (rawData.isNotEmpty()) {
+				textBoxes.add(TextBoxData(
+					anchorX = mousePos.x, anchorY = mousePos.y,
+					targetGridIndex = 33, // 하단 중앙
+					info = TextDrawInfo("하관 비대칭", listOf(
+						TextItem("길이 비대칭 지수", "${rawData.getOrNull(0)}"),
+						TextItem("각도 비대칭 지수", "${rawData.getOrNull(1)}"),
+					))
 				))
-			))
+			}
+
 		}
 		if (dl.contains(DrawLine.A_RATIO_VERTI)) {
 			val rawData = extractRawData(dim, DrawLine.A_RATIO_VERTI)
 
 			val verticalRatio = rawData[0].split(":")
-			textBoxes.add(TextBoxData(
-				anchorX = 0f, anchorY = 0f,
-				targetGridIndex = 30, // 하단 중앙
-				info = TextDrawInfo("", listOf(
-					TextItem("", "${verticalRatio[0]}º"),
+			if (rawData.isNotEmpty()) {
+				textBoxes.add(TextBoxData(
+					anchorX = 0f, anchorY = 0f,
+					targetGridIndex = 30, // 하단 중앙
+					info = TextDrawInfo("", listOf(
+						TextItem("", verticalRatio[0]),
+					))
 				))
-			))
-			textBoxes.add(TextBoxData(
-				anchorX = 0f, anchorY = 0f,
-				targetGridIndex = 31, // 하단 중앙
-				info = TextDrawInfo("", listOf(
-					TextItem("", "${verticalRatio[1]}º"),
+				textBoxes.add(TextBoxData(
+					anchorX = 0f, anchorY = 0f,
+					targetGridIndex = 31, // 하단 중앙
+					info = TextDrawInfo("", listOf(
+						TextItem("", verticalRatio[1]),
+					))
 				))
-			))
-			textBoxes.add(TextBoxData(
-				anchorX = 0f, anchorY = 0f,
-				targetGridIndex = 32, // 하단 중앙
-				info = TextDrawInfo("", listOf(
-					TextItem("", "${verticalRatio[2]}º"),
+				textBoxes.add(TextBoxData(
+					anchorX = 0f, anchorY = 0f,
+					targetGridIndex = 32, // 하단 중앙
+					info = TextDrawInfo("", listOf(
+						TextItem("", verticalRatio[2]),
+					))
 				))
-			))
-			textBoxes.add(TextBoxData(
-				anchorX = 0f, anchorY = 0f,
-				targetGridIndex = 33, // 하단 중앙
-				info = TextDrawInfo("", listOf(
-					TextItem("", "${verticalRatio[3]}º"),
+				textBoxes.add(TextBoxData(
+					anchorX = 0f, anchorY = 0f,
+					targetGridIndex = 33, // 하단 중앙
+					info = TextDrawInfo("", listOf(
+						TextItem("", verticalRatio[3]),
+					))
 				))
-			))
-			textBoxes.add(TextBoxData(
-				anchorX = 0f, anchorY = 0f,
-				targetGridIndex = 34, // 하단 중앙
-				info = TextDrawInfo("", listOf(
-					TextItem("", "${verticalRatio[4]}º"),
+				textBoxes.add(TextBoxData(
+					anchorX = 0f, anchorY = 0f,
+					targetGridIndex = 34, // 하단 중앙
+					info = TextDrawInfo("", listOf(
+						TextItem("", verticalRatio[4]),
+					))
 				))
-			))
-
+			}
 		}
 		if (dl.contains(DrawLine.A_RATIO_HORIZON)) {
 			val rawData = extractRawData(dim, DrawLine.A_RATIO_HORIZON)
 			val verticalRatio = rawData[0].split(":")
-			textBoxes.add(TextBoxData(
-				anchorX = 0f, anchorY = 0f,
-				targetGridIndex = 9, // 하단 중앙
-				info = TextDrawInfo("", listOf(
-					TextItem("", "${verticalRatio[0]}º"),
+			if (rawData.isNotEmpty()) {
+				textBoxes.add(TextBoxData(
+					anchorX = 0f, anchorY = 0f,
+					targetGridIndex = 9, // 하단 중앙
+					info = TextDrawInfo("", listOf(
+						TextItem("", "${verticalRatio[0]}"),
+					))
 				))
-			))
-			textBoxes.add(TextBoxData(
-				anchorX = 0f, anchorY = 0f,
-				targetGridIndex = 19, // 하단 중앙
-				info = TextDrawInfo("", listOf(
-					TextItem("", "${verticalRatio[1]}º"),
+				textBoxes.add(TextBoxData(
+					anchorX = 0f, anchorY = 0f,
+					targetGridIndex = 19, // 하단 중앙
+					info = TextDrawInfo("", listOf(
+						TextItem("", "${verticalRatio[1]}"),
+					))
 				))
-			))
-			textBoxes.add(TextBoxData(
-				anchorX = 0f, anchorY = 0f,
-				targetGridIndex = 29, // 하단 중앙
-				info = TextDrawInfo("", listOf(
-					TextItem("", "${verticalRatio[2]}º"),
+				textBoxes.add(TextBoxData(
+					anchorX = 0f, anchorY = 0f,
+					targetGridIndex = 29, // 하단 중앙
+					info = TextDrawInfo("", listOf(
+						TextItem("", "${verticalRatio[2]}"),
+					))
 				))
-			))
+			}
 		}
 
 		val faceXList = flm.map { it.x }

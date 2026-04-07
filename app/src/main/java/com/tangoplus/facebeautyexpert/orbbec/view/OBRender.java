@@ -75,23 +75,71 @@ public class OBRender implements GLSurfaceView.Renderer {
 //            1.0f, 0.0f,
 //    };
 	// depthCamera Stream 좌우반전 대응
-	private static final float[] TEXTURE = {
+	private static final float[] TEXTURE_0 = {
 		1.0f, 1.0f,
 		0.0f, 1.0f,
 		1.0f, 0.0f,
 		0.0f, 0.0f,
 	};
 
+	// 시계반대방향 90도 회전 (좌우반전 + 90도)
+	private static final float[] TEXTURE_90 = {
+		1.0f, 0.0f,
+		1.0f, 1.0f,
+		0.0f, 0.0f,
+		0.0f, 1.0f,
+	};
+
+	// 180도 회전 (좌우반전 + 180도)
+	private static final float[] TEXTURE_180 = {
+		0.0f, 0.0f,
+		1.0f, 0.0f,
+		0.0f, 1.0f,
+		1.0f, 1.0f,
+	};
+
+	// 시계반대방향 270도 회전 (= 시계방향 90도)
+	private static final float[] TEXTURE_270 = {
+		0.0f, 1.0f,
+		0.0f, 0.0f,
+		1.0f, 1.0f,
+		1.0f, 0.0f,
+	};
+
 	private static final FloatBuffer mVertexArray = GlUtil.createFloatBuffer(VERTEX);
-	private static final FloatBuffer mTexCoordArray = GlUtil.createFloatBuffer(TEXTURE);
+	private FloatBuffer mTexCoordArray;
 
 	public OBRender(GLSurfaceView surfaceView) {
 		mSurfaceView = new WeakReference<>(surfaceView);
+		mTexCoordArray = GlUtil.createFloatBuffer(TEXTURE_0);
 	}
-
+	private int mRotationDegrees = 0;
 	/**
 	 * Clear window
 	 */
+	public void setRotation(int degrees) {
+		mRotationDegrees = degrees % 360;
+		updateTextureCoordinates();
+	}
+	private void updateTextureCoordinates() {
+		float[] textureCoords;
+		switch (mRotationDegrees) {
+			case 90:
+				textureCoords = TEXTURE_90;
+				break;
+			case 180:
+				textureCoords = TEXTURE_180;
+				break;
+			case 270:
+				textureCoords = TEXTURE_270;
+				break;
+			case 0:
+			default:
+				textureCoords = TEXTURE_0;
+				break;
+		}
+		mTexCoordArray = GlUtil.createFloatBuffer(textureCoords);
+	}
 	public void clearWindow() {
 		synchronized (mRenderLock) {
 			mDecodeBuffer = ByteBuffer.allocateDirect(mWidth * mHeight * 3);

@@ -1,6 +1,7 @@
 package com.tangoplus.facebeautyexpert.domain.util
 
 import android.graphics.Bitmap
+import android.graphics.Matrix
 import android.util.Log
 import com.google.mediapipe.framework.image.BitmapImageBuilder
 import com.google.mediapipe.framework.image.MPImage
@@ -71,7 +72,7 @@ object MediaUtility {
 		return BitmapImageBuilder(bmp).build()
 	}
 
-	fun colorFrameToBitmapSafe(frame: ColorFrame): Bitmap? {
+	fun colorFrameToBitmapSafe(frame: ColorFrame, rotationDegrees: Int = 0): Bitmap? {
 		val w = frame.getWidth()
 		val h = frame.getHeight()
 		if (w <= 0 || h <= 0) {
@@ -89,7 +90,7 @@ object MediaUtility {
 		var mat1: org.opencv.core.Mat? = null
 		var mat2: org.opencv.core.Mat? = null
 		return try {
-			when (format) {
+			val baseBitmap = when (format) {
 				// 3바이트/픽셀
 				Format.RGB -> {
 					if (data.size != w * h * 3) {
@@ -157,6 +158,13 @@ object MediaUtility {
 					null
 				}
 			}
+
+			if (baseBitmap != null && rotationDegrees != 0) {
+				rotateBitmap(baseBitmap, rotationDegrees)
+			} else {
+				baseBitmap
+			}
+
 		} catch (e: Throwable) {
 			Log.e("convertError", "Exception: ${e.message}")
 			null
@@ -167,6 +175,27 @@ object MediaUtility {
 		}
 	}
 
+	private fun rotateBitmap(source: Bitmap, degrees: Int): Bitmap {
+		val matrix = Matrix()
+		matrix.postRotate(degrees.toFloat())
+
+		val rotated = Bitmap.createBitmap(
+			source,
+			0,
+			0,
+			source.width,
+			source.height,
+			matrix,
+			true
+		)
+
+		// 원본 Bitmap 해제 (메모리 절약)
+		if (rotated != source) {
+			source.recycle()
+		}
+
+		return rotated
+	}
 	fun colorFrameToBitmap(colorFrame: Frame, width: Int, height: Int): Bitmap? {
 		return try {
 			val data = ByteArray(colorFrame.dataSize)
@@ -223,42 +252,51 @@ object MediaUtility {
 		intrinsic: CameraIntrinsic
 	): List<Point3D> {
 		val landmarks3D = mutableListOf<Point3D>()
-		for (landmark in landmarks2D.landmarks) {
-			val x = (landmark.x * depthWidth).toInt()
-			val y = (landmark.y * depthHeight).toInt()
 
-			if (x in 0 until depthWidth && y in 0 until depthHeight) {
-				val idx = y * depthWidth + x
+		// Orbbec SDK의 Intrinsic 원본 해상도
+		val intrinsicWidth = 640f
+		val intrinsicHeight = 360f
+
+		for (landmark in landmarks2D.landmarks) {
+			// landmark.x, y가 0.0 ~ 1.0 사이의 정규화된 값이라고 가정할 때:
+
+			// 1. Depth Map(1280x720) 배열 인덱스 참조용 좌표
+			val depthX = (landmark.x * depthWidth).toInt()
+			val depthY = (landmark.y * depthHeight).toInt()
+
+			// 2. 3D 투영을 위한 Intrinsic(640x360) 스케일링 좌표 (X, Y 계산용)
+			val calcX = landmark.x * intrinsicWidth
+			val calcY = landmark.y * intrinsicHeight
+
+			if (depthX in 0 until depthWidth && depthY in 0 until depthHeight) {
+				val idx = depthY * depthWidth + depthX
 				val depthMm = depthData[idx].toInt() and 0xFFFF
 				val depthM = depthMm / 1000f // mm를 m로 변환
 
 				if (depthM > 0) {
 					val point3D = convertDepthPixelTo3D(
 						intrinsic,
-						x.toFloat(),  // 픽셀 좌표
-						y.toFloat(),  // 픽셀 좌표
+						calcX,  // ★ 1280 좌표가 아닌 640 스케일 좌표 사용
+						calcY,  // ★ 720 좌표가 아닌 360 스케일 좌표 사용
 						depthM,
 					)
 					landmarks3D.add(point3D)
 				} else {
 					// Depth 값이 0인 경우 주변에서 찾기
-
-					val nearbyDepth = findNearbyDepth(depthData, x, y, depthWidth, depthHeight)
+					val nearbyDepth = findNearbyDepth(depthData, depthX, depthY, depthWidth, depthHeight)
 					if (nearbyDepth > 0) {
 						val point3D = convertDepthPixelTo3D(
 							intrinsic,
-							x.toFloat(),
-							y.toFloat(),
+							calcX,  // ★ 여기도 동일하게 적용
+							calcY,
 							nearbyDepth / 1000f,
 						)
 						landmarks3D.add(point3D)
 					} else {
-//                        Log.v("0값들어감", "x,y: ($x, $y), depth: ($depthWidth, $depthHeight), nearby: $nearbyDepth, idx: $idx, depthMm: $depthMm depthM: $depthM")
 						landmarks3D.add(Point3D(0f, 0f, 0f))
 					}
 				}
 			} else {
-//                Log.v("1값들어감", "x,y: ($x, $y), depth: ($depthWidth, $depthHeight)")
 				landmarks3D.add(Point3D(0f, 0f, 0f))
 			}
 		}
@@ -332,31 +370,4 @@ object MediaUtility {
 		)
 	}
 
-//    fun extractDepthAroundFace(
-//        depthData: ShortArray,
-//        width: Int,
-//        height: Int,
-//        faceRect: Rect,
-//        margin: Int = 25
-//    ): ShortArray {
-//        val x1 = (faceRect.left - margin).coerceAtLeast(0)
-//        val y1 = (faceRect.top - margin).coerceAtLeast(0)
-//        val x2 = (faceRect.right + margin).coerceAtMost(width - 1)
-//        val y2 = (faceRect.bottom + margin).coerceAtMost(height - 1)
-//
-//        val croppedWidth = x2 - x1
-//        val croppedHeight = y2 - y1
-//        val cropped = ShortArray(croppedWidth * croppedHeight)
-//
-//        for (y in y1 until y2) {
-//            for (x in x1 until x2) {
-//                val srcIndex = y * width + x
-//                val dstIndex = (y - y1) * croppedWidth + (x - x1)
-//                cropped[dstIndex] = depthData[srcIndex]
-//            }
-//        }
-//
-//        Log.d("DepthCrop", "Cropped depth: ${croppedWidth}x${croppedHeight}")
-//        return cropped
-//    }
 }

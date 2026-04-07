@@ -7,8 +7,11 @@ import android.graphics.DashPathEffect
 import android.graphics.Paint
 import android.graphics.PointF
 import android.graphics.RectF
+import android.graphics.drawable.Drawable
 import android.util.AttributeSet
+import android.view.MotionEvent
 import android.view.View
+import androidx.core.content.ContextCompat
 import com.davemorrissey.labs.subscaleview.SubsamplingScaleImageView
 import com.tangoplus.facebeautyexpert.domain.util.BitmapUtility
 
@@ -183,35 +186,153 @@ class TextBoxOverlayView @JvmOverloads constructor(
 				needInvalidate = true
 			}
 
-			drawTextBox(canvas, PointF(animPos.currentX, animPos.currentY), box.info)
+			drawTextBox(canvas, PointF(animPos.currentX, animPos.currentY), box.info, box.targetGridIndex)
 		}
 
 		if (needInvalidate) invalidate()
 	}
+	private val collapsedIndices = mutableSetOf<Int>() // 접힌 박스들의 index 저장
+	private val eyeIcon: Drawable? by lazy {
+		ContextCompat.getDrawable(context, android.R.drawable.ic_menu_view) // 또는 프로젝트의 R.drawable.ic_eye
+	}
 
-	private fun drawTextBox(canvas: Canvas, pos: PointF, info: BitmapUtility.TextDrawInfo) {
-		// 배경 박스 및 텍스트 그리기 (기존 로직 유지)
+	private fun drawTextBox(canvas: Canvas, pos: PointF, info: BitmapUtility.TextDrawInfo, gridIndex: Int) {
+		val isCollapsed = collapsedIndices.contains(gridIndex)
 		val p = 10.dp
-		val titlePaint = Paint(textPaint).apply { color = Color.WHITE; textSize = 13.sp; isFakeBoldText = true }
-		val itemPaint = Paint(textPaint).apply { color = Color.WHITE; textSize = 11.sp }
 
-		var maxW = titlePaint.measureText(info.title)
-		info.items.forEach { maxW = maxOf(maxW, itemPaint.measureText("${it.label} ${it.value}")) }
+		if (isCollapsed) {
+			// --- 1. 접힌 상태: 작은 눈 아이콘 그리기 ---
+			val size = 32.dp
+			val rect = RectF(pos.x - size/2, pos.y - size/2, pos.x + size/2, pos.y + size/2)
 
-		val boxW = maxW + p * 2
-		val lineH = 18.dp
-		val boxH = p * 2 + titlePaint.textSize + (info.items.size * lineH)
+			bgPaint.color = Color.parseColor("#CC000000") // 좀 더 진한 배경
+			canvas.drawOval(rect, bgPaint) // 동그랗게 표현 (또는 drawRoundRect)
 
-		val rect = RectF(pos.x - boxW/2, pos.y - boxH/2, pos.x + boxW/2, pos.y + boxH/2)
+			eyeIcon?.let {
+				val iconMargin = 6.dp.toInt()
+				it.setBounds(
+					(rect.left + iconMargin).toInt(),
+					(rect.top + iconMargin).toInt(),
+					(rect.right - iconMargin).toInt(),
+					(rect.bottom - iconMargin).toInt()
+				)
+				it.setTint(Color.WHITE)
+				it.draw(canvas)
+			}
+		} else {
+			// --- 2. 펼쳐진 상태: 기존 텍스트 박스 로직 ---
+			val hasTitle = info.title.isNotEmpty() // 타이틀 존재 여부 체크
 
-		bgPaint.color = Color.parseColor("#99000000") // 반투명 블랙 (ARGB 128)
-		canvas.drawRoundRect(rect, 6.dp, 6.dp, bgPaint)
+			val titlePaint = Paint(textPaint).apply { color = Color.WHITE; textSize = 16.sp; isFakeBoldText = true }
+			val itemPaint = Paint(textPaint).apply { color = Color.WHITE; textSize = 14.sp }
 
-		var curY = rect.top + p - titlePaint.fontMetrics.ascent
-		canvas.drawText(info.title, rect.left + p, curY, titlePaint)
-		info.items.forEach { curY += lineH; canvas.drawText("${it.label} ${it.value}", rect.left + p, curY, itemPaint) }
+			// 1. 가로 길이 계산: 타이틀이 있을 때만 가로폭 측정에 포함
+			var maxW = if (hasTitle) titlePaint.measureText(info.title) else 0f
+			info.items.forEach { maxW = maxOf(maxW, itemPaint.measureText("${it.label} ${it.value}")) }
+
+			val boxW = maxW + p * 2
+			val lineH = 18.dp
+
+			// 2. 세로 길이 계산: 타이틀이 없으면 titlePaint.textSize와 간격을 계산에서 제외
+			val titleSectionH = if (hasTitle) titlePaint.textSize else 0f
+			val boxH = p * 2 + titleSectionH + (info.items.size * lineH)
+
+			val rect = RectF(pos.x - boxW/2, pos.y - boxH/2, pos.x + boxW/2, pos.y + boxH/2)
+
+			bgPaint.color = Color.parseColor("#99000000")
+			canvas.drawRoundRect(rect, 6.dp, 6.dp, bgPaint)
+
+			// 3. 그리기 로직
+			var curY = rect.top + p
+
+			if (hasTitle) {
+				curY -= titlePaint.fontMetrics.ascent
+				canvas.drawText(info.title, rect.left + p, curY, titlePaint)
+				// 타이틀을 그린 후에는 다음 항목과의 간격을 위해 현재 위치 보정 (ascent만큼 뺀 것을 되돌림)
+				curY += titlePaint.fontMetrics.descent
+			} else {
+				// 타이틀이 없으면 첫 번째 아이템이 위에서부터 적절히 배치되도록 보정
+				curY -= itemPaint.fontMetrics.ascent
+			}
+
+			info.items.forEachIndexed { index, it ->
+				// 타이틀이 없고 첫 번째 아이템인 경우 이미 위치를 잡았으므로 lineH를 더하지 않음
+				if (hasTitle || index > 0) curY += lineH
+				canvas.drawText("${it.label} ${it.value}", rect.left + p, curY, itemPaint)
+			}
+		}
 	}
 
 	private val Int.dp: Float get() = this * context.resources.displayMetrics.density
 	private val Int.sp: Float get() = this * context.resources.displayMetrics.scaledDensity
+
+	override fun onTouchEvent(event: MotionEvent): Boolean {
+		val x = event.x
+		val y = event.y
+
+		when (event.action) {
+			MotionEvent.ACTION_DOWN -> {
+				// 1. 터치 시작 시점에 박스(아이콘)를 눌렀는지 확인
+				val hitBoxIndex = findHitBoxIndex(x, y)
+				return if (hitBoxIndex != -1) {
+					// 박스를 눌렀다면 이 터치 시퀀스를 내가 소유함
+					true
+				} else {
+					// 박스가 아니면 false를 리턴해서 아래 SSIV가 터치를 가져가게 함
+					false
+				}
+			}
+			MotionEvent.ACTION_UP -> {
+				// 2. 손을 뗐을 때 해당 위치에 박스가 있다면 토글
+				val hitBoxIndex = findHitBoxIndex(x, y)
+				if (hitBoxIndex != -1) {
+					toggleBox(hitBoxIndex)
+					return true
+				}
+			}
+		}
+		return super.onTouchEvent(event)
+	}
+
+	/**
+	 * 특정 좌표(x, y)에 박스나 아이콘이 있는지 확인하고 index를 반환
+	 */
+	private fun findHitBoxIndex(x: Float, y: Float): Int {
+		textBoxes.forEach { box ->
+			val pos = animatedPositions[box.targetGridIndex] ?: return@forEach
+			val isCollapsed = collapsedIndices.contains(box.targetGridIndex)
+
+			val touchRect = if (isCollapsed) {
+				// 접힌 아이콘 영역 (클릭하기 편하게 조금 넓게 48dp 정도로 설정 추천)
+				val size = 48.dp
+				RectF(pos.currentX - size/2, pos.currentY - size/2, pos.currentX + size/2, pos.currentY + size/2)
+			} else {
+				// 펼쳐진 텍스트 박스 영역 (기존 계산 로직과 동일하게)
+				val titlePaint = Paint().apply { textSize = 16.sp; isFakeBoldText = true }
+				val itemPaint = Paint().apply { textSize = 14.sp }
+				val p = 10.dp
+				val lineH = 18.dp
+
+				var maxW = titlePaint.measureText(box.info.title)
+				box.info.items.forEach { maxW = maxOf(maxW, itemPaint.measureText("${it.label} ${it.value}")) }
+
+				val boxW = maxW + p * 2
+				val boxH = p * 2 + titlePaint.textSize + (box.info.items.size * lineH)
+				RectF(pos.currentX - boxW/2, pos.currentY - boxH/2, pos.currentX + boxW/2, pos.currentY + boxH/2)
+			}
+
+			if (touchRect.contains(x, y)) return box.targetGridIndex
+		}
+		return -1
+	}
+
+	private fun toggleBox(index: Int) {
+		if (collapsedIndices.contains(index)) {
+			collapsedIndices.remove(index)
+		} else {
+			collapsedIndices.add(index)
+		}
+		invalidate() // 다시 그리기
+	}
+
 }
