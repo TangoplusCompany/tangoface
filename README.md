@@ -1,10 +1,10 @@
-# TangoPlus FaceBeautyExpert Android App
+# TangoFace Android 얼굴분석 앱 
 
 ## 개발 환경
 
 | 항목                        | 버전                                  |
 | --------------------------- | ------------------------------------- |
-| Android Studio              | Narwhal Feature Drop 2025.1.2 Patch 2 |
+| Android Studio              | Android Studio Panda 2 | 2025.3.2 |
 | AGP (Android Gradle Plugin) | 8.10.0                                |
 | Kotlin                      | 2.0.21                                |
 | NDK                         | 21.4.7075529                          |

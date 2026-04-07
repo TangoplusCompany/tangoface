@@ -23,7 +23,7 @@
         tools:ignore="ScopedStorage" />
 
     <application
-        android:name=".orbbec.application.MyApplication"
+        android:name="com.tangoplus.facebeautyexpert.orbbec.application.MyApplication"
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="@xml/backup_rules"
@@ -33,18 +33,20 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.FaceBeautyExpert"
         android:largeHeap="true"
+
         tools:targetApi="31">
         <activity
-            android:name=".ui.measure.NormalCameraActivity"
+            android:name="com.tangoplus.facebeautyexpert.ui.measure.NormalCameraActivity"
             android:exported="false"
-            android:screenOrientation="landscape"
+            android:screenOrientation="portrait"
             tools:ignore="DiscouragedApi, LockedOrientationActivity"/>
         <activity
-            android:name=".ui.login.LoginActivity"
-            android:exported="false" />
-        <activity
-            android:name=".ui.main.MainActivity"
-            android:exported="true">
+            android:name="com.tangoplus.facebeautyexpert.ui.main.MainActivity"
+            android:exported="true"
+            android:screenOrientation="portrait"
+            android:resizeableActivity="false"
+            android:excludeFromRecents="false"
+            tools:ignore="DiscouragedApi,NonResizeableActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
@@ -52,9 +54,11 @@
             </intent-filter>
         </activity>
         <activity
-            android:name=".ui.measure.DepthCameraActivity"
+            android:name="com.tangoplus.facebeautyexpert.ui.measure.DepthCameraActivity"
             android:exported="true"
             android:screenOrientation="portrait"
+            android:resizeableActivity="false"
+            android:excludeFromRecents="false"
             tools:ignore="DiscouragedApi,LockedOrientationActivity">
 
             <!--

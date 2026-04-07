@@ -23,7 +23,7 @@
         android:id="@+id/tvLabel"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:textColor="@color/mainColor"
+        android:textColor="@color/accent"
         android:textSize="16dp"
         app:layout_constraintEnd_toStartOf="@+id/tvScore"
         app:layout_constraintStart_toStartOf="parent"

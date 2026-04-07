@@ -16,13 +16,13 @@ val obSignatureProp = Properties().apply {
 }
 
 android {
-    namespace = "com.tangoplus.tangoface"
-    compileSdk = 36
+    namespace = "com.tangoplus.facebeautyexpert"
+    compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.tangoplus.tangoface"
-        minSdk = 29
-        targetSdk = 36
+        applicationId = "com.tangoplus.facebeautyexpert"
+        minSdk = 30
+        targetSdk = 35
         versionCode = 4
         versionName = "1.03"
 
@@ -123,7 +123,7 @@ dependencies {
     // 외부 라이브러리
 //    debugImplementation("com.squareup.leakcanary:leakcanary-android:2.10")
 
-
+    implementation("com.microsoft.onnxruntime:onnxruntime-android:1.17.0")
     implementation("com.hbb20:ccp:2.7.0")
     implementation("com.github.PhilJay:MPAndroidChart:v3.1.0")
 
@@ -146,6 +146,7 @@ dependencies {
     implementation(libs.androidx.recyclerview)
     implementation(libs.androidx.cardview)
     implementation(libs.androidx.ui)
+    implementation(libs.androidx.viewpager2)
 //    implementation(project(":obsensor_jni"))
     if (findProject(":obsensor_jni") != null) {
         implementation(project(":obsensor_jni"))
@@ -182,7 +183,7 @@ dependencies {
     implementation("androidx.room:room-testing:$roomVersion")
     implementation("androidx.legacy:legacy-support-v4:1.0.0")
     annotationProcessor("androidx.room:room-compiler:$roomVersion")
-    annotationProcessor("android.arch.persistence.room:rxjava2:1.1.1")
+    kapt("android.arch.persistence.room:rxjava2:1.1.1")
     //noinspection KaptUsageInsteadOfKsp
     kapt("androidx.room:room-compiler:$roomVersion")
     implementation("androidx.sqlite:sqlite:2.4.0")

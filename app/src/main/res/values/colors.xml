@@ -1,30 +1,32 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <color name="black">#000000</color>
-    <color name="white">#FFFFFF</color>
-    <color name="axis100">#8058FF32</color>
-    <color name="axis200">#BE2EE88B</color>
-    <color name="axis300">#8000FF00</color>
+    <color name="white">#FFFAFB</color>
+    <color name="bg">#140000</color>
+    <color name="subBg">#3D0000</color>
+    <color name="bg30">#4D140000</color>
+    <color name="bg15">#26140000</color>
 
-    <color name="axisSub">#80FAAF00</color>
-    <color name="axis900">#80FF2819</color>
-    <color name="whiteText">#FFFFFF</color>
-    <color name="mainColor">#5F55FB</color>
-    <color name="deleteColor">#FF5449</color>
-    <color name="warningColor">#FFA432</color>
-    <color name="doneColor">#58FF32</color>
+    <color name="accent">#FACEE3</color>
+    <color name="accent10">#19FACEE3</color>
+    <color name="subAccent">#FB91C5</color>
+    <color name="accent_foreground">#8B8FA8</color>
 
-    <color name="subColor100">#F6F6F6</color>
-    <color name="subColor150">#DFDFE0</color>
-    <color name="subColor200">#D9D9D9</color>
-    <color name="subColor300">#C8C8C8</color>
-    <color name="subColor400">#AEAEAE</color>
-    <color name="subColor500">#959595</color>
-    <color name="subColor700">#757575</color>
-    <color name="subColor800">#47484C</color>
-    <color name="subColor900">#2C2C2C</color>
+    <color name="subColor100">#FFFAFB</color>
+    <color name="subColor300">#C1BBBB</color>
+    <color name="subColor500">#94888A</color>
+    <color name="subColor700">#474445</color>
+    <color name="subColor900">#241820</color>
     <color name="rippleColor">#80D9D9D9</color>
+
+
+    <color name="red">#FF5449</color>
+    <color name="orange">#F3E22E</color>
+    <color name="normal">#8BE762</color>
+    <color name="yellow">#F3E22E</color>
+
 
     <color name="transparent">#00FFFFFF</color>
     <color name="warningMarkColor">#FF992B</color>
+    <color name="test">#1AFFAE00</color>
 </resources>

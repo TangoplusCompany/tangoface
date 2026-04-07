@@ -54,4 +54,10 @@
         <item name="android:textSize">20sp</item>
         <item name="android:textColorPrimary">@android:color/black</item>
     </style>
+
+    <style name="App.CustomIndicator" parent="Widget.Material3.BottomNavigationView.ActiveIndicator">
+        <item name="android:color">@color/accent</item>
+        <item name="marginHorizontal">10dp</item>
+    </style>
+
 </resources>
