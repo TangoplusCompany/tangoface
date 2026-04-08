@@ -145,6 +145,7 @@ class StatisticsFragment : Fragment(), PreCheckListFilterCheckListener {
 		bc.xAxis.apply {
 			labelCount = labels.size
 			valueFormatter = IndexAxisValueFormatter(labels)
+			textColor = ContextCompat.getColor(context, R.color.white)
 		}
 
 		bc.invalidate()

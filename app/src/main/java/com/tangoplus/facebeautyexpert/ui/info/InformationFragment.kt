@@ -14,6 +14,7 @@ import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
+import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.davemorrissey.labs.subscaleview.SubsamplingScaleImageView
 import com.tangoplus.facebeautyexpert.R
@@ -96,7 +97,7 @@ class InformationFragment : Fragment(), OnFacialPartClickListener {
 
 	private fun setAdapter() {
 		val selectCase = if (ivm.getSeq() == Sequence.COMFORT) 0 else 1
-		val vLayoutManager = LinearLayoutManager(requireContext(), LinearLayoutManager.VERTICAL, false)
+		val vLayoutManager = GridLayoutManager(context, 5)
 		val sAdapter = SelectRVAdapter(svm, selectCase)
 		sAdapter.onFacialPartClickListener = this@InformationFragment
 		bd.rvGD1.apply {
@@ -131,6 +132,11 @@ class InformationFragment : Fragment(), OnFacialPartClickListener {
 		bd.ssiv.recycle()
 		val isComparison = mvm.comparisonDoubleItem != null
 		ivm.currentFaceStaticsItem.forEach { addCommentInFCI(it, isComparison) }
+
+		val width = bd.ssiv.width
+		val height = bd.ssiv.height
+		ivm.setCropRatio(width, height)
+
 		setImage()
 		bd.rvGD2.apply {
 			layoutManager = LinearLayoutManager(requireContext(), LinearLayoutManager.VERTICAL, false)
@@ -184,7 +190,6 @@ class InformationFragment : Fragment(), OnFacialPartClickListener {
 
 		bd.overlayView.setFaceRect(faceRect)
 		bd.overlayView.attachToImageView(bd.ssiv)
-		Log.v("오버레이크기", "${textInfos.map { it -> Pair(it.anchorX, it.anchorY) }.subList(0, 2)}, (${bd.overlayView.width}, ${bd.overlayView.height})")
 		bd.overlayView.setTextBoxes(textInfos)
 	}
 

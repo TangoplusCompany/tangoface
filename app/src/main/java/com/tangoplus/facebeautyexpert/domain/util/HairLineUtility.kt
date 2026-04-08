@@ -3,8 +3,8 @@ package com.tangoplus.facebeautyexpert.domain.util
 import android.graphics.Bitmap
 import android.util.Log
 import com.orbbec.obsensor.types.CameraIntrinsic
-import com.tangoplus.facebeautyexpert.domain.util.MediaUtility.convertDepthPixelTo3D
-import com.tangoplus.facebeautyexpert.domain.util.MediaUtility.findNearbyDepth
+import com.tangoplus.facebeautyexpert.domain.util.LandmarkUtility.convertDepthPixelTo3D
+import com.tangoplus.facebeautyexpert.domain.util.LandmarkUtility.findNearbyDepth
 import com.tangoplus.facebeautyexpert.domain.vision.face.FaceLandmarkResult
 import com.tangoplus.facebeautyexpert.orbbec.vo.Point3D
 import org.opencv.android.Utils

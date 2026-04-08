@@ -3,6 +3,7 @@ package com.tangoplus.facebeautyexpert.ui.view
 import android.content.Context
 import android.graphics.Canvas
 import android.graphics.Color
+import android.graphics.DashPathEffect
 import android.graphics.Paint
 import android.graphics.PointF
 import android.graphics.RectF
@@ -13,6 +14,7 @@ import kotlin.math.abs
 import kotlin.math.atan2
 import kotlin.math.pow
 import kotlin.math.sqrt
+import androidx.core.graphics.toColorInt
 
 class AngleMeasureView @JvmOverloads constructor(
 	context: Context,
@@ -35,12 +37,12 @@ class AngleMeasureView @JvmOverloads constructor(
 	private val panelPadding = 12.dp
 
 	// Paint 설정
-	private val activePaint = Paint().apply { color = Color.GREEN; strokeWidth = 5f; isAntiAlias = true }
-	private val pointPaint = Paint().apply { color = Color.GREEN; style = Paint.Style.FILL; isAntiAlias = true }
+	private val activePaint = Paint().apply { color = "#B0FF00".toColorInt(); strokeWidth = 5f; isAntiAlias = true }
+	private val pointPaint = Paint().apply { color = "#B0FF00".toColorInt(); style = Paint.Style.FILL; isAntiAlias = true }
 	private val textPaint = Paint().apply {
 		color = Color.WHITE; textSize = 14.sp; textAlign = Paint.Align.CENTER; isFakeBoldText = true
 	}
-	private val bgPaint = Paint().apply { color = Color.parseColor("#AA000000"); isAntiAlias = true }
+	private val bgPaint = Paint().apply { color = "#AA000000".toColorInt(); isAntiAlias = true }
 
 	init {
 		// 초기 실행 시 첫 번째 선 생성
@@ -166,13 +168,15 @@ class AngleMeasureView @JvmOverloads constructor(
 			drawButton(canvas, addBtnLeft, height - panelPadding - buttonSize, "+", false)
 		}
 	}
-
+	val dashedPaint = Paint(activePaint).apply {
+		pathEffect = DashPathEffect(floatArrayOf(2f, 4f), 0f)
+	}
 	override fun onDraw(canvas: Canvas) {
 		super.onDraw(canvas)
 
 		lines.forEachIndexed { index, line ->
 			// 항상 활성화 스타일 사용
-			canvas.drawLine(line.p1.x, line.p1.y, line.p2.x, line.p2.y, activePaint)
+			canvas.drawLine(line.p1.x, line.p1.y, line.p2.x, line.p2.y, dashedPaint)
 			canvas.drawCircle(line.p1.x, line.p1.y, 10.dp, pointPaint)
 			canvas.drawCircle(line.p2.x, line.p2.y, 10.dp, pointPaint)
 

@@ -12,6 +12,7 @@ import android.util.AttributeSet
 import android.view.MotionEvent
 import android.view.View
 import androidx.core.content.ContextCompat
+import androidx.core.graphics.toColorInt
 import com.davemorrissey.labs.subscaleview.SubsamplingScaleImageView
 import com.tangoplus.facebeautyexpert.domain.util.BitmapUtility
 
@@ -223,7 +224,7 @@ class TextBoxOverlayView @JvmOverloads constructor(
 			// --- 2. 펼쳐진 상태: 기존 텍스트 박스 로직 ---
 			val hasTitle = info.title.isNotEmpty() // 타이틀 존재 여부 체크
 
-			val titlePaint = Paint(textPaint).apply { color = Color.WHITE; textSize = 16.sp; isFakeBoldText = true }
+			val titlePaint = Paint(textPaint).apply { color = "#FF0055".toColorInt(); textSize = 16.sp; isFakeBoldText = true }
 			val itemPaint = Paint(textPaint).apply { color = Color.WHITE; textSize = 14.sp }
 
 			// 1. 가로 길이 계산: 타이틀이 있을 때만 가로폭 측정에 포함
@@ -239,7 +240,7 @@ class TextBoxOverlayView @JvmOverloads constructor(
 
 			val rect = RectF(pos.x - boxW/2, pos.y - boxH/2, pos.x + boxW/2, pos.y + boxH/2)
 
-			bgPaint.color = Color.parseColor("#99000000")
+			bgPaint.color = "#7F000000".toColorInt()
 			canvas.drawRoundRect(rect, 6.dp, 6.dp, bgPaint)
 
 			// 3. 그리기 로직

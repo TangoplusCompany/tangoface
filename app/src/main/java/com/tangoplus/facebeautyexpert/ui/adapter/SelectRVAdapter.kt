@@ -30,11 +30,11 @@ class SelectRVAdapter(private val svm: SelectViewModel, private val case: Int) :
 			if (isSelected) {
 				// 선택된 상태: backgroundTint = accent, textColor = subColor700
 				clFHAI.backgroundTintList = ContextCompat.getColorStateList(context, R.color.accent)
-				tvFHAI.setTextColor(ContextCompat.getColor(context, R.color.subColor700))
+//				tvFHAI.setTextColor(ContextCompat.getColor(context, R.color.subColor700))
 			} else {
 				// 선택되지 않은 상태: backgroundTint = 없앰(null), textColor = subColor100
 				clFHAI.backgroundTintList = null
-				tvFHAI.setTextColor(ContextCompat.getColor(context, R.color.subColor100))
+//				tvFHAI.setTextColor(ContextCompat.getColor(context, R.color.subColor100))
 			}
 
 			clFHAI.setOnSingleClickListener {

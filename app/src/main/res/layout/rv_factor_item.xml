@@ -4,7 +4,8 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:background="@drawable/bckgnd_stroke_2_20_accent">
+    android:background="@drawable/bckgnd_20"
+    android:backgroundTint="@color/bg700">
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -22,25 +23,32 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="15dp"
                 android:text="하관 비대칭"
-                android:textColor="@color/subColor100"
-                android:textSize="18sp"
+                android:textColor="@color/accent"
+                android:textSize="24sp"
+                android:textStyle="bold"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toTopOf="parent" />
 
             <TextView
                 android:id="@+id/tvFIValue0"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
+                android:layout_width="0dp"
+                android:layout_height="128dp"
                 android:layout_marginTop="10dp"
                 android:layout_marginBottom="20dp"
-                android:textColor="@color/subColor100"
+                android:background="@drawable/bckgnd_20"
+                android:backgroundTint="@color/bg300"
+                android:gravity="center"
+                android:padding="10dp"
+                android:text="asdfasdfasdf"
+                android:textColor="@color/accent300"
                 android:textSize="20sp"
                 android:textStyle="bold"
                 app:layout_constraintBottom_toBottomOf="parent"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toBottomOf="@id/tvFITitle0" />
+                app:layout_constraintTop_toBottomOf="@id/tvFITitle0"
+                app:layout_constraintWidth_percent="0.5" />
 
             <ImageButton
                 android:id="@+id/ibtnFIInfo0"
@@ -49,6 +57,7 @@
                 android:background="@drawable/effect_12"
                 android:backgroundTint="@color/bg"
                 android:padding="4dp"
+                android:visibility="gone"
                 app:layout_constraintBottom_toBottomOf="@id/tvFITitle0"
                 app:layout_constraintStart_toEndOf="@+id/tvFITitle0"
                 app:layout_constraintTop_toTopOf="@+id/tvFITitle0"
@@ -66,25 +75,49 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="15dp"
                 android:text="피부처짐 지수"
-                android:textColor="@color/subColor100"
-                android:textSize="18sp"
+                android:textColor="@color/accent"
+                android:textSize="24sp"
+                android:textStyle="bold"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toTopOf="parent" />
 
-            <TextView
-                android:id="@+id/tvFIValue1"
+            <LinearLayout
+                android:id="@+id/llFIValue"
                 android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
+                android:layout_height="128dp"
                 android:layout_marginTop="10dp"
                 android:layout_marginBottom="20dp"
-                android:textColor="@color/subColor100"
-                android:textSize="20sp"
-                android:textStyle="bold"
+                android:background="@drawable/bckgnd_20"
+                android:backgroundTint="@color/bg300"
+                android:orientation="horizontal"
                 app:layout_constraintBottom_toBottomOf="parent"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toBottomOf="@+id/tvFITitle1" />
+                app:layout_constraintTop_toBottomOf="@+id/tvFITitle1">
+
+                <TextView
+                    android:id="@+id/tvFIValue10"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1"
+                    android:background="@drawable/bckgnd_20"
+                    android:backgroundTint="@color/bg300"
+                    android:gravity="center"
+                    android:padding="10dp"
+                    android:textColor="@color/accent300"
+                    android:textSize="20sp" />
+
+                <TextView
+                    android:id="@+id/tvFIValue11"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1"
+                    android:gravity="center"
+                    android:padding="10dp"
+                    android:textColor="@color/accent300"
+                    android:textSize="20sp" />
+            </LinearLayout>
 
             <ImageButton
                 android:id="@+id/ibtnFIInfo1"
@@ -93,6 +126,7 @@
                 android:background="@drawable/effect_12"
                 android:backgroundTint="@color/bg"
                 android:padding="4dp"
+                android:visibility="gone"
                 app:layout_constraintBottom_toBottomOf="@id/tvFITitle1"
                 app:layout_constraintStart_toEndOf="@+id/tvFITitle1"
                 app:layout_constraintTop_toTopOf="@+id/tvFITitle1"
@@ -111,25 +145,32 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="15dp"
                 android:text="얼굴형"
-                android:textColor="@color/subColor100"
-                android:textSize="18sp"
+                android:textColor="@color/accent"
+                android:textSize="24sp"
+                android:textStyle="bold"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toTopOf="parent" />
 
             <TextView
                 android:id="@+id/tvFIValue2"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
+                android:layout_width="0dp"
+                android:layout_height="128dp"
                 android:layout_marginTop="10dp"
                 android:layout_marginBottom="20dp"
-                android:textColor="@color/subColor100"
+                android:background="@drawable/bckgnd_20"
+                android:backgroundTint="@color/bg300"
+                android:gravity="center"
+                android:padding="10dp"
+                android:text="asdfasdfasdf"
+                android:textColor="@color/accent300"
                 android:textSize="20sp"
                 android:textStyle="bold"
                 app:layout_constraintBottom_toBottomOf="parent"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toBottomOf="@+id/tvFITitle2" />
+                app:layout_constraintTop_toBottomOf="@+id/tvFITitle2"
+                app:layout_constraintWidth_percent="0.5" />
 
             <ImageButton
                 android:id="@+id/ibtnFIInfo2"
@@ -138,6 +179,7 @@
                 android:background="@drawable/effect_12"
                 android:backgroundTint="@color/bg"
                 android:padding="4dp"
+                android:visibility="gone"
                 app:layout_constraintBottom_toBottomOf="@id/tvFITitle2"
                 app:layout_constraintStart_toEndOf="@+id/tvFITitle2"
                 app:layout_constraintTop_toTopOf="@+id/tvFITitle2"

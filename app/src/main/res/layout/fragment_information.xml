@@ -19,11 +19,11 @@
             android:id="@+id/rvGD1"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_marginStart="5dp"
-            android:layout_marginEnd="5dp"
-            app:layout_constraintBottom_toBottomOf="@+id/cardView2"
+            android:layout_marginStart="10dp"
+            android:layout_marginEnd="10dp"
             app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toEndOf="@+id/cardView2">
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@+id/cardView2">
 
         </androidx.recyclerview.widget.RecyclerView>
 
@@ -39,7 +39,6 @@
             app:cardElevation="0dp"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintHeight_percent="0.75"
-            app:layout_constraintHorizontal_bias="0.0"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent">
 
@@ -76,14 +75,28 @@
                     app:layout_constraintTop_toTopOf="@id/ssiv" />
 
 
+                <TextView
+                    android:id="@+id/tvIdInfo"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="10dp"
+                    android:layout_marginTop="20dp"
+                    android:background="@drawable/bckgnd_12"
+                    android:backgroundTint="@color/bg15"
+                    android:gravity="center_vertical"
+                    android:padding="10dp"
+                    android:text="이강휘, 010-4544-9999"
+                    android:textColor="@color/white"
+                    android:textSize="18sp"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toTopOf="parent" />
+
                 <com.google.android.material.textfield.TextInputLayout
                     android:id="@+id/tilISeq"
                     style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_margin="16dp"
-                    android:layout_marginTop="5dp"
-                    android:layout_marginEnd="5dp"
                     app:boxBackgroundColor="@color/bg_dropdown_fixed"
                     app:boxCornerRadiusBottomEnd="20dp"
                     app:boxCornerRadiusBottomStart="20dp"
@@ -95,15 +108,16 @@
                     app:endIconTint="@color/accent"
                     app:layout_constraintEnd_toEndOf="parent"
                     app:layout_constraintTop_toTopOf="parent">
+
                     <AutoCompleteTextView
                         android:id="@+id/actvTSeq"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
+                        android:background="@null"
                         android:inputType="none"
                         android:padding="16dp"
                         android:textColor="@color/subColor100"
                         android:textSize="18sp"
-                        android:background="@null"
                         app:dropDownBackgroundTint="#1A140000" />
                 </com.google.android.material.textfield.TextInputLayout>
 
@@ -184,7 +198,7 @@
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@+id/cardView2">
+            app:layout_constraintTop_toBottomOf="@+id/rvGD1">
 
             <androidx.constraintlayout.widget.ConstraintLayout
                 android:layout_width="match_parent"
@@ -209,20 +223,6 @@
                         app:layout_constraintEnd_toEndOf="parent"
                         app:layout_constraintStart_toStartOf="parent"
                         app:layout_constraintTop_toBottomOf="@+id/tvIdInfo" />
-
-                    <TextView
-                        android:id="@+id/tvIdInfo"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginStart="5dp"
-                        android:layout_marginTop="10dp"
-                        android:gravity="center_vertical"
-                        android:padding="10dp"
-                        android:text="이강휘, 010-4544-9999"
-                        android:textColor="@color/white"
-                        android:textSize="18sp"
-                        app:layout_constraintStart_toStartOf="parent"
-                        app:layout_constraintTop_toTopOf="parent" />
 
                 </androidx.constraintlayout.widget.ConstraintLayout>
 

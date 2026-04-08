@@ -9,6 +9,7 @@ import android.view.ViewGroup
 import androidx.core.view.isVisible
 import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.lifecycleScope
+import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.tangoplus.facebeautyexpert.R
 import com.tangoplus.facebeautyexpert.data.db.FaceDao
@@ -77,8 +78,6 @@ class MeasureHistoryFragment : Fragment(), OnUserClickListener {
 			setAdapter()
 			loadingDialog = LoadingDialogFragment()
 		}
-
-
 	}
 
 	private fun initUserUI() {
@@ -86,7 +85,7 @@ class MeasureHistoryFragment : Fragment(), OnUserClickListener {
 	}
 
 	private fun setAdapter() {
-		val lm = LinearLayoutManager(requireContext(), LinearLayoutManager.VERTICAL, false)
+		val lm = GridLayoutManager(requireContext(), 2)
 		val userAdapter = UserRVAdapter(requireContext(), mvm.currentUserItems)
 		userAdapter.onUserClickListener = this@MeasureHistoryFragment
 		bd.rvMH.apply {
@@ -104,7 +103,6 @@ class MeasureHistoryFragment : Fragment(), OnUserClickListener {
 
 		lifecycleScope.launch(Dispatchers.IO) {
 			val statics = fDao.getStatic(tempServerSn)
-			Log.v("목폄확인", "statics가져오기: ${statics.map { it.media_file_name }}")
 			val result = mvm.convertToFaceResult(requireContext(), statics)
 //        scrollToView(bd.ibtnMBack, bd.nsvM)
 			withContext(Dispatchers.Main) {

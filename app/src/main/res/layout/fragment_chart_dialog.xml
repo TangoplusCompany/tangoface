@@ -14,7 +14,7 @@
         <androidx.constraintlayout.widget.ConstraintLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:background="@drawable/color_gradation_sub100">
+            android:background="@drawable/color_gradation_main_64">
 
             <androidx.recyclerview.widget.RecyclerView
                 android:id="@+id/rvCD0"

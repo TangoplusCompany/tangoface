@@ -5,11 +5,13 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageButton
 import android.widget.ImageView
+import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.RecyclerView
 import com.skydoves.balloon.Balloon
 import com.tangoplus.facebeautyexpert.R
+import com.tangoplus.facebeautyexpert.data.db.FaceShape
 import com.tangoplus.facebeautyexpert.databinding.RvFactorItemBinding
 import com.tangoplus.facebeautyexpert.domain.util.FileUtility.setOnSingleClickListener
 import com.tangoplus.facebeautyexpert.ui.info.vo.Factor
@@ -30,11 +32,14 @@ class FactorRVAdapter(private val fragment : Fragment, private val currentFactor
 	inner class FactorViewHolder(view: View) : RecyclerView.ViewHolder(view) {
 
 		val tvFIValue0: TextView = view.findViewById(R.id.tvFIValue0)
-		val tvFIValue1: TextView = view.findViewById(R.id.tvFIValue1)
+		val tvFIValue10: TextView = view.findViewById(R.id.tvFIValue10)
+		val tvFIValue11: TextView = view.findViewById(R.id.tvFIValue11)
+
 		val tvFIValue2: TextView = view.findViewById(R.id.tvFIValue2)
-		val ibtnFIInfo0: ImageButton = view.findViewById(R.id.ibtnFIInfo0)
-		val ibtnFIInfo1: ImageButton = view.findViewById(R.id.ibtnFIInfo1)
-		val ibtnFIInfo2: ImageButton = view.findViewById(R.id.ibtnFIInfo2)
+		val llFIValue: LinearLayout = view.findViewById(R.id.llFIValue)
+//		val ibtnFIInfo0: ImageButton = view.findViewById(R.id.ibtnFIInfo0)
+//		val ibtnFIInfo1: ImageButton = view.findViewById(R.id.ibtnFIInfo1)
+//		val ibtnFIInfo2: ImageButton = view.findViewById(R.id.ibtnFIInfo2)
 
 		fun bind(currentItem: Factor) {
 			tvFIValue0.text = currentItem.facialAxis.displayName
@@ -42,17 +47,18 @@ class FactorRVAdapter(private val fragment : Fragment, private val currentFactor
 			val rightSagging = "%.1f".format(currentItem.saggingScale.second)
 			val leftSaggingState = createState(currentItem.saggingScale.first)
 			val rightSaggingState = createState(currentItem.saggingScale.second)
-			tvFIValue1.text = "왼쪽: ${leftSaggingState}(${leftSagging})\n오른쪽:${rightSaggingState}(${rightSagging})"
-			tvFIValue2.text = currentItem.faceShape.displayName
+			tvFIValue10.text = "왼쪽\n\n${leftSaggingState}\n${leftSagging}"
+			tvFIValue11.text = "오른쪽\n\n${rightSaggingState}\n${rightSagging}"
+
+			tvFIValue2.text = "${getImoji(currentItem.faceShape)} ${currentItem.faceShape.displayName}"
 
 			val balloon0 = createBalloon("비대칭 지수", info0)
 			val balloon1 = createBalloon("피부처짐 지수", info1, R.drawable.drawable_sagging_standard)
 			val balloon2 = createBalloon("얼굴형", info2 )
 
-			ibtnFIInfo0.setOnSingleClickListener { balloon0.showAlignBottom(ibtnFIInfo0) }
-			ibtnFIInfo1.setOnSingleClickListener { balloon1.showAlignBottom(ibtnFIInfo1) }
-			ibtnFIInfo2.setOnSingleClickListener { balloon2.showAlignBottom(ibtnFIInfo2) }
-
+			tvFIValue0.setOnSingleClickListener { balloon0.showAlignBottom(tvFIValue0) }
+			llFIValue.setOnSingleClickListener { balloon1.showAlignBottom(llFIValue) }
+			tvFIValue2.setOnSingleClickListener { balloon2.showAlignBottom(tvFIValue2) }
 		}
 	}
 
@@ -112,6 +118,17 @@ class FactorRVAdapter(private val fragment : Fragment, private val currentFactor
 			in 3f..5f -> "보통"
 			in 6f..10f -> "탄력 저하"
 			else -> "심한 처짐" // 10 이상(초과)인 모든 경우
+		}
+	}
+	private fun getImoji(faceShape: FaceShape) :String {
+		return when (faceShape) {
+			FaceShape.EGG -> "🥚"
+			FaceShape.RHOMBUS -> "🔶"
+			FaceShape.HEART -> "♥️"
+			FaceShape.PEANUT -> "🥜"
+			FaceShape.HEXAGON -> "🛡️"
+			FaceShape.CIRCLE -> "🟢"
+			FaceShape.DEFAULT -> ""
 		}
 	}
 }

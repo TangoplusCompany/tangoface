@@ -29,6 +29,7 @@ class UserRVAdapter(
 		val tvMVIRegDate: TextView = view.findViewById(R.id.tvMVIRegDate)
 		val tvMVIAge: TextView = view.findViewById(R.id.tvMVIAge)
 		val tvMVIGender: TextView = view.findViewById(R.id.tvMVIGender)
+		val tvUICircle: TextView = view.findViewById(R.id.tvUICircle)
 	}
 
 	override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder {
@@ -43,6 +44,12 @@ class UserRVAdapter(
 		if (holder is MeasureVerticalViewHolder) {
 			holder.clMVI.background = ContextCompat.getDrawable(context, R.drawable.effect_20)
 			holder.tvMVIName.text = currentItem.name
+			val circleInitial = currentItem.name?.let {it ->
+				if ( it.length > 1) currentItem.name.substring(0, 1) else "G"
+			}
+			holder.tvUICircle.text = circleInitial
+
+
 //            Log.v("mobiel", "${currentItem.userMobile.isNullOrEmpty()}, ${currentItem.userMobile}")
 			val mobile = if (currentItem.mobile?.length == 11) {
 				currentItem.mobile.substring(0, 3) + "-****-" + currentItem.mobile.substring(7) + ", "
@@ -59,8 +66,8 @@ class UserRVAdapter(
 			val c = Calendar.getInstance(TimeZone.getTimeZone("Asia/Seoul"))
 			val birthday = currentItem.birthday
 
-
-			holder.tvMVIRegDate.text = currentItem.regDate.substring(0, 16)
+			val regDate = "🗓️: ${currentItem.regDate.substring(0, 16)}"
+			holder.tvMVIRegDate.text = regDate
 			val age = if (birthday?.length == 10) {
 				try {
 					val (birthYear, birthMonth, birthDay) = birthday.split("-").map { it.toInt() }
@@ -78,10 +85,10 @@ class UserRVAdapter(
 
 					"만 $ageCalc 세"
 				} catch (e: Exception) {
-					"미설정"
+					""
 				}
 			} else {
-				"미설정"
+				""
 			}
 
 			holder.tvMVIAge.text = age
@@ -95,11 +102,18 @@ class UserRVAdapter(
 		return faceResults.size
 	}
 
-//    fun resetAllItemsUI() {
-//        notifyDataSetChanged()
-//    }
-//    fun setBlockedItemClick(block: Boolean) {
-//        isBlockedItemClick = block
-//        notifyDataSetChanged()
-//    }
+	fun getGenderBgColor(context:Context, gender: Int) : Int {
+		return when (gender) {
+			0 -> ContextCompat.getColor(context, R.color.maleBg)
+			1 -> ContextCompat.getColor(context, R.color.femaleBg)
+			else -> ContextCompat.getColor(context, R.color.bg15)
+		}
+	}
+	fun getGenderAccentColor(gender: Int) : Int {
+		return when (gender) {
+			0 -> ContextCompat.getColor(context, R.color.maleAccent)
+			1 -> ContextCompat.getColor(context, R.color.femaleAccent)
+			else -> ContextCompat.getColor(context, R.color.bg15)
+		}
+	}
 }
