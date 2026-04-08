@@ -58,8 +58,6 @@ object PermissionUtility {
 					Manifest.permission.READ_MEDIA_VIDEO,
 					Manifest.permission.READ_MEDIA_AUDIO,
 					Manifest.permission.READ_MEDIA_VISUAL_USER_SELECTED,
-//                    Manifest.permission.POST_NOTIFICATIONS,
-//                    Manifest.permission.USE_EXACT_ALARM
 				)
 			}
 
@@ -71,7 +69,6 @@ object PermissionUtility {
 					Manifest.permission.READ_MEDIA_VIDEO,
 					Manifest.permission.READ_MEDIA_AUDIO,
 					Manifest.permission.POST_NOTIFICATIONS,
-//                    Manifest.permission.SCHEDULE_EXACT_ALARM
 				)
 			}
 

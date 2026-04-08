@@ -297,12 +297,12 @@ object ClassifyUtility {
 		// 4. 각도 비대칭 지수 (0~1로 정규화, 180도 기준)
 		val angleAsymmetry = abs(leftAngle - abs(rightAngle)) / 180f
 
-		Log.v("안면비대칭", """
-        왼쪽 길이: $leftLength, 오른쪽 길이: $rightLength
-        왼쪽 각도: ${"%.2f".format(leftAngle)}°, 오른쪽 각도: ${"%.2f".format(rightAngle)}°
-        길이 비대칭: ${"%.4f".format(lengthAsymmetry)}
-        각도 비대칭: ${"%.4f".format(angleAsymmetry)}
-    """.trimIndent())
+//		Log.v("안면비대칭", """
+//        왼쪽 길이: $leftLength, 오른쪽 길이: $rightLength
+//        왼쪽 각도: ${"%.2f".format(leftAngle)}°, 오른쪽 각도: ${"%.2f".format(rightAngle)}°
+//        길이 비대칭: ${"%.4f".format(lengthAsymmetry)}
+//        각도 비대칭: ${"%.4f".format(angleAsymmetry)}
+//    """.trimIndent())
 
 		return Pair(lengthAsymmetry, angleAsymmetry)
 	}

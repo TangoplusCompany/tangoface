@@ -42,14 +42,7 @@ object MeasureUtility {
 	fun getGuideText(seq: Sequence): String {
 		return when (seq) {
 			Sequence.COMFORT -> "안녕하세요! 화면에 잘 보이게 위치해 주시고\n편한 상태로 입을 다물고 정면을 응시해주세요"
-//			Sequence.RESTING -> "정면 상태입니다.\n얼굴을 화면 중앙 원에 맞추고\n입을 다문 상태에서 정면을 응시해주세요"
-//			Sequence.OCCLUSAL -> "교합 상태입니다\n이를 맞물리게 물고 이빨이 전부 보이게 미소 지어보세요"
-//			Sequence.JAW_LEFT_TILT -> "턱 가측 이동 측정입니다\n이를 맞물리고 이빨이 전부 보이게 미소 지은 상태로\n시작 버튼을 눌러주세요"
-//			Sequence.JAW_RIGHT_TILT -> "턱 가측 이동 측정입니다\n이를 맞물리고 이빨이 전부 보이게 미소 지은 상태로\n시작 버튼을 눌러주세요"
-//			Sequence.JAW_OPENING -> "개구상태입니다.\n이빨이 보이도록 입을 최대한 벌려\n정면을 응시해주세요"
 			Sequence.NECK_EXTENTION -> "목을 편 상태입니다. 버튼을 누르고\n코 끝을 하늘을 향하게 턱을 들어주세요"
-//			Sequence.SIDE_LEFT -> "왼쪽 측면 측정입니다. 몸을 틀어 왼쪽을 바라봐주세요"
-//			Sequence.SIDE_RIGHT -> "오른쪽 측면 측정입니다. 몸을 틀어 오른쪽을 바라봐주세요."
 			else -> ""
 		}
 	}

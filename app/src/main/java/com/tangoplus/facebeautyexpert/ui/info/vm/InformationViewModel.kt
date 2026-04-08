@@ -56,4 +56,15 @@ class InformationViewModel : ViewModel() {
 	fun updateManualAngle(angle: Float) {
 		_currentManualAngle.value = angle
 	}
+
+	private var cropRatio = Pair(0f, 0f)
+
+	// 1. 비율 설정 함수
+	fun setCropRatio(width: Int, height: Int) {
+		if (width > 0 && height > 0) {
+			// 전처리 비율로 사용할 수 있도록 Float Pair로 저장
+			cropRatio = Pair(width.toFloat(), height.toFloat())
+		}
+	}
+	fun getCropRatio() : Pair<Float, Float> = cropRatio
 }

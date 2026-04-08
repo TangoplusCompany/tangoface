@@ -10,6 +10,8 @@ import com.tangoplus.facebeautyexpert.domain.util.ClassifyUtility.classifyFaceSh
 import com.tangoplus.facebeautyexpert.domain.util.ClassifyUtility.classifyFacialAsymmetry
 import com.tangoplus.facebeautyexpert.domain.util.ClassifyUtility.classifyFacialAxis
 import com.tangoplus.facebeautyexpert.domain.util.ClassifyUtility.classifySaggingDepth
+import com.tangoplus.facebeautyexpert.domain.util.LandmarkUtility.calculateScreenX
+import com.tangoplus.facebeautyexpert.domain.util.LandmarkUtility.calculateScreenY
 import com.tangoplus.facebeautyexpert.domain.util.MathHelpers.calculateAngle
 import com.tangoplus.facebeautyexpert.domain.util.MathHelpers.calculateAreaWithScaling
 import com.tangoplus.facebeautyexpert.domain.util.MathHelpers.calculatePolygonArea
@@ -17,8 +19,6 @@ import com.tangoplus.facebeautyexpert.domain.util.MathHelpers.calculateSlope
 import com.tangoplus.facebeautyexpert.domain.util.MathHelpers.correctingValue
 import com.tangoplus.facebeautyexpert.domain.util.MathHelpers.get3DDistance
 import com.tangoplus.facebeautyexpert.domain.util.MathHelpers.get3DFloorDistance
-import com.tangoplus.facebeautyexpert.domain.util.MediaUtility.calculateScreenX
-import com.tangoplus.facebeautyexpert.domain.util.MediaUtility.calculateScreenY
 import com.tangoplus.facebeautyexpert.domain.vision.face.FaceLandmarkResult
 import com.tangoplus.facebeautyexpert.domain.vision.face.FaceLandmarkerHelper
 import com.tangoplus.facebeautyexpert.domain.vo.Sequence
@@ -191,10 +191,7 @@ class MeasureViewModel : ViewModel() {
 				val x = flr3D.getOrNull(index)?.x ?: 0f
 				val y = flr3D.getOrNull(index)?.y ?: 0f
 				val z = flr3D.getOrNull(index)?.z ?: 0f
-				if (index in listOf(13, 14)) Log.v(
-					"xyz보기",
-					"$index: ($x $y $z), ${flr3D.size}"
-				)
+
 				val ja = JSONArray().apply {
 					put(index)
 					put(scaledX.toBigDecimal().setScale(1, RoundingMode.HALF_UP))
@@ -340,7 +337,7 @@ class MeasureViewModel : ViewModel() {
 					val cheeksExtents = if (isDepthCameraMeasure) {
 						val leftCheeksPoint = leftCheeks.map { current3DCoordinate[it] }
 						val rightCheeksPoint = rightCheeks.map { current3DCoordinate[it] }
-						Log.v("뎁스카메라", "5-Cheeks: $leftCheeksPoint, $rightCheeksPoint")
+//						Log.v("뎁스카메라", "5-Cheeks: $leftCheeksPoint, $rightCheeksPoint")
 						Pair(
 							calculateAreaWithScaling(leftCheeks, currentCoordinate, current3DCoordinate),
 							calculateAreaWithScaling(rightCheeks, currentCoordinate, current3DCoordinate)
@@ -348,7 +345,7 @@ class MeasureViewModel : ViewModel() {
 					} else {
 						val leftCheeksPoint = leftCheeks.map { currentCoordinate[it] }
 						val rightCheeksPoint = rightCheeks.map { currentCoordinate[it] }
-						Log.v("뎁스카메라", "0-Cheeks: $leftCheeksPoint, $rightCheeksPoint")
+//						Log.v("뎁스카메라", "0-Cheeks: $leftCheeksPoint, $rightCheeksPoint")
 
 						Pair(
 							calculatePolygonArea(leftCheeksPoint),
@@ -378,7 +375,7 @@ class MeasureViewModel : ViewModel() {
 					val cheekboneExtents = if (isDepthCameraMeasure) {
 						val leftCheekBonePoint = leftCheekBone.map { currentCoordinate[it] }
 						val rightCheekBonePoint = rightCheekBone.map { currentCoordinate[it] }
-						Log.v("뎁스카메라", "0-CheekBone: $leftCheekBonePoint, $rightCheekBonePoint")
+//						Log.v("뎁스카메라", "0-CheekBone: $leftCheekBonePoint, $rightCheekBonePoint")
 						Pair(
 							calculateAreaWithScaling(leftCheekBone, currentCoordinate, current3DCoordinate),
 							calculateAreaWithScaling(rightCheekBone, currentCoordinate, current3DCoordinate)
@@ -386,7 +383,7 @@ class MeasureViewModel : ViewModel() {
 					} else {
 						val leftCheekBonePoint = leftCheekBone.map { currentCoordinate[it] }
 						val rightCheekBonePoint = rightCheekBone.map { currentCoordinate[it] }
-						Log.v("뎁스카메라", "0-CheekBone: $leftCheekBonePoint, $rightCheekBonePoint")
+//						Log.v("뎁스카메라", "0-CheekBone: $leftCheekBonePoint, $rightCheekBonePoint")
 						Pair(
 							calculatePolygonArea(leftCheekBonePoint),
 							calculatePolygonArea(rightCheekBonePoint)
@@ -403,7 +400,7 @@ class MeasureViewModel : ViewModel() {
 						get3DDistance(flr3D[14], flr3D[17])
 					)
 					// 🎀🎀🎀🎀🎀 얼굴 전체 🎀🎀🎀🎀🎀
-					Log.v("뎁스카메라", "isSDKInit: ${isDepthCameraMeasure}, $cheekboneExtents")
+//					Log.v("뎁스카메라", "isSDKInit: ${isDepthCameraMeasure}, $cheekboneExtents")
 					val plr = currentPlrCoordinate
 					val plr3D = current3DPlrCoordinate
 					val midShoulder =
@@ -501,8 +498,6 @@ class MeasureViewModel : ViewModel() {
 						put("comfort_right_cheeks_extent", cheeksExtents.second)
 						put("comfort_left_cheekbone_extent", cheekboneExtents.first)
 						put("comfort_right_cheekbone_extent", cheekboneExtents.second)
-
-
 					}
 					staticJA.put(tempStatic)
 				}

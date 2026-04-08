@@ -24,7 +24,7 @@
                 android:layout_marginEnd="32dp"
                 android:padding="6dp"
                 android:text="SKIP"
-                android:textColor="@color/black"
+                android:textColor="@color/subColor500"
                 android:textSize="24dp"
                 android:textStyle="bold"
                 app:layout_constraintBottom_toBottomOf="@+id/tvUSDGuide"

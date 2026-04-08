@@ -3,6 +3,7 @@ package com.tangoplus.facebeautyexpert.ui.main
 import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.content.res.ColorStateList
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -112,8 +113,8 @@ class MainFragment : Fragment() {
 			.show()
 	}
 	private val promoImages = listOf(
-		R.drawable.color_gradation_sub100,
-		R.drawable.color_gradation_bg,
+		R.drawable.poster_main_0,
+		R.drawable.poster_main_1,
 	)
 	private val autoScrollHandler = Handler(Looper.getMainLooper())
 	private var autoScrollRunnable: Runnable? = null
@@ -138,9 +139,33 @@ class MainFragment : Fragment() {
 					ViewPager2.SCROLL_STATE_IDLE -> startAutoScroll()
 				}
 			}
+
+			override fun onPageSelected(position: Int) {
+				super.onPageSelected(position)
+				// 실제 이미지 인덱스 계산 (0 또는 1)
+				val actualPosition = position % promoImages.size
+				updateButtonState(actualPosition)
+			}
+
 		})
 	}
 
+	private fun updateButtonState(position: Int) {
+		when (position) {
+			0 -> {
+				bd.btnMainStart.text = "얼굴 부위 분석 시작 →"
+//				bd.btnMainStart.backgroundTintList = ColorStateList.valueOf(
+//					ContextCompat.getColor(requireContext(), R.color.bg15)
+//				)
+			}
+			1 -> {
+				bd.btnMainStart.text = "얼굴 밸런스 스캔 하기 →"
+//				bd.btnMainStart.backgroundTintList = ColorStateList.valueOf(
+//					ContextCompat.getColor(requireContext(), R.color.bg30)
+//				)
+			}
+		}
+	}
 	private fun startAutoScroll() {
 		stopAutoScroll() // 기존 것 제거
 

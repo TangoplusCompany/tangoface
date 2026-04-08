@@ -87,11 +87,6 @@ import com.tangoplus.facebeautyexpert.domain.util.MeasureUtility.animationSet
 import com.tangoplus.facebeautyexpert.domain.util.MeasureUtility.getGuideText
 import com.tangoplus.facebeautyexpert.domain.util.MeasureUtility.showGoMainDialog
 import com.tangoplus.facebeautyexpert.domain.util.MeasureUtility.showPreviousDialog
-import com.tangoplus.facebeautyexpert.domain.util.MediaUtility.calculateScreenX
-import com.tangoplus.facebeautyexpert.domain.util.MediaUtility.calculateScreenY
-import com.tangoplus.facebeautyexpert.domain.util.MediaUtility.colorFrameToBitmapSafe
-import com.tangoplus.facebeautyexpert.domain.util.MediaUtility.convertFaceLandmarksTo3D
-import com.tangoplus.facebeautyexpert.domain.util.MediaUtility.scaleAndCropIntrinsicCenterCrop
 import com.tangoplus.facebeautyexpert.domain.util.PreferenceUtility
 import com.tangoplus.facebeautyexpert.domain.util.SecurityUtility.generateCustomUUID
 import com.tangoplus.facebeautyexpert.domain.vision.face.FaceLandmarkAdapter
@@ -114,8 +109,13 @@ import androidx.core.graphics.scale
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.tangoplus.facebeautyexpert.domain.util.ClassifyUtility.calculateHorizontalRatio
 import com.tangoplus.facebeautyexpert.domain.util.HairLineUtility.convertHairlineTo3D
-import com.tangoplus.facebeautyexpert.domain.util.MediaUtility.convertDepthPixelTo3D
-import com.tangoplus.facebeautyexpert.domain.util.MediaUtility.findNearbyDepth
+import com.tangoplus.facebeautyexpert.domain.util.LandmarkUtility.calculateScreenX
+import com.tangoplus.facebeautyexpert.domain.util.LandmarkUtility.calculateScreenY
+import com.tangoplus.facebeautyexpert.domain.util.LandmarkUtility.colorFrameToBitmapSafe
+import com.tangoplus.facebeautyexpert.domain.util.LandmarkUtility.convertDepthPixelTo3D
+import com.tangoplus.facebeautyexpert.domain.util.LandmarkUtility.convertFaceLandmarksTo3D
+import com.tangoplus.facebeautyexpert.domain.util.LandmarkUtility.findNearbyDepth
+import com.tangoplus.facebeautyexpert.domain.util.LandmarkUtility.scaleAndCropIntrinsicCenterCrop
 import com.tangoplus.facebeautyexpert.domain.util.clearAll
 import com.tangoplus.facebeautyexpert.ui.main.vm.MainViewModel
 import com.tangoplus.facebeautyexpert.ui.statistics.GyroDialogFragment
@@ -349,7 +349,7 @@ class DepthCameraActivity : BaseActivity(), FaceLandmarkerHelper.LandmarkerListe
 											put("horizontal_ratio", horizontalRatio)
 										})
 									}
-									Log.v("스태틱", "${mvm.staticJA}")
+//									Log.v("스태틱", "${mvm.staticJA}")
 								}
 							}
 							mvm.currentHairLine3DCoordinate.clear()
@@ -688,9 +688,9 @@ class DepthCameraActivity : BaseActivity(), FaceLandmarkerHelper.LandmarkerListe
 					allSeqs.forEachIndexed { index, sequence ->
 						val staticJSON = setJo(mvm.staticJA.getJSONObject(index), sequence)
 						staticJos.add(staticJSON)
-						Log.v("staticJSON", "$staticJSON")
+//						Log.v("staticJSON", "$staticJSON")
 					}
-					Log.v("staticJson까보기0", "${staticJos.size}")
+//					Log.v("staticJson까보기0", "${staticJos.size}")
 
 					// 받아온 user_sn으로 수정
 					val now = getCurrentDateTime()
@@ -744,7 +744,7 @@ class DepthCameraActivity : BaseActivity(), FaceLandmarkerHelper.LandmarkerListe
 						// prefs에서 마지막 sn을 +1 하기
 						prefsUtil.setNextTempServerSn()
 
-						Log.v("스태틱스Sn", "$lastTempServerSn, ${mvm.currentUserSn}: ${transStatics.map { it.user_sn }}")
+//						Log.v("스태틱스Sn", "$lastTempServerSn, ${mvm.currentUserSn}: ${transStatics.map { it.user_sn }}")
 						viewModel.comparisonDoubleItem = null
 						val intent = Intent(this@DepthCameraActivity, MainActivity::class.java)
 						intent.putExtra("isMeasureFinish", true)
@@ -1195,7 +1195,6 @@ class DepthCameraActivity : BaseActivity(), FaceLandmarkerHelper.LandmarkerListe
 	}
 
 	fun saveJsonToStorage(inputJson: JSONObject, fileName: String): String? {
-		Log.e("JSON_SAVE", "ENTER(JsonWriter): len=${inputJson.length()}, fileName=$fileName")
 
 		MeasureUtility.show(this)
 		val resolver = contentResolver
