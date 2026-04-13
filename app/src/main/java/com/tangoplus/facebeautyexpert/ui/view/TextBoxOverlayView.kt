@@ -151,7 +151,7 @@ class TextBoxOverlayView @JvmOverloads constructor(
 		val faceH = br.y - tl.y
 
 		// 1.25~1.5배 확장 (여기에선 1.3배 적용 - 필요에 따라 조절)
-		val expansionFactor = 1.3f
+		val expansionFactor = 2f
 		val expW = faceW * expansionFactor
 		val expH = faceH * expansionFactor
 

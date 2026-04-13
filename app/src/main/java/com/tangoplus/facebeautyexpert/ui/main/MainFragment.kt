@@ -23,6 +23,7 @@ import com.tangoplus.facebeautyexpert.databinding.FragmentMainBinding
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.tangoplus.facebeautyexpert.R
 import com.tangoplus.facebeautyexpert.domain.util.FileUtility.setOnSingleClickListener
+import com.tangoplus.facebeautyexpert.domain.util.PreferenceUtility
 import com.tangoplus.facebeautyexpert.ui.adapter.AdVPAdapter
 import com.tangoplus.facebeautyexpert.ui.measure.DepthCameraActivity
 import com.tangoplus.facebeautyexpert.ui.main.vm.MainViewModel
@@ -121,16 +122,29 @@ class MainFragment : Fragment() {
 
 	private fun setupViewPager() {
 
-		val adapter = AdVPAdapter(promoImages)
+		val pPrefs = PreferenceUtility(requireContext())
+		val savedPosters = pPrefs.getPosters()
+
+		// 2. 데이터가 없을 경우를 대비한 예외 처리
+		if (savedPosters.isEmpty()) {
+			// 데이터가 없으면 ViewPager를 숨기거나 기본 이미지를 띄우는 처리가 필요해
+			return
+		}
+
+		// 3. 어댑터 연결 (String 리스트를 받도록 AdVPAdapter가 수정되었다고 가정)
+		val adapter = AdVPAdapter(savedPosters)
 		bd.vpM.adapter = adapter
 
-		// 중간 위치에서 시작 (무한 스크롤 효과)
-		val startPosition = Int.MAX_VALUE / 2
-		bd.vpM.setCurrentItem(startPosition - (startPosition % promoImages.size), false)
+		// 4. 무한 스크롤 설정 (이미지가 2장 이상일 때만 의미가 있음)
+		if (savedPosters.size > 1) {
+			val startPosition = Int.MAX_VALUE / 2
+			// 실제 인덱스에 맞춰서 중앙 위치 계산
+			val jumpPosition = startPosition - (startPosition % savedPosters.size)
+			bd.vpM.setCurrentItem(jumpPosition, false)
 
-		// 자동 스크롤 시작
-		startAutoScroll()
-
+			// 자동 스크롤 시작
+			startAutoScroll()
+		}
 		// 사용자가 터치하면 자동 스크롤 일시 중지 후 재시작
 		bd.vpM.registerOnPageChangeCallback(object : ViewPager2.OnPageChangeCallback() {
 			override fun onPageScrollStateChanged(state: Int) {
@@ -172,10 +186,10 @@ class MainFragment : Fragment() {
 		autoScrollRunnable = object : Runnable {
 			override fun run() {
 				bd.vpM.currentItem = bd.vpM.currentItem + 1
-				autoScrollHandler.postDelayed(this, 7500) // 5초마다
+				autoScrollHandler.postDelayed(this, 6500) // 5초마다
 			}
 		}
-		autoScrollHandler.postDelayed(autoScrollRunnable!!, 7500)
+		autoScrollHandler.postDelayed(autoScrollRunnable!!, 6500)
 	}
 
 	private fun stopAutoScroll() {

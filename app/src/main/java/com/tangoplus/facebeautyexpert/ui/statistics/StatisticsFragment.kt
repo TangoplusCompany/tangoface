@@ -10,6 +10,7 @@ import androidx.core.content.ContextCompat
 import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.GridLayoutManager
+import androidx.recyclerview.widget.LinearLayoutManager
 import com.github.mikephil.charting.animation.Easing
 import com.github.mikephil.charting.components.AxisBase
 import com.github.mikephil.charting.components.XAxis
@@ -25,6 +26,7 @@ import com.tangoplus.facebeautyexpert.domain.util.FileUtility.setOnSingleClickLi
 import com.tangoplus.facebeautyexpert.domain.vo.PreCheckList
 import com.tangoplus.facebeautyexpert.ui.adapter.ChartRVAdapter
 import com.tangoplus.facebeautyexpert.ui.adapter.PreCheckListFilterRVAdapter
+import com.tangoplus.facebeautyexpert.ui.adapter.SettingsRVAdapter
 import com.tangoplus.facebeautyexpert.ui.listener.PreCheckListFilterCheckListener
 import com.tangoplus.facebeautyexpert.ui.statistics.vm.ChartViewModel
 import com.tangoplus.facebeautyexpert.ui.statistics.vm.SettingsViewModel
@@ -157,7 +159,7 @@ class StatisticsFragment : Fragment(), PreCheckListFilterCheckListener {
 	}
 
 	private fun setAdapter() {
-		val rvs = listOf(bd.rvCD0, bd.rvCD1, bd.rvCD2)
+		val rvs = listOf(bd.rvS0, bd.rvS1, bd.rvS2)
 		rvs.forEachIndexed { i, rv ->
 			val isPortrait = activity?.getScreenOrientation()?.contains("portrait") == true
 			val layoutManager = GridLayoutManager(requireContext(), if (isPortrait) 4 else 2)
@@ -167,13 +169,21 @@ class StatisticsFragment : Fragment(), PreCheckListFilterCheckListener {
 			rv.adapter = cAdapter
 			adapters.add(cAdapter)
 		}
+
+
+		val lLayoutManager = LinearLayoutManager(context, LinearLayoutManager.VERTICAL, false)
+		val sAdapter = SettingsRVAdapter(this@StatisticsFragment)
+		bd.rvSettings.apply {
+			layoutManager =  lLayoutManager
+			adapter = sAdapter
+		}
 	}
 
 	private fun setPieChart() {
 		// -----------------# pie chart 시작 #-----------------
 		val cAdapter = ChartRVAdapter(cvm, this@StatisticsFragment)
-		bd.rvCDPie.layoutManager = GridLayoutManager(context, 4)
-		bd.rvCDPie.adapter = cAdapter
+		bd.rvSPie.layoutManager = GridLayoutManager(context, 4)
+		bd.rvSPie.adapter = cAdapter
 	}
 
 

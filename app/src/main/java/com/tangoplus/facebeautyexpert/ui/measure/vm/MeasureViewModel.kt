@@ -1,7 +1,18 @@
 package com.tangoplus.facebeautyexpert.ui.measure.vm
 
+import android.content.ContentValues
+import android.content.Context
 import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.graphics.Matrix
+import android.media.ExifInterface
+import android.net.Uri
+import android.provider.MediaStore
+import android.util.JsonWriter
 import android.util.Log
+import android.widget.Toast
+import androidx.appcompat.app.AppCompatActivity
+import androidx.core.graphics.scale
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import com.orbbec.obsensor.types.CameraIntrinsic
@@ -10,8 +21,13 @@ import com.tangoplus.facebeautyexpert.domain.util.ClassifyUtility.classifyFaceSh
 import com.tangoplus.facebeautyexpert.domain.util.ClassifyUtility.classifyFacialAsymmetry
 import com.tangoplus.facebeautyexpert.domain.util.ClassifyUtility.classifyFacialAxis
 import com.tangoplus.facebeautyexpert.domain.util.ClassifyUtility.classifySaggingDepth
+import com.tangoplus.facebeautyexpert.domain.util.FileUtility.writeJsonValue
+import com.tangoplus.facebeautyexpert.domain.util.HairLineUtility.convertHairlineTo3D
+import com.tangoplus.facebeautyexpert.domain.util.HairLineUtility.findHairline
 import com.tangoplus.facebeautyexpert.domain.util.LandmarkUtility.calculateScreenX
 import com.tangoplus.facebeautyexpert.domain.util.LandmarkUtility.calculateScreenY
+import com.tangoplus.facebeautyexpert.domain.util.LandmarkUtility.convertDepthPixelTo3D
+import com.tangoplus.facebeautyexpert.domain.util.LandmarkUtility.findNearbyDepth
 import com.tangoplus.facebeautyexpert.domain.util.MathHelpers.calculateAngle
 import com.tangoplus.facebeautyexpert.domain.util.MathHelpers.calculateAreaWithScaling
 import com.tangoplus.facebeautyexpert.domain.util.MathHelpers.calculatePolygonArea
@@ -19,13 +35,19 @@ import com.tangoplus.facebeautyexpert.domain.util.MathHelpers.calculateSlope
 import com.tangoplus.facebeautyexpert.domain.util.MathHelpers.correctingValue
 import com.tangoplus.facebeautyexpert.domain.util.MathHelpers.get3DDistance
 import com.tangoplus.facebeautyexpert.domain.util.MathHelpers.get3DFloorDistance
+import com.tangoplus.facebeautyexpert.domain.util.MeasureUtility
 import com.tangoplus.facebeautyexpert.domain.vision.face.FaceLandmarkResult
 import com.tangoplus.facebeautyexpert.domain.vision.face.FaceLandmarkerHelper
+import com.tangoplus.facebeautyexpert.domain.vision.pose.PoseLandmarkerHelper
 import com.tangoplus.facebeautyexpert.domain.vo.Sequence
 import com.tangoplus.facebeautyexpert.orbbec.vo.Point3D
 import com.tangoplus.facebeautyexpert.ui.view.OverlayView
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
+import java.io.File
+import java.io.OutputStreamWriter
 import java.math.RoundingMode
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
@@ -61,6 +83,14 @@ class MeasureViewModel : ViewModel() {
 
 	// ----------# flag들 #-----------
 
+	// 🍿🍿🍿🍿🍿 results들 🍿🍿🍿🍿🍿
+	var latestResult: List<Point3D> = listOf()
+	var customResult: FaceLandmarkResult? = null
+	// 🍿🍿🍿🍿🍿🍿🍿🍿🍿🍿🍿🍿🍿🍿🍿🍿🍿🍿🍿🍿🍿🍿🍿🍿🍿🍿🍿🍿
+	// detect Face Pose Landmarker
+	lateinit var flh: FaceLandmarkerHelper
+	lateinit var poseLandmarker: PoseLandmarkerHelper
+	// 🍿🍿🍿🍿🍿🍿🍿🍿🍿🍿🍿🍿🍿🍿🍿🍿🍿🍿🍿🍿🍿🍿🍿🍿🍿🍿🍿🍿
 
 	// 측정 초기화
 	var initMeasure = MutableLiveData(true)
@@ -159,13 +189,13 @@ class MeasureViewModel : ViewModel() {
 	var isDepthCameraMeasure = true
 
 	fun resultBundleToJson(
-		resultBundle: FaceLandmarkResult,
-		flr3D: List<Point3D> = listOf(),
+//		resultBundle: FaceLandmarkResult,
+//		flr3D: List<Point3D> = listOf(),
 		seq: Sequence
 	) {
-		Log.v("3d좌표?", "${flr3D.size}")
-		if (resultBundle.landmarks.isNotEmpty()) {
-			val flr = resultBundle.landmarks
+		Log.v("3d좌표?", "${latestResult.size}")
+		if (customResult?.landmarks?.isNotEmpty() == true) {
+			val flr = customResult?.landmarks!!
 
 			/* 1. 키오스크 -> pose좌표까지 좌우 반전 -> 8이 왼쪽 어깨
 			*  2. 일치시키기 위해 모바일 pose좌표 -> 동일
@@ -176,7 +206,6 @@ class MeasureViewModel : ViewModel() {
 			* */
 //            Log.v("현재렌즈위치", "$cameraFacing == 정면${CameraSelector.LENS_FACING_FRONT}, 후면${CameraSelector.LENS_FACING_BACK}")
 			// 비우기
-			// TODO 이거 데이터 정리하고 RESNET결과도 넣기 (헤어라인, 목 둘레 정도) 260327
 			tempCoordinateJA = JSONArray()
 			currentCoordinate.clear()
 			relativeCoordinate.clear()
@@ -188,9 +217,9 @@ class MeasureViewModel : ViewModel() {
 					if (isDepthCameraMeasure) (1f - faceLandmark.x) else faceLandmark.x
 				)
 				val scaledY = calculateScreenY(overlayH, faceLandmark.y)
-				val x = flr3D.getOrNull(index)?.x ?: 0f
-				val y = flr3D.getOrNull(index)?.y ?: 0f
-				val z = flr3D.getOrNull(index)?.z ?: 0f
+				val x = latestResult.getOrNull(index)?.x ?: 0f
+				val y = latestResult.getOrNull(index)?.y ?: 0f
+				val z = latestResult.getOrNull(index)?.z ?: 0f
 
 				val ja = JSONArray().apply {
 					put(index)
@@ -423,9 +452,12 @@ class MeasureViewModel : ViewModel() {
 					val rightFacePoint = listOf(389, 356, 454, 323, 401, 435)
 						.map { flr3D[it] }
 						.maxByOrNull { it.first } ?: flr3D[454]
-
-					val faceWidth = get3DFloorDistance(leftFacePoint, rightFacePoint)
-					Log.v("faceWidth", "${leftFacePoint}, ${rightFacePoint} : ${faceWidth}")
+					val adjustedLeftPoint = if (leftFacePoint.third > 1.5f) {
+						Triple(leftFacePoint.first, leftFacePoint.second, rightFacePoint.third)
+					} else {
+						leftFacePoint
+					}
+					val faceWidth = get3DFloorDistance(adjustedLeftPoint, rightFacePoint)
 					val faceShape = classifyFaceShape(vmFlr, currentHairLine3DCoordinate)
 					val facialAxisShape = classifyFacialAxis(vmFlr)
 					val verticalRatio = calculateVerticalRatio(vmFlr)
@@ -561,4 +593,234 @@ class MeasureViewModel : ViewModel() {
 			}
 		}
 	}
+
+
+
+	// 🔶🔶🔶🔶🔶🔶🔶🔶🔶🔶🔶🔶🔶 json, media 파일 저장 🔶🔶🔶🔶🔶🔶🔶🔶🔶🔶🔶🔶🔶
+	fun saveJsonToStorage(activity: AppCompatActivity, inputJson: JSONObject, fileName: String): String? {
+
+		MeasureUtility.show(activity)
+		val resolver = activity.contentResolver
+		val contentValues = ContentValues().apply {
+			put(MediaStore.MediaColumns.DISPLAY_NAME, "$fileName.json")
+			put(MediaStore.MediaColumns.MIME_TYPE, "application/json")
+			put(MediaStore.Files.FileColumns.RELATIVE_PATH, "Documents/TangoPlus")
+		}
+
+		return try {
+			val uri: Uri = resolver.insert(MediaStore.Files.getContentUri("external"), contentValues)
+				?: run {
+					Log.e("JSON_SAVE", "insert returned null uri")
+					return null
+				}
+
+			resolver.openOutputStream(uri)?.use { os ->
+				OutputStreamWriter(os, Charsets.UTF_8).use { osw ->
+					JsonWriter(osw).use { w ->
+						// 보기 좋게 들여쓰기(원치 않으면 제거)
+						w.setIndent("  ")
+						// ✅ JSONObject/JSONArray를 toString() 없이 직접 기록
+						writeJsonValue(w, inputJson)
+					}
+				}
+			} ?: run {
+				Log.e("JSON_SAVE", "openOutputStream returned null")
+				return null
+			}
+
+			Log.d("JSON_SAVE", "saved(JsonWriter): $fileName.json, uri=$uri")
+			MeasureUtility.dismiss(activity)
+			"$fileName.json"
+		} catch (e: Exception) {
+			Log.e("JSON_SAVE", "save failed(JsonWriter)", e)
+			null
+		}
+	}
+
+	suspend fun saveMediaToStorage(context: Context, uri: Uri, fileName: String, isImage: Boolean) {
+		withContext(Dispatchers.IO) {
+			try {
+				val extension = if (isImage) ".webp" else ".mp4"
+//			val file = File(context.cacheDir, "$fileName$extension")
+
+				val contentValues = ContentValues().apply {
+					put(MediaStore.MediaColumns.DISPLAY_NAME, "$fileName$extension")
+					put(MediaStore.MediaColumns.MIME_TYPE, "image/webp")
+					put(MediaStore.Images.Media.RELATIVE_PATH, "Pictures/TangoPlus")
+				}
+				val inputStream = context.contentResolver.openInputStream(uri)
+				val tempFile = File.createTempFile("tempImage", null, context.cacheDir)
+				inputStream?.use { input ->
+					tempFile.outputStream().use { output ->
+						input.copyTo(output)
+					}
+				}
+
+				// EXIF 데이터 읽기
+				val exif = ExifInterface(tempFile.absolutePath)
+				val orientation =
+					exif.getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL)
+//                Log.d("ExifDebug", "Exif Orientation: $orientation")
+				// 비트맵 디코딩
+				val options = BitmapFactory.Options().apply {
+					inJustDecodeBounds = true
+				}
+				BitmapFactory.decodeFile(tempFile.absolutePath, options)
+
+				val sourceWidth = options.outWidth
+				val sourceHeight = options.outHeight
+
+				val targetWidth = 1920
+				val targetHeight = 1080
+
+				// 이미지 스케일 계산
+				val widthRatio = sourceWidth.toFloat() / targetWidth
+				val heightRatio = sourceHeight.toFloat() / targetHeight
+				val scale = maxOf(widthRatio, heightRatio)
+
+				options.inJustDecodeBounds = false
+				options.inSampleSize = scale.toInt()
+
+				var bitmap = BitmapFactory.decodeFile(tempFile.absolutePath, options)
+				val matrix = Matrix()
+
+				// 회전 적용
+				when (orientation) {
+					ExifInterface.ORIENTATION_ROTATE_90 -> matrix.postRotate(90f)   // 시계 방향 90도
+					ExifInterface.ORIENTATION_ROTATE_180 -> matrix.postRotate(180f) // 시계 방향 180도
+					ExifInterface.ORIENTATION_ROTATE_270 -> matrix.postRotate(270f) // 시계 방향 270도
+				}
+
+				// ★★★ 좌우반전 ★★★
+//					matrix.postScale(1f, 1f, bitmap.width / 2f, bitmap.height / 2f)
+
+				// 모든 변환을 한번에 적용
+				bitmap = Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true)
+
+				// 스케일 조정
+				bitmap.scale(targetWidth, targetHeight).also { bitmap = it }
+
+				// Pictures/TangoBeauty에 저장
+				val imageUri = context.contentResolver.insert(
+					MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
+					contentValues
+				)
+				latestBitmap = bitmap
+				// --------------------------# poselandmark를 잡기 위한 detectAsync #-------------------------
+				if (currentSeq == Sequence.COMFORT) {
+					customResult?.let {
+						val absoluteLandmarks = it.landmarks.map { landmark ->
+							FaceLandmarkResult.FaceLandmark(
+								x = calculateScreenX(overlayW, landmark.x),
+								y = calculateScreenY(overlayH, landmark.y)
+							)
+						}
+						val absoluteResult = FaceLandmarkResult(absoluteLandmarks)
+						val hairResult = findHairline(bitmap, absoluteResult)
+						hairResult?.let {
+							val hairline3D = convertHairlineTo3D(
+								hairlinePoints = it.hairlinePoints,
+								depthData      = latestDepthData!!,
+								depthWidth     = latestDepthWidth,
+								depthHeight    = latestDepthHeight,
+								intrinsic      = latestIntrinsic!!,
+							)
+
+							hairline3D.forEach { hp ->
+								val pointJA = JSONArray().apply {
+									put(hp.landmarkIndex)
+									put(hp.point2D.x.toBigDecimal().setScale(1, RoundingMode.HALF_UP))
+									put(hp.point2D.y.toBigDecimal().setScale(1, RoundingMode.HALF_UP))
+									put(hp.point3D.x.toBigDecimal().setScale(4, RoundingMode.HALF_UP))
+									put(hp.point3D.y.toBigDecimal().setScale(4, RoundingMode.HALF_UP))
+									put(hp.point3D.z.toBigDecimal().setScale(4, RoundingMode.HALF_UP))
+								}
+								tempHairLineJA.put(pointJA)
+								currentHairLine3DCoordinate.add(Triple(hp.point3D.x, hp.point3D.y, hp.point3D.z))
+							}
+						}
+						hairLineJA.put(tempHairLineJA)
+						Log.v("mvmhairLineJA", "${hairLineJA}")
+						tempHairLineJA = JSONArray()
+					}
+				}
+
+				// --------------------------# poselandmark를 잡기 위한 detectAsync #-------------------------
+				val resultBundle = poseLandmarker.detectImage(bitmap)
+				if (resultBundle?.results?.first()?.landmarks()?.isNotEmpty() == true) {
+					val plr = resultBundle.results.first().landmarks()[0]
+
+					tempPlrJA = JSONArray()
+					plr.forEachIndexed { index, _ ->
+						val swapIndex = if (index >= 7 && index % 2 == 0) index - 1
+						else if (index >= 7) index + 1
+						else index
+						val targetLandmark = plr[swapIndex]
+
+						val scaledX = calculateScreenX(overlayW, targetLandmark.x())
+						val scaledY = calculateScreenY(overlayH, targetLandmark.y())
+
+						// pose 랜드마크 3D 변환
+						val px = (targetLandmark.x() * latestDepthWidth).toInt().coerceIn(0, latestDepthWidth - 1)
+						val py = (targetLandmark.y() * latestDepthHeight).toInt().coerceIn(0, latestDepthHeight - 1)
+						val idx = py * latestDepthWidth + px
+						val depthMm = latestDepthData?.get(idx)?.toInt()?.and(0xFFFF) ?: 0
+						val depthM = depthMm / 1000f
+						val point3D = if (depthM > 0) {
+							convertDepthPixelTo3D(latestIntrinsic!!, px.toFloat(), py.toFloat(), depthM)
+						} else {
+							val nearbyDepth = findNearbyDepth(latestDepthData!!, px, py, latestDepthWidth, latestDepthHeight)
+							if (nearbyDepth > 0) convertDepthPixelTo3D(latestIntrinsic!!, px.toFloat(), py.toFloat(), nearbyDepth / 1000f)
+							else Point3D(0f, 0f, 0f)
+						}
+
+						val ja = JSONArray().apply {
+							put(index)
+							put(scaledX.toBigDecimal().setScale(1, RoundingMode.HALF_UP))
+							put(scaledY.toBigDecimal().setScale(1, RoundingMode.HALF_UP))
+							put(point3D.x.toBigDecimal().setScale(4, RoundingMode.HALF_UP))
+							put(point3D.y.toBigDecimal().setScale(4, RoundingMode.HALF_UP))
+							put(point3D.z.toBigDecimal().setScale(4, RoundingMode.HALF_UP))
+						}
+						tempPlrJA.put(ja)
+						currentPlrCoordinate.add(Pair(targetLandmark.x(), targetLandmark.y()))
+						current3DPlrCoordinate.add(Triple(point3D.x, point3D.y, point3D.z))
+					}
+					plrJA.put(tempPlrJA)
+				} else {
+					Toast.makeText(context, "poselandmark를 찾을 수 없습니다.", Toast.LENGTH_LONG).show()
+					plrJA.put(JSONArray())
+				}
+				// -------------------------# 목젖 위치를 잡기 위한 detectAsync 끝 #-----------------------
+				imageUri?.let { imageURI ->
+					context.contentResolver.openOutputStream(imageURI)?.use { outputStream ->
+						bitmap.compress(Bitmap.CompressFormat.WEBP_LOSSY, 100, outputStream)
+						outputStream.flush()
+					}
+					Log.d("SaveMedia", "Image saved to Pictures: ${currentSeq} ->  $fileName$extension")
+				} ?: run {
+					Log.e("SaveMedia", "Failed to create image URI")
+				}
+				mediaFileNames.add("$fileName$extension")
+
+				Log.d("SaveMedia", "seqStep: ${currentSeq} vmFileName: ${mediaFileNames}")
+
+				// 임시 파일과 비트맵 정리
+				tempFile.delete()
+				bitmap.recycle()
+
+			} catch (e: IndexOutOfBoundsException) {
+				Log.e("SaveMediaIndex", "${e.message}")
+			} catch (e: IllegalArgumentException) {
+				Log.e("SaveMediaIllegal", "${e.message}")
+			} catch (e: IllegalStateException) {
+				Log.e("SaveMediaIllegal", "${e.message}")
+			} catch (e: NullPointerException) {
+				Log.e("SaveMediaNull", "${e.message}")
+			} catch (e: java.lang.Exception) {
+				Log.e("SaveMediaException", "${e.message}")
+			}
+		}
+	}
+
 }

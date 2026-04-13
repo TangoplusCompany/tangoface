@@ -136,8 +136,8 @@ dependencies {
 
     //noinspection Aligned16KB
     implementation("com.google.mediapipe:tasks-vision:0.10.26")
-
-
+    implementation("com.github.bumptech.glide:glide:4.12.0")
+    implementation("com.github.yalantis:ucrop:2.2.8")
     implementation("com.google.code.gson:gson:2.11.0")
     implementation("com.facebook.shimmer:shimmer:0.5.0")
     implementation("com.github.skydoves:balloon:1.6.4")

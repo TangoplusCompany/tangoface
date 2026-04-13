@@ -18,6 +18,7 @@ import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
 import java.io.FileInputStream
+import java.io.FileOutputStream
 import java.text.SimpleDateFormat
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
@@ -429,5 +430,21 @@ object FileUtility {
 		Log.e("FileWait", "⛔ 파일 준비 실패 또는 타임아웃 (${timeoutMs}ms 초과)")
 		return false
 	}
+	fun saveImageToInternalStorage(context: Context, uri: Uri, fileName: String): String? {
+		return try {
+			val inputStream = context.contentResolver.openInputStream(uri)
+			val file = File(context.filesDir, fileName) // 앱 내부 저장소 경로
+			val outputStream = FileOutputStream(file)
 
+			inputStream?.use { input ->
+				outputStream.use { output ->
+					input.copyTo(output)
+				}
+			}
+			file.absolutePath // 저장된 파일의 로컬 경로 반환
+		} catch (e: Exception) {
+			e.printStackTrace()
+			null
+		}
+	}
 }

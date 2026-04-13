@@ -15,10 +15,12 @@ import com.tangoplus.facebeautyexpert.R
 import com.tangoplus.facebeautyexpert.data.db.FaceDao
 import com.tangoplus.facebeautyexpert.data.db.FaceDatabase
 import com.tangoplus.facebeautyexpert.databinding.FragmentMeasureHistoryBinding
+import com.tangoplus.facebeautyexpert.domain.util.FileUtility.setOnSingleClickListener
 import com.tangoplus.facebeautyexpert.ui.LoadingDialogFragment
 import com.tangoplus.facebeautyexpert.ui.adapter.UserRVAdapter
 import com.tangoplus.facebeautyexpert.ui.listener.OnUserClickListener
 import com.tangoplus.facebeautyexpert.ui.main.vm.MainViewModel
+import com.tangoplus.facebeautyexpert.ui.measure.MeasureImageFragment
 import com.tangoplus.facebeautyexpert.ui.statistics.StatisticsFragment
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -77,6 +79,14 @@ class MeasureHistoryFragment : Fragment(), OnUserClickListener {
 			initUserUI()
 			setAdapter()
 			loadingDialog = LoadingDialogFragment()
+
+			bd.btnMHImage.setOnSingleClickListener {
+				requireActivity().supportFragmentManager.beginTransaction().apply {
+					replace(R.id.flMain, MeasureImageFragment())
+					addToBackStack("measureImage")
+					commit()
+				}
+			}
 		}
 	}
 
@@ -93,7 +103,7 @@ class MeasureHistoryFragment : Fragment(), OnUserClickListener {
 			adapter = userAdapter
 		}
 
-		bd.tvMHEmpty.visibility = if (mvm.currentUserItems.isEmpty()) View.VISIBLE else View.GONE
+		bd.llMHEmpty.visibility = if (mvm.currentUserItems.isEmpty()) View.VISIBLE else View.GONE
 	}
 
 	override fun onUserClick(tempServerSn: Int) {
@@ -117,4 +127,6 @@ class MeasureHistoryFragment : Fragment(), OnUserClickListener {
 			}
 		}
 	}
+
+
 }

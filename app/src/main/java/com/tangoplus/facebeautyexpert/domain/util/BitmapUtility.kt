@@ -1836,7 +1836,7 @@ object BitmapUtility {
 				val leftEyePos = calculateFinalPixel(flm[66].x, flm[66].y,)
 				textBoxes.add(TextBoxData(
 					anchorX = leftEyePos.x, anchorY = leftEyePos.y,
-					targetGridIndex = 1, // 좌측 상단
+					targetGridIndex = 6, // 좌측 상단
 					info = TextDrawInfo("왼쪽 눈썹", listOf(
 						TextItem("각도: ", "${rawData.getOrNull(0)}º"),
 						TextItem("두께: ", "${rawData.getOrNull(4)}cm | ${rawData.getOrNull(3)}cm | ${rawData.getOrNull(2)}cm")
@@ -1847,7 +1847,7 @@ object BitmapUtility {
 				val rightEyePos = calculateFinalPixel(flm[296].x, flm[296].y,)
 				textBoxes.add(TextBoxData(
 					anchorX = rightEyePos.x, anchorY = rightEyePos.y,
-					targetGridIndex = 3, // 우측 상단
+					targetGridIndex = 8, // 우측 상단
 					info = TextDrawInfo("오른쪽 눈썹", listOf(
 						TextItem("각도: ", "${rawData.getOrNull(1)}º"),
 						TextItem("두께: ", "${rawData.getOrNull(5)}cm | ${rawData.getOrNull(6)}cm | ${rawData.getOrNull(7)}cm")

@@ -48,7 +48,6 @@ import kotlinx.coroutines.coroutineScope
 class InformationFragment : Fragment(), OnFacialPartClickListener {
 	private lateinit var bd: FragmentInformationBinding
 	private val svm: SelectViewModel by activityViewModels()
-	//    private val mvm : MeasureViewModel by activityViewModels()
 	private val ivm: InformationViewModel by activityViewModels()
 	private val mvm: MainViewModel by activityViewModels()
 	private lateinit var fDao: FaceDao

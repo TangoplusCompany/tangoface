@@ -30,6 +30,7 @@ class UserRVAdapter(
 		val tvMVIAge: TextView = view.findViewById(R.id.tvMVIAge)
 		val tvMVIGender: TextView = view.findViewById(R.id.tvMVIGender)
 		val tvUICircle: TextView = view.findViewById(R.id.tvUICircle)
+		val tvMVIMobile : TextView = view.findViewById(R.id.tvMVIMobile)
 	}
 
 	override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder {
@@ -52,7 +53,7 @@ class UserRVAdapter(
 
 //            Log.v("mobiel", "${currentItem.userMobile.isNullOrEmpty()}, ${currentItem.userMobile}")
 			val mobile = if (currentItem.mobile?.length == 11) {
-				currentItem.mobile.substring(0, 3) + "-****-" + currentItem.mobile.substring(7) + ", "
+				"📱 " + currentItem.mobile.substring(0, 3) + "-****-" + currentItem.mobile.substring(7)
 			} else {
 				""
 			}
@@ -62,11 +63,12 @@ class UserRVAdapter(
 				1 -> "여성"
 				else -> ""
 			}
-			holder.tvMVIGender.text = "${mobile}${genderText}"
+			holder.tvMVIGender.text = genderText
+			holder.tvMVIMobile.text = mobile
 			val c = Calendar.getInstance(TimeZone.getTimeZone("Asia/Seoul"))
 			val birthday = currentItem.birthday
 
-			val regDate = "🗓️: ${currentItem.regDate.substring(0, 16)}"
+			val regDate = "🗓️ ${currentItem.regDate.substring(0, 16)}"
 			holder.tvMVIRegDate.text = regDate
 			val age = if (birthday?.length == 10) {
 				try {
@@ -83,7 +85,7 @@ class UserRVAdapter(
 						ageCalc -= 1
 					}
 
-					"만 $ageCalc 세"
+					"만 ${ageCalc}세"
 				} catch (e: Exception) {
 					""
 				}
