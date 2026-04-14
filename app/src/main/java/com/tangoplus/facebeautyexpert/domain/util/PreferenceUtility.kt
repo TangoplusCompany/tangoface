@@ -1,8 +1,14 @@
 package com.tangoplus.facebeautyexpert.domain.util
 
 import android.content.Context
+import android.util.Log
 import androidx.core.content.edit
+import com.google.gson.Gson
+import com.google.gson.reflect.TypeToken
+import com.tangoplus.facebeautyexpert.R
 import com.tangoplus.facebeautyexpert.domain.vo.Sequence
+import java.io.File
+import java.io.FileOutputStream
 
 class PreferenceUtility(context: Context) {
 	private val tssPrefs = context.getSharedPreferences("temp_server_sn_prefs", Context.MODE_PRIVATE)
@@ -10,7 +16,7 @@ class PreferenceUtility(context: Context) {
 	private val bPrefs = context.getSharedPreferences("backup_prefs", Context.MODE_PRIVATE)
 	private val mPrefs = context.getSharedPreferences("measure_prefs", Context.MODE_PRIVATE)
 	private val fPrefs = context.getSharedPreferences("flicker_prefs", Context.MODE_PRIVATE)
-
+	private val pPrefs = context.getSharedPreferences("poster_prefs", Context.MODE_PRIVATE)
 	private val KEY_LAST_SN = "last_temp_server_sn"
 	private val KEY_LAST_COUNT = "last_data_count"
 	fun setNextTempServerSn() {
@@ -79,5 +85,57 @@ class PreferenceUtility(context: Context) {
 
 	fun getFlickerType(): Int {
 		return mPrefs.getInt("FREQ_MODE" , 2)
+	}
+
+	// ---- poster url 저장 ----
+	private val KEY_IMAGES = "images"
+	private val MAX_COUNT = 6
+	fun savePosters( urls: List<String>) {
+		val json = Gson().toJson(urls.take(MAX_COUNT))
+		pPrefs.edit { putString(KEY_IMAGES, json) }
+	}
+
+	fun getPosters(): List<String> {
+		val json = pPrefs.getString(KEY_IMAGES, null) ?: return emptyList()
+		val type = object : TypeToken<List<String>>() {}.type
+		return Gson().fromJson(json, type)
+	}
+	fun initDefaultPosters(context: Context) {
+		val currentPosters = getPosters()
+		Log.v("포스터", "$currentPosters")
+		// 저장된 데이터가 없을 때만 실행
+		if (currentPosters.isEmpty()) {
+			val defaultResIds = listOf(R.drawable.poster_main_0, R.drawable.poster_main_1)
+			val defaultPaths = mutableListOf<String>()
+
+			defaultResIds.forEachIndexed { index, resId ->
+				val fileName = "default_poster_$index.jpg"
+				val path = copyResourceToFile(context, resId, fileName)
+				path?.let { defaultPaths.add(it) }
+			}
+
+			if (defaultPaths.isNotEmpty()) {
+				savePosters( defaultPaths)
+			}
+		}
+	}
+
+	// drawable 리소스를 내부 파일로 복사하는 헬퍼 함수
+	private fun copyResourceToFile(context: Context, resId: Int, fileName: String): String? {
+		return try {
+			val inputStream = context.resources.openRawResource(resId)
+			val file = File(context.filesDir, fileName)
+			val outputStream = FileOutputStream(file)
+
+			inputStream.use { input ->
+				outputStream.use { output ->
+					input.copyTo(output)
+				}
+			}
+			file.absolutePath
+		} catch (e: Exception) {
+			e.printStackTrace()
+			null
+		}
 	}
 }

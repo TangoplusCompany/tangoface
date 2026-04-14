@@ -142,19 +142,24 @@ object LandmarkUtility {
 
 
 
-	fun calculateScreenX(olW: Float, xx: Float): Float {
-		val scaleFactor = olW / 1920
-		val offsetX = ((olW - 1920 * scaleFactor) / 2)
-		val x = xx * olW / scaleFactor + offsetX
-		return x
-	}
+//	fun calculateScreenX(olW: Float, xx: Float): Float {
+//		val scaleFactor = olW / 1920
+//		val offsetX = ((olW - 1920 * scaleFactor) / 2)
+//		val x = xx * olW / scaleFactor + offsetX
+//		return x
+//	}
+//
+//	fun calculateScreenY(olH: Float, yy: Float): Float {
+//		val scaleFactor = olH / 1080
+//		val offsetY = (olH - 1080 * scaleFactor) / 2
+//		val y = yy * olH / scaleFactor + offsetY
+//		return y
+//	}
+	// X 좌표: 0.0 ~ 1.0 값을 1920 픽셀 비율로 변환
+	fun calculateScreenX(xx: Float): Float = xx * 1920f
 
-	fun calculateScreenY(olH: Float, yy: Float): Float {
-		val scaleFactor = olH / 1080
-		val offsetY = (olH - 1080 * scaleFactor) / 2
-		val y = yy * olH / scaleFactor + offsetY
-		return y
-	}
+	// Y 좌표: 0.0 ~ 1.0 값을 1080 픽셀 비율로 변환
+	fun calculateScreenY(yy: Float): Float = yy * 1080f
 
 	fun colorFrameToBitmapSafe(frame: ColorFrame, rotationDegrees: Int = 0): Bitmap? {
 		val w = frame.getWidth()

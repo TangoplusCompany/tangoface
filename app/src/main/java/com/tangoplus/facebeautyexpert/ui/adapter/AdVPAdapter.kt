@@ -1,14 +1,16 @@
 package com.tangoplus.facebeautyexpert.ui.adapter
 
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
 import androidx.recyclerview.widget.RecyclerView
+import com.bumptech.glide.Glide
 import com.tangoplus.facebeautyexpert.R
 import com.tangoplus.facebeautyexpert.databinding.VpAdItemBinding
 
-class AdVPAdapter(private val images: List<Int>) : RecyclerView.Adapter<AdVPAdapter.AdViewHolder>() {
+class AdVPAdapter(private val items: List<String>) : RecyclerView.Adapter<AdVPAdapter.AdViewHolder>() {
 
 	inner class AdViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
 		val imageView: ImageView = itemView.findViewById(R.id.ivAd)
@@ -22,12 +24,16 @@ class AdVPAdapter(private val images: List<Int>) : RecyclerView.Adapter<AdVPAdap
 		return AdViewHolder(binding.root)
 	}
 
-	override fun onBindViewHolder(
-		p0: AdViewHolder,
-		p1: Int
-	) {
-		val actualPosition = p1 % images.size
-		p0.imageView.setImageResource(images[actualPosition])
+	override fun onBindViewHolder(p0: AdViewHolder, position: Int) {
+		// 무한 슬라이드를 위해 position % items.size 사용
+		val actualPosition = position % items.size
+		val imagePath = items[actualPosition]
+
+		// 파일 경로로부터 이미지 로드
+		Glide.with(p0.itemView.context)
+			.load(imagePath)
+			.placeholder(R.color.bg500) // 로딩 중 보여줄 색상이나 이미지
+			.into(p0.imageView) // 아이템 레이아웃의 ImageView ID
 	}
 
 	override fun getItemCount(): Int = Int.MAX_VALUE // 무한 스크롤

@@ -52,7 +52,7 @@
 
     <style name="NumberPickerStyle">
         <item name="android:textSize">20sp</item>
-        <item name="android:textColorPrimary">@android:color/black</item>
+        <item name="android:textColorPrimary">@color/subColor100</item>
     </style>
 
     <style name="App.CustomIndicator" parent="Widget.Material3.BottomNavigationView.ActiveIndicator">

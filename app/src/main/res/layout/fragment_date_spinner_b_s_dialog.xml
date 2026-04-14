@@ -3,6 +3,7 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:background="@drawable/bckgnd_top_20"
+    android:backgroundTint="@color/bg"
     android:orientation="vertical"
     android:padding="20dp">
 
@@ -14,7 +15,7 @@
         android:layout_marginEnd="5dp"
         android:layout_marginBottom="24dp"
         android:text="생년월일 선택"
-        android:textColor="@android:color/black"
+        android:textColor="@color/subColor100"
         android:textSize="20sp"
         android:textStyle="bold" />
 
@@ -24,9 +25,9 @@
         android:layout_height="200dp"
         android:layout_marginStart="5dp"
         android:layout_marginEnd="5dp"
+        android:descendantFocusability="blocksDescendants"
         android:gravity="center"
-        android:orientation="horizontal"
-        android:descendantFocusability="blocksDescendants">
+        android:orientation="horizontal">
 
         <NumberPicker
             android:id="@+id/yearPicker"
@@ -65,10 +66,10 @@
             android:layout_marginEnd="8dp"
             android:layout_weight="1"
             android:background="@drawable/effect_20"
-            android:backgroundTint="@color/white"
+            android:backgroundTint="@color/bg500"
             android:elevation="2dp"
             android:text="취소"
-            android:textColor="@android:color/black"
+            android:textColor="@color/subColor100"
             android:textSize="18dp" />
 
         <androidx.appcompat.widget.AppCompatButton
@@ -79,9 +80,9 @@
             android:layout_marginStart="8dp"
             android:layout_weight="1"
             android:background="@drawable/effect_20"
-            android:backgroundTint="@color/black"
+            android:backgroundTint="@color/accent"
             android:text="확인"
-            android:textColor="@color/white"
+            android:textColor="@color/subColor100"
             android:textSize="18dp" />
     </LinearLayout>
 

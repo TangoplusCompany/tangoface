@@ -16,8 +16,35 @@
             android:layout_height="wrap_content"
             android:background="@color/bg">
 
+            <TextView
+                android:id="@+id/textView"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="30dp"
+                android:layout_marginTop="30dp"
+                android:text="설정"
+                android:textColor="@color/subColor100"
+                android:textSize="24sp"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent" />
+
             <androidx.recyclerview.widget.RecyclerView
-                android:id="@+id/rvCD0"
+                android:id="@+id/rvSettings"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="20dp"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@+id/textView" />
+
+            <ImageView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                app:layout_constraintBottom_toBottomOf="@+id/textView16"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintTop_toTopOf="@+id/textView16" />
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/rvS0"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="27dp"
@@ -26,22 +53,22 @@
                 app:layout_constraintTop_toBottomOf="@+id/bcCD" />
 
             <androidx.recyclerview.widget.RecyclerView
-                android:id="@+id/rvCD1"
+                android:id="@+id/rvS1"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="27dp"
                 android:layout_marginTop="10dp"
                 app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toBottomOf="@+id/rvCD0" />
+                app:layout_constraintTop_toBottomOf="@+id/rvS0" />
 
             <androidx.recyclerview.widget.RecyclerView
-                android:id="@+id/rvCD2"
+                android:id="@+id/rvS2"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="27dp"
                 android:layout_marginTop="10dp"
                 app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toBottomOf="@+id/rvCD1" />
+                app:layout_constraintTop_toBottomOf="@+id/rvS1" />
 
             <TextView
                 android:id="@+id/textView16"
@@ -51,9 +78,9 @@
                 android:layout_marginTop="30dp"
                 android:text="체크리스트 통계"
                 android:textColor="@color/white"
-                android:textSize="20sp"
+                android:textSize="24sp"
                 app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toTopOf="parent" />
+                app:layout_constraintTop_toBottomOf="@+id/rvSettings" />
 
             <com.github.mikephil.charting.charts.BarChart
                 android:id="@+id/bcCD"
@@ -80,10 +107,10 @@
                 android:textColor="@color/white"
                 android:textSize="20sp"
                 app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toBottomOf="@+id/rvCD2" />
+                app:layout_constraintTop_toBottomOf="@+id/rvS2" />
 
             <androidx.recyclerview.widget.RecyclerView
-                android:id="@+id/rvCDPie"
+                android:id="@+id/rvSPie"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="30dp"
