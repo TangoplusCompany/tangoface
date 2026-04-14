@@ -30,15 +30,15 @@ class MeasureImageRVAdapter(
 			// 1. 비율 설정 (16:9)
 			ibtnPIDelete.visibility = View.INVISIBLE
 			val params = cvPI.layoutParams as ConstraintLayout.LayoutParams
-			params.dimensionRatio = "W,1920:1080"
+			params.dimensionRatio = "H,3:4"
 			cvPI.layoutParams = params
 
 			// 2. 이미지 로드 (null이거나 비어있으면 추가 아이콘)
 			if (!uri.isNullOrEmpty()) {
-				Glide.with(ivPI).load(uri).into(ivPI)
+				Glide.with(ivPI).load(uri).centerCrop().into(ivPI)
 			} else {
 				Glide.with(ivPI)
-					.load(R.drawable.drawble_image_add) // 미리 준비한 추가 이미지
+					.load(R.drawable.drawable_image_add) // 미리 준비한 추가 이미지
 					.into(ivPI)
 			}
 

@@ -19,6 +19,7 @@ import com.tangoplus.facebeautyexpert.domain.util.FileUtility.setOnSingleClickLi
 import com.tangoplus.facebeautyexpert.ui.LoadingDialogFragment
 import com.tangoplus.facebeautyexpert.ui.adapter.UserRVAdapter
 import com.tangoplus.facebeautyexpert.ui.listener.OnUserClickListener
+import com.tangoplus.facebeautyexpert.ui.main.MainActivity
 import com.tangoplus.facebeautyexpert.ui.main.vm.MainViewModel
 import com.tangoplus.facebeautyexpert.ui.measure.MeasureImageFragment
 import com.tangoplus.facebeautyexpert.ui.statistics.StatisticsFragment
@@ -81,11 +82,7 @@ class MeasureHistoryFragment : Fragment(), OnUserClickListener {
 			loadingDialog = LoadingDialogFragment()
 
 			bd.btnMHImage.setOnSingleClickListener {
-				requireActivity().supportFragmentManager.beginTransaction().apply {
-					replace(R.id.flMain, MeasureImageFragment())
-					addToBackStack("measureImage")
-					commit()
-				}
+				(requireActivity() as MainActivity).navigateToSubFragment(MeasureImageFragment())
 			}
 		}
 	}

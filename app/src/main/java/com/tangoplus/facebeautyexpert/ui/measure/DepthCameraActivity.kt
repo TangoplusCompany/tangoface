@@ -3,21 +3,14 @@ package com.tangoplus.facebeautyexpert.ui.measure
 import android.animation.AnimatorSet
 import android.animation.ValueAnimator
 import android.annotation.SuppressLint
-import android.content.ContentValues
-import android.content.Context
 import android.content.Intent
 import android.content.pm.ActivityInfo
 import android.graphics.Bitmap
-import android.graphics.BitmapFactory
-import android.graphics.Matrix
-import android.media.ExifInterface
 import android.net.Uri
 import android.os.Bundle
 import android.os.CountDownTimer
 import android.os.Handler
 import android.os.Looper
-import android.provider.MediaStore
-import android.util.JsonWriter
 import android.util.Log
 import android.view.View
 import android.view.WindowManager
@@ -65,7 +58,6 @@ import com.tangoplus.facebeautyexpert.domain.vision.face.FaceLandmarkerHelper
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
 import java.time.LocalDateTime
@@ -76,8 +68,6 @@ import kotlin.math.roundToInt
 import kotlin.math.sqrt
 import com.tangoplus.facebeautyexpert.domain.util.FileUtility.toFaceStatic
 import com.tangoplus.facebeautyexpert.domain.util.FileUtility.toJsonString
-import com.tangoplus.facebeautyexpert.domain.util.FileUtility.writeJsonValue
-import com.tangoplus.facebeautyexpert.domain.util.HairLineUtility.findHairline
 import com.tangoplus.facebeautyexpert.domain.util.MathHelpers.calculateAngle
 import com.tangoplus.facebeautyexpert.domain.util.MathHelpers.getNormalizedDistance
 import com.tangoplus.facebeautyexpert.domain.util.MathHelpers.getScaleFactor
@@ -90,36 +80,27 @@ import com.tangoplus.facebeautyexpert.domain.util.MeasureUtility.showPreviousDia
 import com.tangoplus.facebeautyexpert.domain.util.PreferenceUtility
 import com.tangoplus.facebeautyexpert.domain.util.SecurityUtility.generateCustomUUID
 import com.tangoplus.facebeautyexpert.domain.vision.face.FaceLandmarkAdapter
-import com.tangoplus.facebeautyexpert.domain.vision.face.FaceLandmarkResult
 import com.tangoplus.facebeautyexpert.domain.vision.pose.PoseLandmarkerHelper
 import com.tangoplus.facebeautyexpert.domain.vo.Sequence
-import com.tangoplus.facebeautyexpert.orbbec.vo.Point3D
 import com.tangoplus.facebeautyexpert.orbbec.vo.ScaledIntrinsic
 import com.tangoplus.facebeautyexpert.orbbec.BaseActivity
 import com.tangoplus.facebeautyexpert.ui.main.MainActivity
 import com.tangoplus.facebeautyexpert.ui.measure.vm.InputViewModel
 import com.tangoplus.facebeautyexpert.ui.measure.vm.MeasureViewModel
 import java.io.FileOutputStream
-import java.io.OutputStreamWriter
 import java.nio.ByteBuffer
-import kotlin.collections.listOf
 import kotlin.lazy
 import kotlin.math.abs
-import androidx.core.graphics.scale
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.tangoplus.facebeautyexpert.domain.util.ClassifyUtility.calculateHorizontalRatio
-import com.tangoplus.facebeautyexpert.domain.util.HairLineUtility.convertHairlineTo3D
 import com.tangoplus.facebeautyexpert.domain.util.LandmarkUtility.calculateScreenX
 import com.tangoplus.facebeautyexpert.domain.util.LandmarkUtility.calculateScreenY
 import com.tangoplus.facebeautyexpert.domain.util.LandmarkUtility.colorFrameToBitmapSafe
-import com.tangoplus.facebeautyexpert.domain.util.LandmarkUtility.convertDepthPixelTo3D
 import com.tangoplus.facebeautyexpert.domain.util.LandmarkUtility.convertFaceLandmarksTo3D
-import com.tangoplus.facebeautyexpert.domain.util.LandmarkUtility.findNearbyDepth
 import com.tangoplus.facebeautyexpert.domain.util.LandmarkUtility.scaleAndCropIntrinsicCenterCrop
 import com.tangoplus.facebeautyexpert.domain.util.clearAll
 import com.tangoplus.facebeautyexpert.ui.main.vm.MainViewModel
 import com.tangoplus.facebeautyexpert.ui.statistics.GyroDialogFragment
-import java.math.RoundingMode
 
 class DepthCameraActivity : BaseActivity(), FaceLandmarkerHelper.LandmarkerListener {
 
@@ -330,7 +311,7 @@ class DepthCameraActivity : BaseActivity(), FaceLandmarkerHelper.LandmarkerListe
 							mvm.resultBundleToJson( mvm.currentSeq)
 							if (mvm.currentHairLine3DCoordinate.size == 7) {
 								val absoluteLandmarkPairs = mvm.customResult?.landmarks?.map {
-									Pair(calculateScreenX(mvm.overlayW, it.x), calculateScreenY(mvm.overlayH, it.y))
+									Pair(calculateScreenX( it.x), calculateScreenY( it.y))
 								}?.toMutableList()
 								// 🕊️🕊️🕊️🕊️ 여기서 vertical 비율 넣기
 								absoluteLandmarkPairs?.let { pairs ->
@@ -510,8 +491,8 @@ class DepthCameraActivity : BaseActivity(), FaceLandmarkerHelper.LandmarkerListe
 
 									val timestamp = System.currentTimeMillis()
 									mainHandler.post {
-										if (!mvm.flh.isClose()) {
-											mvm.flh.detectAsync(mpImage!!, timestamp)
+										if (mvm.flh?.isClose() == false) {
+											mvm.flh?.detectAsync(mpImage!!, timestamp)
 										}
 									}
 								}
@@ -681,7 +662,7 @@ class DepthCameraActivity : BaseActivity(), FaceLandmarkerHelper.LandmarkerListe
 					val staticJos = mutableListOf<JSONObject>()
 
 					allSeqs.forEachIndexed { index, sequence ->
-						val staticJSON = setJo(mvm.staticJA.getJSONObject(index), sequence)
+						val staticJSON = mvm.setJo(mvm.staticJA.getJSONObject(index), sequence, ivm, prefsUtil, true)
 						staticJos.add(staticJSON)
 //						Log.v("staticJSON", "$staticJSON")
 					}
@@ -1225,11 +1206,11 @@ class DepthCameraActivity : BaseActivity(), FaceLandmarkerHelper.LandmarkerListe
 						faceLandmarkerHelperListener = this
 					)
 				}
-				Log.d("PoseLandmarker", "Initialization successful!")
+				Log.d("FaceLandmarker", "Initialization successful!")
 			} catch (e: Exception) {
-				Log.e("PoseLandmarker", "Failed to initialize: ${e.message}", e)
+				Log.e("FaceLandmarker", "Failed to initialize: ${e.message}", e)
 			}
-			Log.d("이닛", "PoseLandmarker initialized.")
+			Log.d("이닛", "FaceLandmarker initialized.")
 		} catch (e: Exception) {
 			Log.e("이닛", "Failed to initialze pose landmarker: ${e.message}", e)
 		}
@@ -1241,7 +1222,7 @@ class DepthCameraActivity : BaseActivity(), FaceLandmarkerHelper.LandmarkerListe
 			// 이제 this가 완전히 초기화된 상태
 			try {
 				mvm.poseLandmarker = PoseLandmarkerHelper(
-					context = this, // 이제 this가 완전히 초기화된 상태
+					context = this.applicationContext,
 					runningMode = RunningMode.IMAGE,
 					minPoseDetectionConfidence = PoseLandmarkerHelper.DEFAULT_POSE_DETECTION_CONFIDENCE,
 					minPoseTrackingConfidence = PoseLandmarkerHelper.DEFAULT_POSE_TRACKING_CONFIDENCE,
@@ -1271,7 +1252,7 @@ class DepthCameraActivity : BaseActivity(), FaceLandmarkerHelper.LandmarkerListe
 			}
 
 			// FaceLandmarkerHelper 해제
-			mvm.flh.clearFaceLandmarker()
+			mvm.flh?.clearFaceLandmarker()
 
 			Log.d("릴리즈", "FaceLandmarker released.")
 		} catch (e: Exception) {
@@ -1282,8 +1263,8 @@ class DepthCameraActivity : BaseActivity(), FaceLandmarkerHelper.LandmarkerListe
 	private fun releasePose() {
 		try {
 			Log.d("릴리즈", "Releasing PoseLandmarker resources...")
-			if (!mvm.poseLandmarker.isClose()) {
-				mvm.poseLandmarker.clearPoseLandmarker()
+			if (mvm.poseLandmarker?.isClose() == false) {
+				mvm.poseLandmarker?.clearPoseLandmarker()
 			}
 			Log.d("릴리즈", "PoseLandmarker released.")
 		} catch (e: Exception) {
@@ -1333,7 +1314,7 @@ class DepthCameraActivity : BaseActivity(), FaceLandmarkerHelper.LandmarkerListe
 			val onBoardingDialog = OnBoardingDialogFragment()
 			onBoardingDialog.show(supportFragmentManager, "")
 		} else {
-			val userDialog = UserSetupDialogFragment()
+			val userDialog = UserSetupDialogFragment.newInstance(0)
 			userDialog.show(supportFragmentManager, "")
 		}
 		// flat 초기화
@@ -1378,33 +1359,5 @@ class DepthCameraActivity : BaseActivity(), FaceLandmarkerHelper.LandmarkerListe
 		}
 	}
 
-	private fun setJo(originJo: JSONObject, seq: Sequence): JSONObject {
-		val seqInt = when (seq) {
-			Sequence.COMFORT -> 0
-			Sequence.NECK_EXTENTION -> 6
-		}
-		val seqIndex = mvm.allSeqs.indexOf(seq)
-		val mediaFileName = if (seqInt == 9) {
-			mvm.hsvMediaFileName
-		} else {
-			mvm.mediaFileNames[seqIndex]
-		}
 
-		return originJo.apply {
-			put("temp_server_sn", prefsUtil.getLastTempServerSn())
-			put("media_file_name", mediaFileName)
-			put("json_file_name", mediaFileName.replace(".webp", ".json").replace(".mp4", ".json"))
-			put("seq", seqInt)
-			put("uuid", mvm.currentUUID)
-			put("name", ivm.nameValue.value)
-			put("mobile", ivm.mobileValue.value)
-			put("birthday", ivm.birthdayValue.value)
-			put("gender", ivm.genderValue.value)
-			put("nationality", ivm.nationalityValue.value)
-
-
-			put("scale_factor", getScaleFactor())
-			put("depth_result", true)
-		}
-	}
 }

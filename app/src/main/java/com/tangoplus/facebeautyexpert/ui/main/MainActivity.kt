@@ -27,6 +27,7 @@ import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
+import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.tangoplus.facebeautyexpert.R
@@ -41,6 +42,7 @@ import com.tangoplus.facebeautyexpert.ui.info.InformationFragment
 import com.tangoplus.facebeautyexpert.ui.info.MeasureHistoryFragment
 import com.tangoplus.facebeautyexpert.ui.main.vm.FragmentViewModel
 import com.tangoplus.facebeautyexpert.ui.main.vm.MainViewModel
+import com.tangoplus.facebeautyexpert.ui.measure.MeasureImageFragment
 import com.tangoplus.facebeautyexpert.ui.statistics.StatisticsFragment
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -328,7 +330,7 @@ class MainActivity : AppCompatActivity() {
 			}
 
 			// 가장 최신 파일의 prefix를 식별자로 사용 (9번 JSON 기준)
-			val latestJsonFile = documentsDir?.listFiles { file ->
+			val latestJsonFile = documentsDir.listFiles { file ->
 				file.isFile && file.extension == "json" && file.name.startsWith("9-")
 			}?.maxByOrNull { it.lastModified() }
 
@@ -520,8 +522,22 @@ class MainActivity : AppCompatActivity() {
 	}
 	private var previousTabId = R.id.nav_main
 
+	fun navigateToSubFragment(fragment: Fragment) {
+		supportFragmentManager.beginTransaction().apply {
+			// 부드러운 Fade In / Fade Out 효과
+			// 뒤로가기 했을 때의 애니메이션까지 4개를 적어주는 것이 좋습니다.
+			setCustomAnimations(
+				R.anim.fade_in,
+				android.R.anim.fade_out,
+			)
+			replace(R.id.flMain, fragment)
+			// 핵심: 뒤로 가기 버튼을 누르면 이전 화면(바텀 탭 화면)으로 돌아오게 만듦
+			addToBackStack(null)
+			commit()
+		}
+	}
+
 	private fun setCurrentFragment(itemId: Int) {
-		// 탭 순서 정의
 		val tabOrder = mapOf(
 			R.id.nav_main to 0,
 			R.id.nav_measure_history to 1,
@@ -543,9 +559,9 @@ class MainActivity : AppCompatActivity() {
 		}
 
 		when (fragment) {
-			is MainFragment -> fvm.setCurrentFragment(FragmentViewModel.FragmentType.MAIN_FRAGMENT)
-			is MeasureHistoryFragment -> fvm.setCurrentFragment(FragmentViewModel.FragmentType.MEASURE_HISTORY_FRAGMENT)
-			is StatisticsFragment -> fvm.setCurrentFragment(FragmentViewModel.FragmentType.STATISTICS_FRAGMENT)
+			is MainFragment -> fvm.setCurrentFragment(FragmentViewModel.FragmentType.MAIN)
+			is MeasureHistoryFragment -> fvm.setCurrentFragment(FragmentViewModel.FragmentType.MEASURE_HISTORY)
+			is StatisticsFragment -> fvm.setCurrentFragment(FragmentViewModel.FragmentType.STATISTICS)
 		}
 
 		supportFragmentManager.beginTransaction().apply {
@@ -568,7 +584,7 @@ class MainActivity : AppCompatActivity() {
 			commit()
 		}
 
-		// 현재 탭을 이전 탭으로 저장
+		// 현재 상태 저장
 		previousTabId = itemId
 		selectedTabId = itemId
 	}

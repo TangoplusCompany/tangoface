@@ -11,9 +11,9 @@ class FragmentViewModel : ViewModel() {
 
 	// Fragment 타입 enum
 	enum class FragmentType {
-		MAIN_FRAGMENT,
-		MEASURE_HISTORY_FRAGMENT,
-		STATISTICS_FRAGMENT,
+		MAIN,
+		MEASURE_HISTORY,
+		STATISTICS,
 	}
 
 	// 현재 Fragment 설정
@@ -23,6 +23,6 @@ class FragmentViewModel : ViewModel() {
 
 	// 초기화 (필요시)
 	init {
-		_currentFragmentType.value = FragmentType.MAIN_FRAGMENT // 기본값
+		_currentFragmentType.value = FragmentType.MAIN
 	}
 }

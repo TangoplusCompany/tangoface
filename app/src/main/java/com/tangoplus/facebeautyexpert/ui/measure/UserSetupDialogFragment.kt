@@ -46,6 +46,23 @@ class UserSetupDialogFragment : DialogFragment() {
 	private var touchX: Float = 0f
 	private var touchY: Float = 0f
 
+
+	// parent Type
+	// 0 -> depthCameraActivity
+	// 1 -> MeasureImageFragment
+
+	companion object {
+		private const val ARG_PARENT = "PARENT_TYPE"
+		fun newInstance(parent: Int) : UserSetupDialogFragment {
+			// TODO 여기서 input dialogfragment에다가 args를 건네줘서 onboarding 체크리스트 안보이게하기.
+			val fragment = UserSetupDialogFragment()
+			val args = Bundle()
+			args.putInt(ARG_PARENT, parent)
+			fragment.arguments = args
+			return fragment
+		}
+	}
+
 	override fun onCreateView(
 		inflater: LayoutInflater, container: ViewGroup?,
 		savedInstanceState: Bundle?
@@ -91,7 +108,8 @@ class UserSetupDialogFragment : DialogFragment() {
 	@SuppressLint("ClickableViewAccessibility")
 	override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
 		super.onViewCreated(view, savedInstanceState)
-
+		val bundle = Bundle()
+		val parentCase = bundle.getInt(ARG_PARENT)
 		// 초기 설정: 이름 입력창이 나오고, 키보드가 올라옴
 		bd.etUSDMobile.visibility = View.INVISIBLE
 		bd.btnUSDProgres.visibility = View.INVISIBLE
@@ -228,11 +246,20 @@ class UserSetupDialogFragment : DialogFragment() {
 			val uuid = generateCustomUUID(ivm.nameValue.value, ivm.mobileValue.value, key)
 			Log.v("createdUUID", uuid)
 			mvm.currentUUID = uuid
-			val onBoardingDialog = OnBoardingDialogFragment()
-			onBoardingDialog.show(requireActivity().supportFragmentManager, "")
-			Handler(Looper.getMainLooper()).postDelayed({
-				dismissAllowingStateLoss()
-			}, 300)
+
+			when (parentCase) {
+				0 -> {
+					val onBoardingDialog = OnBoardingDialogFragment()
+					onBoardingDialog.show(requireActivity().supportFragmentManager, "")
+					Handler(Looper.getMainLooper()).postDelayed({
+						dismissAllowingStateLoss()
+					}, 300)
+				}
+				1 -> {
+					ivm.isFinishInput.value = true
+					dismiss()
+				}
+			}
 		}
 
 		bd.tvUSDSkip.setOnSingleClickListener {
@@ -301,16 +328,16 @@ class UserSetupDialogFragment : DialogFragment() {
 				ivm.genderValue.value = index
 
 				btns.forEachIndexed { indexx, tv ->
-					tv.setTextColor(
-						ContextCompat.getColor(
-							requireContext(),
-							if (indexx == index) R.color.white else R.color.black
-						)
-					)
+//					tv.setTextColor(
+//						ContextCompat.getColor(
+//							requireContext(),
+//							if (indexx == index) R.color.white else R.color.black
+//						)
+//					)
 					tv.backgroundTintList = ColorStateList.valueOf(
 						ContextCompat.getColor(
 							requireContext(),
-							if (indexx == index) R.color.black else R.color.white
+							if (indexx == index) R.color.accent else R.color.bg500
 						)
 					)
 				}

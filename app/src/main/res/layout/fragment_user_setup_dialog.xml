@@ -15,7 +15,7 @@
         <androidx.constraintlayout.widget.ConstraintLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:background="@color/white">
+            android:background="@color/bg">
 
             <TextView
                 android:id="@+id/tvUSDSkip"
@@ -24,7 +24,7 @@
                 android:layout_marginEnd="32dp"
                 android:padding="6dp"
                 android:text="SKIP"
-                android:textColor="@color/subColor500"
+                android:textColor="@color/subColor100"
                 android:textSize="24dp"
                 android:textStyle="bold"
                 app:layout_constraintBottom_toBottomOf="@+id/tvUSDGuide"
@@ -37,7 +37,7 @@
                 android:layout_height="wrap_content"
                 android:layout_margin="40dp"
                 android:text="안녕하세요\n분석을 위해 성함을 입력해주세요"
-                android:textColor="@color/black"
+                android:textColor="@color/subColor100"
                 android:textSize="36dp"
                 app:layout_constraintEnd_toStartOf="@+id/tvUSDSkip"
                 app:layout_constraintStart_toStartOf="parent"
@@ -56,8 +56,8 @@
                 android:paddingTop="20dp"
                 android:paddingBottom="20dp"
                 android:singleLine="true"
-                android:textColor="@color/black"
-                android:textColorHint="@color/subColor300"
+                android:textColor="@color/subColor100"
+                android:textColorHint="@color/subColor100"
                 android:textSize="28dp"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
@@ -76,8 +76,8 @@
                 android:paddingTop="20dp"
                 android:paddingBottom="20dp"
                 android:singleLine="true"
-                android:textColor="@color/black"
-                android:textColorHint="@color/subColor300"
+                android:textColor="@color/subColor100"
+                android:textColorHint="@color/subColor100"
                 android:textSize="28dp"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
@@ -88,7 +88,7 @@
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:background="@drawable/effect_0"
-                android:backgroundTint="@color/black"
+                android:backgroundTint="@color/accent"
                 android:padding="16dp"
                 android:text="사전 체크리스트 시작"
                 android:textColor="@color/white"
@@ -114,7 +114,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginStart="5dp"
                     android:text="성별"
-                    android:textColor="@color/black"
+                    android:textColor="@color/subColor100"
                     android:textSize="24dp"
                     app:layout_constraintStart_toStartOf="parent"
                     app:layout_constraintTop_toTopOf="parent" />
@@ -135,13 +135,13 @@
                         android:layout_margin="5dp"
                         android:layout_weight="1"
                         android:background="@drawable/effect_20"
-                        android:backgroundTint="@color/white"
+                        android:backgroundTint="@color/bg500"
                         android:elevation="2dp"
                         android:gravity="center"
                         android:paddingTop="40dp"
                         android:paddingBottom="40dp"
                         android:text="남성"
-                        android:textColor="@color/black"
+                        android:textColor="@color/subColor100"
                         android:textSize="28dp" />
 
                     <TextView
@@ -151,13 +151,13 @@
                         android:layout_margin="5dp"
                         android:layout_weight="1"
                         android:background="@drawable/effect_20"
-                        android:backgroundTint="@color/white"
+                        android:backgroundTint="@color/bg500"
                         android:elevation="2dp"
                         android:gravity="center"
                         android:paddingTop="40dp"
                         android:paddingBottom="40dp"
                         android:text="여성"
-                        android:textColor="@color/black"
+                        android:textColor="@color/subColor100"
                         android:textSize="28dp" />
                 </LinearLayout>
             </androidx.constraintlayout.widget.ConstraintLayout>
@@ -186,7 +186,7 @@
                         android:layout_marginStart="5dp"
                         android:layout_weight="1"
                         android:text="생년월일"
-                        android:textColor="@color/black"
+                        android:textColor="@color/subColor100"
                         android:textSize="24dp" />
 
                     <TextView
@@ -195,7 +195,7 @@
                         android:layout_height="match_parent"
                         android:layout_weight="1"
                         android:text="국적"
-                        android:textColor="@color/black"
+                        android:textColor="@color/subColor100"
                         android:textSize="24dp" />
                 </LinearLayout>
 
@@ -216,12 +216,13 @@
                         android:layout_margin="5dp"
                         android:layout_weight="1"
                         android:background="@drawable/effect_20"
+                        android:backgroundTint="@color/bg500"
                         android:elevation="2dp"
                         android:gravity="center"
                         android:paddingTop="15dp"
                         android:paddingBottom="15dp"
                         android:text="날짜 선택"
-                        android:textColor="@color/black"
+                        android:textColor="@color/subColor100"
                         android:textSize="24dp" />
 
                     <com.hbb20.CountryCodePicker
@@ -231,9 +232,13 @@
                         android:layout_margin="5dp"
                         android:layout_weight="1"
                         android:background="@drawable/effect_20"
+                        android:backgroundTint="@color/bg500"
                         android:elevation="2dp"
                         android:paddingTop="15dp"
                         android:paddingBottom="15dp"
+                        app:ccpDialog_textColor="@color/subColor100"
+                        app:ccp_arrowColor="@color/subColor100"
+                        app:ccp_contentColor="@color/subColor100"
                         app:ccp_textSize="24dp" />
 
 

@@ -10,6 +10,8 @@ import androidx.recyclerview.widget.RecyclerView
 import com.tangoplus.facebeautyexpert.R
 import com.tangoplus.facebeautyexpert.databinding.RvSettingsItemBinding
 import com.tangoplus.facebeautyexpert.domain.util.FileUtility.setOnSingleClickListener
+import com.tangoplus.facebeautyexpert.ui.main.MainActivity
+import com.tangoplus.facebeautyexpert.ui.measure.MeasureImageFragment
 import com.tangoplus.facebeautyexpert.ui.statistics.PosterManageFragment
 
 class SettingsRVAdapter(private val fragment: Fragment) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
@@ -26,16 +28,9 @@ class SettingsRVAdapter(private val fragment: Fragment) : RecyclerView.Adapter<R
 			tvSITitle.text = currentItem
 			clSI.setOnSingleClickListener {
 				when (currentItem) {
-					"슬라이드 포스터 관리" -> {
-						fragment.requireActivity().supportFragmentManager.beginTransaction().apply {
-							replace(R.id.flMain, PosterManageFragment())
-							addToBackStack("slideposter")
-							commit()
-						}
-					}
+					"슬라이드 포스터 관리" -> (fragment.requireActivity() as MainActivity).navigateToSubFragment(PosterManageFragment())
 				}
 			}
-
 		}
 	}
 

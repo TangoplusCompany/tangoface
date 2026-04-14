@@ -160,7 +160,6 @@ class MainFragment : Fragment() {
 				val actualPosition = position % promoImages.size
 				updateButtonState(actualPosition)
 			}
-
 		})
 	}
 

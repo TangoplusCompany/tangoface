@@ -289,7 +289,7 @@ object BitmapUtility {
 			}
 		}
 
-		if (dim.flags.isLineOn) {
+		if (dim.flags.isLineOn && dimFLS.landmarks.isNotEmpty()) {
 			if (dim.setedLine.contains(DrawLine.A_SAGGING_FACE)) {
 				val leftEarFlap = dimFLS.landmarks[234]
 				val rightEarFlap = dimFLS.landmarks[454]
@@ -1706,345 +1706,346 @@ object BitmapUtility {
 		val plm = dim.lms.poseLandmarks.landmarks
 		val textBoxes = mutableListOf<TextBoxData>()
 
-		if (dl.contains(DrawLine.A_SAGGING_FACE)) {
-			val boxLocation = flm[152]
-			val finalPos = calculateFinalPixel(boxLocation.x, boxLocation.y)
-			val rawData = extractRawData(dim, DrawLine.A_SAGGING_FACE)
-			if (rawData.isNotEmpty()) {
-				textBoxes.add(
-					TextBoxData(
-						anchorX = finalPos.x,
-						anchorY = finalPos.y,
-						targetGridIndex = 27,
-						info = TextDrawInfo(
-							title = "처짐 지수",
-							items = listOf(
-								TextItem("왼쪽:", rawData.getOrNull(0) ?: ""),
-								TextItem("오른쪽:", rawData.getOrNull(1) ?: ""),
+		if (flm.isNotEmpty()) {
+			if (dl.contains(DrawLine.A_SAGGING_FACE)) {
+				val boxLocation = flm[152]
+				val finalPos = calculateFinalPixel(boxLocation.x, boxLocation.y)
+				val rawData = extractRawData(dim, DrawLine.A_SAGGING_FACE)
+				if (rawData.isNotEmpty()) {
+					textBoxes.add(
+						TextBoxData(
+							anchorX = finalPos.x,
+							anchorY = finalPos.y,
+							targetGridIndex = 27,
+							info = TextDrawInfo(
+								title = "처짐 지수",
+								items = listOf(
+									TextItem("왼쪽:", rawData.getOrNull(0) ?: ""),
+									TextItem("오른쪽:", rawData.getOrNull(1) ?: ""),
+								)
 							)
 						)
 					)
-				)
+				}
 			}
 
-		}
-		if (dl.contains(DrawLine.A_SHOULDER)) {
-			val rawX = (plm[11].x + plm[12].x) / 2
-			val rawY = (plm[11].y + plm[12].y) / 2
-			val finalPos = calculateFinalPixel(rawX, rawY)
-			val rawData = extractRawData(dim, DrawLine.A_SHOULDER)
-			if (rawData.isNotEmpty()) {
-				textBoxes.add(TextBoxData(
-					anchorX = finalPos.x, anchorY = finalPos.y,
-					targetGridIndex = 32, // 중앙 하단부
-					info = TextDrawInfo("어깨 각도", listOf(TextItem("너비:", "${rawData.getOrNull(0) ?: ""}º")))
-				))
-			}
-		}
-
-		if (dl.contains(DrawLine.NECK)) {
-			val rawX = (plm[11].x + plm[12].x) / 2
-			val rawY = (plm[11].y + plm[12].y) / 2
-			val finalPos = calculateFinalPixel(rawX, rawY)
-			val rawData = extractRawData(dim, DrawLine.NECK)
-			if (rawData.isNotEmpty()) {
-				textBoxes.add(TextBoxData(
-					anchorX = finalPos.x, anchorY = finalPos.y,
-					targetGridIndex = 32, // 목 근처 왼쪽
-					info = TextDrawInfo("목 각도", listOf(TextItem("", "${rawData.getOrNull(0) ?: ""}º")))
-				))
-			}
-		}
-		if (dl.contains(DrawLine.FACE)) {
-			val boxLocation = flm[234]
-			val finalPos = calculateFinalPixel(boxLocation.x, boxLocation.y)
-			val rawData = extractRawData(dim, DrawLine.FACE)
-			if (rawData.isNotEmpty()) {
-				textBoxes.add(TextBoxData(
-					anchorX = finalPos.x, anchorY = finalPos.y,
-					targetGridIndex = 15, // 얼굴 왼쪽 구역
-					info = TextDrawInfo("얼굴 정보", if (dim.seq == Sequence.COMFORT) {
-						listOf(
-							TextItem("너비:", "${rawData.getOrNull(1) ?: ""}cm"),
-							TextItem("높이:", "${rawData.getOrNull(2) ?: ""}cm"),
-							TextItem("각도:", "${rawData.getOrNull(0) ?: ""}º")
-						)
-					} else  listOf(
-						TextItem("각도:", "${rawData.getOrNull(0) ?: ""}º")
+			if (dl.contains(DrawLine.A_SHOULDER)) {
+				val rawX = (plm[11].x + plm[12].x) / 2
+				val rawY = (plm[11].y + plm[12].y) / 2
+				val finalPos = calculateFinalPixel(rawX, rawY)
+				val rawData = extractRawData(dim, DrawLine.A_SHOULDER)
+				if (rawData.isNotEmpty()) {
+					textBoxes.add(TextBoxData(
+						anchorX = finalPos.x, anchorY = finalPos.y,
+						targetGridIndex = 32, // 중앙 하단부
+						info = TextDrawInfo("어깨 각도", listOf(TextItem("너비:", "${rawData.getOrNull(0) ?: ""}º")))
 					))
-				))
+				}
 			}
-		}
 
-		if (dl.contains(DrawLine.A_HORIZON)) {
-			val boxLocation = flm[454]
-			val finalPos = calculateFinalPixel(boxLocation.x, boxLocation.y)
-			val rawData = extractRawData(dim, DrawLine.A_HORIZON)
-			if (rawData.isNotEmpty()) {
-				textBoxes.add(TextBoxData(
-					anchorX = finalPos.x, anchorY = finalPos.y,
-					targetGridIndex = 19, // 얼굴 오른쪽 구역
-					info = TextDrawInfo("수평 각도",  if (dim.seq == Sequence.COMFORT) {
-						listOf(
+			if (dl.contains(DrawLine.NECK)) {
+				val rawX = (plm[11].x + plm[12].x) / 2
+				val rawY = (plm[11].y + plm[12].y) / 2
+				val finalPos = calculateFinalPixel(rawX, rawY)
+				val rawData = extractRawData(dim, DrawLine.NECK)
+				if (rawData.isNotEmpty()) {
+					textBoxes.add(TextBoxData(
+						anchorX = finalPos.x, anchorY = finalPos.y,
+						targetGridIndex = 32, // 목 근처 왼쪽
+						info = TextDrawInfo("목 각도", listOf(TextItem("", "${rawData.getOrNull(0) ?: ""}º")))
+					))
+				}
+			}
+			if (dl.contains(DrawLine.FACE)) {
+				val boxLocation = flm[234]
+				val finalPos = calculateFinalPixel(boxLocation.x, boxLocation.y)
+				val rawData = extractRawData(dim, DrawLine.FACE)
+				if (rawData.isNotEmpty()) {
+					textBoxes.add(TextBoxData(
+						anchorX = finalPos.x, anchorY = finalPos.y,
+						targetGridIndex = 15, // 얼굴 왼쪽 구역
+						info = TextDrawInfo("얼굴 정보", if (dim.seq == Sequence.COMFORT) {
+							listOf(
+								TextItem("너비:", "${rawData.getOrNull(1) ?: ""}cm"),
+								TextItem("높이:", "${rawData.getOrNull(2) ?: ""}cm"),
+								TextItem("각도:", "${rawData.getOrNull(0) ?: ""}º")
+							)
+						} else  listOf(
+							TextItem("각도:", "${rawData.getOrNull(0) ?: ""}º")
+						))
+					))
+				}
+			}
+
+			if (dl.contains(DrawLine.A_HORIZON)) {
+				val boxLocation = flm[454]
+				val finalPos = calculateFinalPixel(boxLocation.x, boxLocation.y)
+				val rawData = extractRawData(dim, DrawLine.A_HORIZON)
+				if (rawData.isNotEmpty()) {
+					textBoxes.add(TextBoxData(
+						anchorX = finalPos.x, anchorY = finalPos.y,
+						targetGridIndex = 19, // 얼굴 오른쪽 구역
+						info = TextDrawInfo("수평 각도",  if (dim.seq == Sequence.COMFORT) {
+							listOf(
+								TextItem("눈:", "${rawData.getOrNull(0) ?: ""}º"),
+								TextItem("귀:", "${rawData.getOrNull(1) ?: ""}º"),
+								TextItem("입술:", "${rawData.getOrNull(2) ?: ""}º"),
+								TextItem("턱:", "${rawData.getOrNull(3) ?: ""}º")
+							)
+						} else  listOf(
 							TextItem("눈:", "${rawData.getOrNull(0) ?: ""}º"),
 							TextItem("귀:", "${rawData.getOrNull(1) ?: ""}º"),
-							TextItem("입술:", "${rawData.getOrNull(2) ?: ""}º"),
-							TextItem("턱:", "${rawData.getOrNull(3) ?: ""}º")
-						)
-					} else  listOf(
-						TextItem("눈:", "${rawData.getOrNull(0) ?: ""}º"),
-						TextItem("귀:", "${rawData.getOrNull(1) ?: ""}º"),
-					))
+						))
 
-				))
+					))
+				}
 			}
-		}
-		if (dl.contains(DrawLine.EYE)) {
-			val rawData = extractRawData(dim, DrawLine.EYE)
-			if (rawData.isNotEmpty()) {
-				// 왼쪽 눈 (233번)
-				val leftEyePos = calculateFinalPixel(flm[233].x, flm[233].y,)
-				textBoxes.add(TextBoxData(
-					anchorX = leftEyePos.x, anchorY = leftEyePos.y,
-					targetGridIndex = 16, // 좌측 상단
-					info = TextDrawInfo("왼쪽 눈", listOf(
-						TextItem("눈매:", "${rawData.getOrNull(0)}º"),
-						TextItem("너비 | 높이:", "${rawData.getOrNull(6)}cm | ${rawData.getOrNull(8)}cm"),
-						TextItem("눈꼬리 | 눈앞머리", "${rawData.getOrNull(4)}º | ${rawData.getOrNull(2)}º")
+			if (dl.contains(DrawLine.EYE)) {
+				val rawData = extractRawData(dim, DrawLine.EYE)
+				if (rawData.isNotEmpty()) {
+					// 왼쪽 눈 (233번)
+					val leftEyePos = calculateFinalPixel(flm[233].x, flm[233].y,)
+					textBoxes.add(TextBoxData(
+						anchorX = leftEyePos.x, anchorY = leftEyePos.y,
+						targetGridIndex = 16, // 좌측 상단
+						info = TextDrawInfo("왼쪽 눈", listOf(
+							TextItem("눈매:", "${rawData.getOrNull(0)}º"),
+							TextItem("너비 | 높이:", "${rawData.getOrNull(6)}cm | ${rawData.getOrNull(8)}cm"),
+							TextItem("눈꼬리 | 눈앞머리", "${rawData.getOrNull(4)}º | ${rawData.getOrNull(2)}º")
+						))
 					))
-				))
 
-				// 오른쪽 눈 (453번)
-				val rightEyePos = calculateFinalPixel(flm[453].x, flm[453].y,)
-				textBoxes.add(TextBoxData(
-					anchorX = rightEyePos.x, anchorY = rightEyePos.y,
-					targetGridIndex = 18, // 우측 상단
-					info = TextDrawInfo("오른쪽 눈", listOf(
-						TextItem("눈매:", "${rawData.getOrNull(1)}º"),
-						TextItem("너비 | 높이:", "${rawData.getOrNull(7)}cm | ${rawData.getOrNull(9)}cm"),
-						TextItem("눈앞머리 | 눈꼬리", "${rawData.getOrNull(3)} | ${rawData.getOrNull(5)}º")
+					// 오른쪽 눈 (453번)
+					val rightEyePos = calculateFinalPixel(flm[453].x, flm[453].y,)
+					textBoxes.add(TextBoxData(
+						anchorX = rightEyePos.x, anchorY = rightEyePos.y,
+						targetGridIndex = 18, // 우측 상단
+						info = TextDrawInfo("오른쪽 눈", listOf(
+							TextItem("눈매:", "${rawData.getOrNull(1)}º"),
+							TextItem("너비 | 높이:", "${rawData.getOrNull(7)}cm | ${rawData.getOrNull(9)}cm"),
+							TextItem("눈앞머리 | 눈꼬리", "${rawData.getOrNull(3)} | ${rawData.getOrNull(5)}º")
+						))
 					))
-				))
+				}
 			}
 
-
-		}
-		if (dl.contains(DrawLine.EYEBROW)) {
-			val rawData = extractRawData(dim, DrawLine.EYEBROW)
-			if (rawData.isNotEmpty()) {
-				// 왼쪽 눈 (233번)
-				val leftEyePos = calculateFinalPixel(flm[66].x, flm[66].y,)
-				textBoxes.add(TextBoxData(
-					anchorX = leftEyePos.x, anchorY = leftEyePos.y,
-					targetGridIndex = 6, // 좌측 상단
-					info = TextDrawInfo("왼쪽 눈썹", listOf(
-						TextItem("각도: ", "${rawData.getOrNull(0)}º"),
-						TextItem("두께: ", "${rawData.getOrNull(4)}cm | ${rawData.getOrNull(3)}cm | ${rawData.getOrNull(2)}cm")
+			if (dl.contains(DrawLine.EYEBROW)) {
+				val rawData = extractRawData(dim, DrawLine.EYEBROW)
+				if (rawData.isNotEmpty()) {
+					// 왼쪽 눈 (233번)
+					val leftEyePos = calculateFinalPixel(flm[66].x, flm[66].y,)
+					textBoxes.add(TextBoxData(
+						anchorX = leftEyePos.x, anchorY = leftEyePos.y,
+						targetGridIndex = 6, // 좌측 상단
+						info = TextDrawInfo("왼쪽 눈썹", listOf(
+							TextItem("각도: ", "${rawData.getOrNull(0)}º"),
+							TextItem("두께: ", "${rawData.getOrNull(4)}cm | ${rawData.getOrNull(3)}cm | ${rawData.getOrNull(2)}cm")
+						))
 					))
-				))
 
-				// 오른쪽 눈 (453번)
-				val rightEyePos = calculateFinalPixel(flm[296].x, flm[296].y,)
-				textBoxes.add(TextBoxData(
-					anchorX = rightEyePos.x, anchorY = rightEyePos.y,
-					targetGridIndex = 8, // 우측 상단
-					info = TextDrawInfo("오른쪽 눈썹", listOf(
-						TextItem("각도: ", "${rawData.getOrNull(1)}º"),
-						TextItem("두께: ", "${rawData.getOrNull(5)}cm | ${rawData.getOrNull(6)}cm | ${rawData.getOrNull(7)}cm")
+					// 오른쪽 눈 (453번)
+					val rightEyePos = calculateFinalPixel(flm[296].x, flm[296].y,)
+					textBoxes.add(TextBoxData(
+						anchorX = rightEyePos.x, anchorY = rightEyePos.y,
+						targetGridIndex = 8, // 우측 상단
+						info = TextDrawInfo("오른쪽 눈썹", listOf(
+							TextItem("각도: ", "${rawData.getOrNull(1)}º"),
+							TextItem("두께: ", "${rawData.getOrNull(5)}cm | ${rawData.getOrNull(6)}cm | ${rawData.getOrNull(7)}cm")
+						))
 					))
-				))
-			}
-		}
-
-		if (dl.contains(DrawLine.NOSE)) {
-			val noseCenter = calculateFinalPixel(flm[164].x, flm[164].y)
-			val rawData = extractRawData(dim, DrawLine.NOSE)
-			if (rawData.isNotEmpty()) {
-				textBoxes.add(TextBoxData(
-					anchorX = noseCenter.x, anchorY = noseCenter.y,
-					targetGridIndex = 18, // 중앙 상단 (얼굴 중앙)
-					info = TextDrawInfo("코 정보", listOf(
-						TextItem("길이 | 너비:", "${rawData.getOrNull(0)}cm | ${rawData.getOrNull(1)}º"),
-						TextItem("콧날개 각:", "${rawData.getOrNull(2)}º")
-					))
-				))
+				}
 			}
 
-		}
+			if (dl.contains(DrawLine.NOSE)) {
+				val noseCenter = calculateFinalPixel(flm[164].x, flm[164].y)
+				val rawData = extractRawData(dim, DrawLine.NOSE)
+				if (rawData.isNotEmpty()) {
+					textBoxes.add(TextBoxData(
+						anchorX = noseCenter.x, anchorY = noseCenter.y,
+						targetGridIndex = 18, // 중앙 상단 (얼굴 중앙)
+						info = TextDrawInfo("코 정보", listOf(
+							TextItem("길이 | 너비:", "${rawData.getOrNull(0)}cm | ${rawData.getOrNull(1)}cm"),
+							TextItem("콧날개 각:", "${rawData.getOrNull(2)}º")
+						))
+					))
+				}
+
+			}
 //
 //		if (dl.contains(DrawLine.E_CHEEKBONE)) {
 //
 //		}
-		if (dl.contains(DrawLine.A_ALAR_ORAL)) {
-			val boxLocation = flm[357] // 코 하단 중앙
-			val finalPos = calculateFinalPixel(boxLocation.x, boxLocation.y)
-			val rawData = extractRawData(dim, DrawLine.A_ALAR_ORAL)
-			if (rawData.isNotEmpty()) {
-				textBoxes.add(TextBoxData(
-					anchorX = finalPos.x, anchorY = finalPos.y,
-					targetGridIndex = 27, // 중앙 하단부
-					info = TextDrawInfo("콧날개-입술끝 각도", listOf(
-						TextItem("좌측:", "${rawData.getOrNull(0) ?: ""}º"),
-						TextItem("우측:", "${rawData.getOrNull(1) ?: ""}º")
+			if (dl.contains(DrawLine.A_ALAR_ORAL)) {
+				val boxLocation = flm[357] // 코 하단 중앙
+				val finalPos = calculateFinalPixel(boxLocation.x, boxLocation.y)
+				val rawData = extractRawData(dim, DrawLine.A_ALAR_ORAL)
+				if (rawData.isNotEmpty()) {
+					textBoxes.add(TextBoxData(
+						anchorX = finalPos.x, anchorY = finalPos.y,
+						targetGridIndex = 27, // 중앙 하단부
+						info = TextDrawInfo("콧날개-입술끝 각도", listOf(
+							TextItem("좌측:", "${rawData.getOrNull(0) ?: ""}º"),
+							TextItem("우측:", "${rawData.getOrNull(1) ?: ""}º")
+						))
 					))
-				))
+				}
 			}
-		}
-		if (dl.contains(DrawLine.A_SIDE_HEAD)) {
-			val rawData = extractRawData(dim, DrawLine.A_SIDE_HEAD)
-			if (rawData.isNotEmpty()) {
-				// 좌측 측두 (251번)
-				val leftPos = calculateFinalPixel(flm[251].x, flm[251].y)
-				textBoxes.add(TextBoxData(
-					anchorX = leftPos.x, anchorY = leftPos.y,
-					targetGridIndex = 10, // 왼쪽 중간
-					info = TextDrawInfo("측두 각도(좌)", listOf(TextItem("", "${rawData.getOrNull(0) ?: ""}º")))
-				))
+			if (dl.contains(DrawLine.A_SIDE_HEAD)) {
+				val rawData = extractRawData(dim, DrawLine.A_SIDE_HEAD)
+				if (rawData.isNotEmpty()) {
+					// 좌측 측두 (251번)
+					val leftPos = calculateFinalPixel(flm[251].x, flm[251].y)
+					textBoxes.add(TextBoxData(
+						anchorX = leftPos.x, anchorY = leftPos.y,
+						targetGridIndex = 10, // 왼쪽 중간
+						info = TextDrawInfo("측두 각도(좌)", listOf(TextItem("", "${rawData.getOrNull(0) ?: ""}º")))
+					))
 
-				// 우측 측두 (21번)
-				val rightPos = calculateFinalPixel(flm[21].x, flm[21].y)
-				textBoxes.add(TextBoxData(
-					anchorX = rightPos.x, anchorY = rightPos.y,
-					targetGridIndex = 14, // 오른쪽 중간
-					info = TextDrawInfo("측두 각도(우)", listOf(TextItem("", "${rawData.getOrNull(1) ?: ""}º")))
-				))
-			}
-		}
-		if (dl.contains(DrawLine.A_CANTHUS_ORAL)) {
-			val boxLocation = flm[18] // 하안면부 중앙
-			val finalPos = calculateFinalPixel(boxLocation.x, boxLocation.y)
-			val rawData = extractRawData(dim, DrawLine.A_CANTHUS_ORAL)
-			if (rawData.isNotEmpty()) {
-				textBoxes.add(TextBoxData(
-					anchorX = finalPos.x, anchorY = finalPos.y,
-					targetGridIndex = 32, // 하단 중앙
-					info = TextDrawInfo("눈매끝-입꼬리 각도", listOf(
-						TextItem("좌측:", "${rawData.getOrNull(0) ?: ""}º"),
-						TextItem("우측:", "${rawData.getOrNull(1) ?: ""}º")
+					// 우측 측두 (21번)
+					val rightPos = calculateFinalPixel(flm[21].x, flm[21].y)
+					textBoxes.add(TextBoxData(
+						anchorX = rightPos.x, anchorY = rightPos.y,
+						targetGridIndex = 14, // 오른쪽 중간
+						info = TextDrawInfo("측두 각도(우)", listOf(TextItem("", "${rawData.getOrNull(1) ?: ""}º")))
 					))
-				))
+				}
 			}
-		}
-		if (dl.contains(DrawLine.E_CHEEKS)) {
-			val rawData = extractRawData(dim, DrawLine.E_CHEEKS)
+			if (dl.contains(DrawLine.A_CANTHUS_ORAL)) {
+				val boxLocation = flm[18] // 하안면부 중앙
+				val finalPos = calculateFinalPixel(boxLocation.x, boxLocation.y)
+				val rawData = extractRawData(dim, DrawLine.A_CANTHUS_ORAL)
+				if (rawData.isNotEmpty()) {
+					textBoxes.add(TextBoxData(
+						anchorX = finalPos.x, anchorY = finalPos.y,
+						targetGridIndex = 32, // 하단 중앙
+						info = TextDrawInfo("눈매끝-입꼬리 각도", listOf(
+							TextItem("좌측:", "${rawData.getOrNull(0) ?: ""}º"),
+							TextItem("우측:", "${rawData.getOrNull(1) ?: ""}º")
+						))
+					))
+				}
+			}
+			if (dl.contains(DrawLine.E_CHEEKS)) {
+				val rawData = extractRawData(dim, DrawLine.E_CHEEKS)
 
-			// 좌측 볼 (132번)
-			if (rawData.isNotEmpty()) {
-				val leftPos = calculateFinalPixel(flm[132].x, flm[132].y,)
-				textBoxes.add(TextBoxData(
-					anchorX = leftPos.x, anchorY = leftPos.y,
-					targetGridIndex = 20, // 왼쪽 하단부
-					info = TextDrawInfo("볼 너비(좌)", listOf(TextItem("", "${rawData.getOrNull(0) ?: ""}㎠")))
-				))
+				// 좌측 볼 (132번)
+				if (rawData.isNotEmpty()) {
+					val leftPos = calculateFinalPixel(flm[132].x, flm[132].y,)
+					textBoxes.add(TextBoxData(
+						anchorX = leftPos.x, anchorY = leftPos.y,
+						targetGridIndex = 20, // 왼쪽 하단부
+						info = TextDrawInfo("볼 너비(좌)", listOf(TextItem("", "${rawData.getOrNull(0) ?: ""}㎠")))
+					))
 
-				// 우측 볼 (361번)
-				val rightPos = calculateFinalPixel(flm[361].x, flm[361].y,)
-				textBoxes.add(TextBoxData(
-					anchorX = rightPos.x, anchorY = rightPos.y,
-					targetGridIndex = 24, // 오른쪽 하단부
-					info = TextDrawInfo("볼 너비(우)", listOf(TextItem("", "${rawData.getOrNull(1) ?: ""}㎠")))
-				))
-			}
-		}
-		if (dl.contains(DrawLine.MOUSE)) {
-			val mousePos = calculateFinalPixel(flm[17].x, flm[17].y,)
-			val rawData = extractRawData(dim, DrawLine.MOUSE)
-			if (rawData.isNotEmpty()) {
-				textBoxes.add(TextBoxData(
-					anchorX = mousePos.x, anchorY = mousePos.y,
-					targetGridIndex = 27, // 하단 중앙
-					info = TextDrawInfo("입 정보", listOf(
-						TextItem("인중 길이:", "${rawData.getOrNull(2)}cm"),
-						TextItem("입 길이", "${rawData.getOrNull(3)}cm"),
-						TextItem("입꼬리 각도:", "${rawData.getOrNull(0)}º / ${rawData.getOrNull(1)}º"),
-						TextItem("윗입술 두께", "${rawData.getOrNull(4)}cm"),
-						TextItem("아래입술 두께", "${rawData.getOrNull(5)}cm")
+					// 우측 볼 (361번)
+					val rightPos = calculateFinalPixel(flm[361].x, flm[361].y,)
+					textBoxes.add(TextBoxData(
+						anchorX = rightPos.x, anchorY = rightPos.y,
+						targetGridIndex = 24, // 오른쪽 하단부
+						info = TextDrawInfo("볼 너비(우)", listOf(TextItem("", "${rawData.getOrNull(1) ?: ""}㎠")))
 					))
-				))
+				}
 			}
-		}
-		if (dl.contains(DrawLine.A_FACIAL_AXIS)) {
-			val mousePos = calculateFinalPixel(flm[17].x, flm[17].y,)
-			val rawData = extractRawData(dim, DrawLine.A_FACIAL_AXIS)
-			if (rawData.isNotEmpty()) {
-				textBoxes.add(TextBoxData(
-					anchorX = mousePos.x, anchorY = mousePos.y,
-					targetGridIndex = 33, // 하단 중앙
-					info = TextDrawInfo("하관 비대칭", listOf(
-						TextItem("길이 비대칭 지수", "${rawData.getOrNull(0)}"),
-						TextItem("각도 비대칭 지수", "${rawData.getOrNull(1)}"),
+			if (dl.contains(DrawLine.MOUSE)) {
+				val mousePos = calculateFinalPixel(flm[17].x, flm[17].y,)
+				val rawData = extractRawData(dim, DrawLine.MOUSE)
+				if (rawData.isNotEmpty()) {
+					textBoxes.add(TextBoxData(
+						anchorX = mousePos.x, anchorY = mousePos.y,
+						targetGridIndex = 27, // 하단 중앙
+						info = TextDrawInfo("입 정보", listOf(
+							TextItem("인중 길이:", "${rawData.getOrNull(2)}cm"),
+							TextItem("입 길이", "${rawData.getOrNull(3)}cm"),
+							TextItem("입꼬리 각도:", "${rawData.getOrNull(0)}º / ${rawData.getOrNull(1)}º"),
+							TextItem("윗입술 두께", "${rawData.getOrNull(4)}cm"),
+							TextItem("아래입술 두께", "${rawData.getOrNull(5)}cm")
+						))
 					))
-				))
+				}
 			}
+			if (dl.contains(DrawLine.A_FACIAL_AXIS)) {
+				val mousePos = calculateFinalPixel(flm[17].x, flm[17].y,)
+				val rawData = extractRawData(dim, DrawLine.A_FACIAL_AXIS)
+				if (rawData.isNotEmpty()) {
+					textBoxes.add(TextBoxData(
+						anchorX = mousePos.x, anchorY = mousePos.y,
+						targetGridIndex = 33, // 하단 중앙
+						info = TextDrawInfo("하관 비대칭", listOf(
+							TextItem("길이 비대칭 지수", "${rawData.getOrNull(0)}"),
+							TextItem("각도 비대칭 지수", "${rawData.getOrNull(1)}"),
+						))
+					))
+				}
 
-		}
-		if (dl.contains(DrawLine.A_RATIO_VERTI)) {
-			val rawData = extractRawData(dim, DrawLine.A_RATIO_VERTI)
-
-			val verticalRatio = rawData[0].split(":")
-			if (rawData.isNotEmpty()) {
-				textBoxes.add(TextBoxData(
-					anchorX = 0f, anchorY = 0f,
-					targetGridIndex = 30, // 하단 중앙
-					info = TextDrawInfo("", listOf(
-						TextItem("", verticalRatio[0]),
-					))
-				))
-				textBoxes.add(TextBoxData(
-					anchorX = 0f, anchorY = 0f,
-					targetGridIndex = 31, // 하단 중앙
-					info = TextDrawInfo("", listOf(
-						TextItem("", verticalRatio[1]),
-					))
-				))
-				textBoxes.add(TextBoxData(
-					anchorX = 0f, anchorY = 0f,
-					targetGridIndex = 32, // 하단 중앙
-					info = TextDrawInfo("", listOf(
-						TextItem("", verticalRatio[2]),
-					))
-				))
-				textBoxes.add(TextBoxData(
-					anchorX = 0f, anchorY = 0f,
-					targetGridIndex = 33, // 하단 중앙
-					info = TextDrawInfo("", listOf(
-						TextItem("", verticalRatio[3]),
-					))
-				))
-				textBoxes.add(TextBoxData(
-					anchorX = 0f, anchorY = 0f,
-					targetGridIndex = 34, // 하단 중앙
-					info = TextDrawInfo("", listOf(
-						TextItem("", verticalRatio[4]),
-					))
-				))
 			}
-		}
-		if (dl.contains(DrawLine.A_RATIO_HORIZON)) {
-			val rawData = extractRawData(dim, DrawLine.A_RATIO_HORIZON)
-			val verticalRatio = rawData[0].split(":")
-			if (rawData.isNotEmpty()) {
-				textBoxes.add(TextBoxData(
-					anchorX = 0f, anchorY = 0f,
-					targetGridIndex = 9, // 하단 중앙
-					info = TextDrawInfo("", listOf(
-						TextItem("", "${verticalRatio[0]}"),
+			if (dl.contains(DrawLine.A_RATIO_VERTI)) {
+				val rawData = extractRawData(dim, DrawLine.A_RATIO_VERTI)
+
+				val verticalRatio = rawData[0].split(":")
+				if (rawData.isNotEmpty()) {
+					textBoxes.add(TextBoxData(
+						anchorX = 0f, anchorY = 0f,
+						targetGridIndex = 30, // 하단 중앙
+						info = TextDrawInfo("", listOf(
+							TextItem("", verticalRatio[0]),
+						))
 					))
-				))
-				textBoxes.add(TextBoxData(
-					anchorX = 0f, anchorY = 0f,
-					targetGridIndex = 19, // 하단 중앙
-					info = TextDrawInfo("", listOf(
-						TextItem("", "${verticalRatio[1]}"),
+					textBoxes.add(TextBoxData(
+						anchorX = 0f, anchorY = 0f,
+						targetGridIndex = 31, // 하단 중앙
+						info = TextDrawInfo("", listOf(
+							TextItem("", verticalRatio[1]),
+						))
 					))
-				))
-				textBoxes.add(TextBoxData(
-					anchorX = 0f, anchorY = 0f,
-					targetGridIndex = 29, // 하단 중앙
-					info = TextDrawInfo("", listOf(
-						TextItem("", "${verticalRatio[2]}"),
+					textBoxes.add(TextBoxData(
+						anchorX = 0f, anchorY = 0f,
+						targetGridIndex = 32, // 하단 중앙
+						info = TextDrawInfo("", listOf(
+							TextItem("", verticalRatio[2]),
+						))
 					))
-				))
+					textBoxes.add(TextBoxData(
+						anchorX = 0f, anchorY = 0f,
+						targetGridIndex = 33, // 하단 중앙
+						info = TextDrawInfo("", listOf(
+							TextItem("", verticalRatio[3]),
+						))
+					))
+					textBoxes.add(TextBoxData(
+						anchorX = 0f, anchorY = 0f,
+						targetGridIndex = 34, // 하단 중앙
+						info = TextDrawInfo("", listOf(
+							TextItem("", verticalRatio[4]),
+						))
+					))
+				}
+			}
+			if (dl.contains(DrawLine.A_RATIO_HORIZON)) {
+				val rawData = extractRawData(dim, DrawLine.A_RATIO_HORIZON)
+				val verticalRatio = rawData[0].split(":")
+				if (rawData.isNotEmpty()) {
+					textBoxes.add(TextBoxData(
+						anchorX = 0f, anchorY = 0f,
+						targetGridIndex = 9, // 하단 중앙
+						info = TextDrawInfo("", listOf(
+							TextItem("", "${verticalRatio[0]}"),
+						))
+					))
+					textBoxes.add(TextBoxData(
+						anchorX = 0f, anchorY = 0f,
+						targetGridIndex = 19, // 하단 중앙
+						info = TextDrawInfo("", listOf(
+							TextItem("", "${verticalRatio[1]}"),
+						))
+					))
+					textBoxes.add(TextBoxData(
+						anchorX = 0f, anchorY = 0f,
+						targetGridIndex = 29, // 하단 중앙
+						info = TextDrawInfo("", listOf(
+							TextItem("", "${verticalRatio[2]}"),
+						))
+					))
+				}
 			}
 		}
 
@@ -2067,7 +2068,6 @@ object BitmapUtility {
 			right = bottomRight.x,
 			bottom = bottomRight.y
 		)
-
 		return Pair(textBoxes, faceRect)
 	}
 //

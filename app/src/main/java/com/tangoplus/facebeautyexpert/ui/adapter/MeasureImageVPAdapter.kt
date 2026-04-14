@@ -6,7 +6,7 @@ import android.widget.ImageView
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
 
-class MeasureImageVPAdapter(private val items: List<String>) : RecyclerView.Adapter<MeasureImageVPAdapter.VH>() {
+class MeasureImageVPAdapter(private val items: List<String?>) : RecyclerView.Adapter<MeasureImageVPAdapter.VH>() {
 	inner class VH(val iv: ImageView) : RecyclerView.ViewHolder(iv)
 	override fun onCreateViewHolder(parent: ViewGroup, viewType: Int) =
 		VH(ImageView(parent.context).apply {

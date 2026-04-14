@@ -100,8 +100,8 @@ object AnimationUtility {
 	suspend fun startTypingAnimation(
 		textView: TextView,
 		fullText: String,
-		typingSpeed: Long = 50,
-		lineBreakDelay: Long = 250
+		typingSpeed: Long = 10,
+		lineBreakDelay: Long = 100
 	) = withContext(Dispatchers.Main) {
 		textView.text = ""
 
