@@ -189,8 +189,8 @@ object ClassifyUtility {
 	): Pair<Float, Float> {
 		val lm = faceLandmarks
 
-		val leftJaw  = lm[172]
-		val rightJaw = lm[397]
+		val leftJaw  = lm[136]
+		val rightJaw = lm[365]
 		val chin     = lm[152]
 
 		// 왼쪽 기준선: leftJaw → chin
@@ -307,41 +307,59 @@ object ClassifyUtility {
 		return Pair(lengthAsymmetry, angleAsymmetry)
 	}
 
-	fun calculateVerticalRatio(
-		faceLandmarks: MutableList<Pair<Float, Float>>
-	): String {
-		val points = listOf(
-			faceLandmarks[234],   // 왼쪽 귓바퀴
-			faceLandmarks[33],    // 왼눈끝
-			faceLandmarks[133],   // 왼눈시작
-			faceLandmarks[362],   // 오른눈시작
-			faceLandmarks[263],   // 오른눈끝
-			faceLandmarks[454]    // 오른쪽 귓바퀴
-		)
-
-		val ratios = calculateRatios(points, isVertical = true)  // X좌표 기준
-		if (ratios.isEmpty()) return "0:0:0:0:0"
-
-		return ratios.joinToString(":") { "%.2f".format(it) }
-	}
-
+	// 가로 비율 (상:중:하 총합 3)
 	fun calculateHorizontalRatio(
 		faceLandmarks: MutableList<Pair<Float, Float>>,
 		hairLine3DCoordinates: MutableList<Triple<Float, Float, Float>>
 	): String {
-		val hairlineCenterY = hairLine3DCoordinates[3].second
+		val hairlineY = hairLine3DCoordinates[3].second
+		val eyesY = (faceLandmarks[55].second + faceLandmarks[285].second) / 2f
+		val noseY = faceLandmarks[2].second
+		val chinY = faceLandmarks[152].second
 
-		val points = listOf(
-			Pair(0f, hairlineCenterY),                                              // 헤어라인
-			Pair(0f, (faceLandmarks[55].second + faceLandmarks[285].second) / 2f), // 눈끝 라인
-			Pair(0f, faceLandmarks[2].second),                                      // 코끝
-			Pair(0f, faceLandmarks[152].second)                                     // 턱끝
-		)
+		val upper = eyesY - hairlineY
+		val mid = noseY - eyesY
+		val lower = chinY - noseY
 
-		val ratios = calculateRatios(points, isVertical = false)  // Y좌표 기준
-		if (ratios.isEmpty()) return "0:0:0"
+		val total = upper + mid + lower
+		if (total == 0f) return "0:0:0"
 
-		return ratios.joinToString(":") { "%.2f".format(it) }
+		// 전체 중 차지하는 비율 * 3
+		val rUpper = (upper / total) * 3f
+		val rMid = (mid / total) * 3f
+		val rLower = (lower / total) * 3f
+
+		return "%.2f:%.2f:%.2f".format(rUpper, rMid, rLower)
+	}
+
+	// 세로 비율 (5구간 총합 5)
+	fun calculateVerticalRatio(
+		faceLandmarks: MutableList<Pair<Float, Float>>
+	): String {
+		val leftEarX = faceLandmarks[234].first
+		val leftEyeOutX = faceLandmarks[33].first
+		val leftEyeInX = faceLandmarks[133].first
+		val rightEyeInX = faceLandmarks[362].first
+		val rightEyeOutX = faceLandmarks[263].first
+		val rightEarX = faceLandmarks[454].first
+
+		val m1 = leftEyeOutX - leftEarX
+		val m2 = leftEyeInX - leftEyeOutX
+		val m3 = rightEyeInX - leftEyeInX
+		val m4 = rightEyeOutX - rightEyeInX
+		val m5 = rightEarX - rightEyeOutX
+
+		val total = m1 + m2 + m3 + m4 + m5
+		if (total == 0f) return "0:0:0:0:0"
+
+		// 전체 중 차지하는 비율 * 5
+		val r1 = (m1 / total) * 5f
+		val r2 = (m2 / total) * 5f
+		val r3 = (m3 / total) * 5f
+		val r4 = (m4 / total) * 5f
+		val r5 = (m5 / total) * 5f
+
+		return "%.2f:%.2f:%.2f:%.2f:%.2f".format(r1, r2, r3, r4, r5)
 	}
 
 

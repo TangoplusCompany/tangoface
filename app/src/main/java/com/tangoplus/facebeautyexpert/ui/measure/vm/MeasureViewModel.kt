@@ -662,8 +662,8 @@ class MeasureViewModel : ViewModel() {
 		}
 	}
 
-	suspend fun saveMediaToStorage(context: Context, uri: Uri, fileName: String, isImage: Boolean) {
-		withContext(Dispatchers.IO) {
+	suspend fun saveMediaToStorage(context: Context, uri: Uri, fileName: String, isImage: Boolean): Boolean {
+		return withContext(Dispatchers.IO) {
 			try {
 				val extension = if (isImage) ".webp" else ".mp4"
 //			val file = File(context.cacheDir, "$fileName$extension")
@@ -735,70 +735,66 @@ class MeasureViewModel : ViewModel() {
 
 				val flResultBundle = flh?.detectImage(bitmap)
 				customResult = flResultBundle?.result?.let { FaceLandmarkAdapter.toCustomFaceLandmarkResult(it) }
-				Log.v("리절트덮기", "${currentSeq} -> $customResult")
 				if (currentSeq == Sequence.COMFORT) {
-					customResult?.let {
-						val absoluteLandmarks = it.landmarks.map { landmark ->
-							FaceLandmarkResult.FaceLandmark(
-								x = calculateScreenX(landmark.x),
-								y = calculateScreenY(landmark.y)
-							)
-						}
-						val absoluteResult = FaceLandmarkResult(absoluteLandmarks)
-						val hairResult = findHairline(bitmap, absoluteResult)
-
-						hairResult?.let { hr -> // 변수명 중첩 방지를 위해 hr로 변경
-							// 1. 깊이 데이터가 유효한지 안전하게 검사
-							val isDepthValid = latestDepthData != null && latestDepthWidth > 0 && latestDepthHeight > 0 && latestIntrinsic != null
-
-							if (isDepthValid) {
-								// 2. 유효할 경우 기존처럼 3D 변환 진행
-								val hairline3D = convertHairlineTo3D(
-									hairlinePoints = hr.hairlinePoints,
-									depthData      = latestDepthData!!,
-									depthWidth     = latestDepthWidth,
-									depthHeight    = latestDepthHeight,
-									intrinsic      = latestIntrinsic!!,
-								)
-
-								hairline3D.forEach { hp ->
-									val pointJA = JSONArray().apply {
-										put(hp.landmarkIndex)
-										put(hp.point2D.x.toBigDecimal().setScale(1, RoundingMode.HALF_UP))
-										put(hp.point2D.y.toBigDecimal().setScale(1, RoundingMode.HALF_UP))
-										put(hp.point3D.x.toBigDecimal().setScale(4, RoundingMode.HALF_UP))
-										put(hp.point3D.y.toBigDecimal().setScale(4, RoundingMode.HALF_UP))
-										put(hp.point3D.z.toBigDecimal().setScale(4, RoundingMode.HALF_UP))
-									}
-									tempHairLineJA.put(pointJA)
-									currentHairLine3DCoordinate.add(Triple(hp.point3D.x, hp.point3D.y, hp.point3D.z))
-								}
-							} else {
-								// 3. 깊이 데이터가 없을 경우 3D를 모두 0f로 덮어쓰기
-								hr.hairlinePoints.forEachIndexed { index, hp2d ->
-									val pointJA = JSONArray().apply {
-										// 주의: hp2d 클래스 구조에 landmarkIndex가 없다면 index를 사용하세요.
-										// 만약 hp2d.landmarkIndex가 있다면 그걸 쓰시면 됩니다.
-										put(index)
-										// 2D 좌표는 정상적으로 입력 (x, y 프로퍼티명은 모델에 맞게 수정)
-										put(hp2d.point.x.toBigDecimal().setScale(1, RoundingMode.HALF_UP))
-										put(hp2d.point.y.toBigDecimal().setScale(1, RoundingMode.HALF_UP))
-
-										// 3D 좌표는 모두 0f로 처리
-										put(0f.toBigDecimal().setScale(4, RoundingMode.HALF_UP))
-										put(0f.toBigDecimal().setScale(4, RoundingMode.HALF_UP))
-										put(0f.toBigDecimal().setScale(4, RoundingMode.HALF_UP))
-									}
-									tempHairLineJA.put(pointJA)
-									currentHairLine3DCoordinate.add(Triple(0f, 0f, 0f))
-								}
-							}
-						}
-
-						hairLineJA.put(tempHairLineJA)
-						Log.v("mvmhairLineJA", "${hairLineJA}")
-						tempHairLineJA = JSONArray()
+					if (customResult == null) {
+						Log.w("saveMedia", "얼굴 랜드마크 검출 실패. 저장을 중단합니다.")
+						return@withContext false // ❌ 중단
 					}
+					val absoluteLandmarks = customResult!!.landmarks.map { landmark ->
+						FaceLandmarkResult.FaceLandmark(
+							x = calculateScreenX(landmark.x),
+							y = calculateScreenY(landmark.y)
+						)
+					}
+					val absoluteResult = FaceLandmarkResult(absoluteLandmarks)
+					val hairResult = findHairline(bitmap, absoluteResult)
+					if (hairResult == null || hairResult.hairlinePoints.isEmpty()) {
+						Log.w("saveMedia", "헤어라인 검출 실패. 빈 배열 생성을 막고 저장을 중단합니다.")
+						return@withContext false
+					}
+					// 1. 깊이 데이터가 유효한지 안전하게 검사
+					val isDepthValid = latestDepthData != null && latestDepthWidth > 0 && latestDepthHeight > 0 && latestIntrinsic != null
+
+					if (isDepthValid) {
+						val hairline3D = convertHairlineTo3D(
+							hairlinePoints = hairResult.hairlinePoints,
+							depthData      = latestDepthData!!,
+							depthWidth     = latestDepthWidth,
+							depthHeight    = latestDepthHeight,
+							intrinsic      = latestIntrinsic!!,
+						)
+
+						hairline3D.forEach { hp ->
+							val pointJA = JSONArray().apply {
+								put(hp.landmarkIndex)
+								put(hp.point2D.x.toBigDecimal().setScale(1, RoundingMode.HALF_UP))
+								put(hp.point2D.y.toBigDecimal().setScale(1, RoundingMode.HALF_UP))
+								put(hp.point3D.x.toBigDecimal().setScale(4, RoundingMode.HALF_UP))
+								put(hp.point3D.y.toBigDecimal().setScale(4, RoundingMode.HALF_UP))
+								put(hp.point3D.z.toBigDecimal().setScale(4, RoundingMode.HALF_UP))
+							}
+							tempHairLineJA.put(pointJA)
+							currentHairLine3DCoordinate.add(Triple(hp.point3D.x, hp.point3D.y, hp.point3D.z))
+						}
+					} else {
+						// 깊이 데이터가 없을 경우 0f로 채우는 기존 로직
+						hairResult.hairlinePoints.forEachIndexed { index, hp2d ->
+							val pointJA = JSONArray().apply {
+								put(index)
+								put(hp2d.point.x.toBigDecimal().setScale(1, RoundingMode.HALF_UP))
+								put(hp2d.point.y.toBigDecimal().setScale(1, RoundingMode.HALF_UP))
+								put(0f.toBigDecimal().setScale(4, RoundingMode.HALF_UP))
+								put(0f.toBigDecimal().setScale(4, RoundingMode.HALF_UP))
+								put(0f.toBigDecimal().setScale(4, RoundingMode.HALF_UP))
+							}
+							tempHairLineJA.put(pointJA)
+							currentHairLine3DCoordinate.add(Triple(0f, 0f, 0f))
+						}
+					}
+
+					hairLineJA.put(tempHairLineJA)
+					Log.v("mvmhairLineJA", "${hairLineJA}")
+					tempHairLineJA = JSONArray()
 				}
 
 				// --------------------------# poselandmark를 잡기 위한 detectAsync #-------------------------
@@ -852,8 +848,11 @@ class MeasureViewModel : ViewModel() {
 					Log.v("tempPlrJA", "포즈랜드마크JA 들어감: ${plrJA}")
 					plrJA.put(tempPlrJA)
 				} else {
-					Toast.makeText(context, "poselandmark를 찾을 수 없습니다.", Toast.LENGTH_LONG).show()
-					plrJA.put(JSONArray())
+					withContext(Dispatchers.Main) {
+						Toast.makeText(context, "poselandmark를 찾을 수 없습니다.", Toast.LENGTH_LONG).show()
+					}
+					Log.e("saveMedia", "poselandmark 검출 실패. 저장을 중단합니다.")
+					return@withContext false // ❌ 중단
 				}
 				// -------------------------# 목젖 위치를 잡기 위한 detectAsync 끝 #-----------------------
 				imageUri?.let { imageURI ->
@@ -872,17 +871,22 @@ class MeasureViewModel : ViewModel() {
 				// 임시 파일과 비트맵 정리
 				tempFile.delete()
 				bitmap.recycle()
-
+				return@withContext true
 			} catch (e: IndexOutOfBoundsException) {
 				Log.e("SaveMediaIndex", "${e.message}")
+				return@withContext false
 			} catch (e: IllegalArgumentException) {
 				Log.e("SaveMedia", "IllegalArgument: ${e.printStackTrace()}")
+				return@withContext false
 			} catch (e: IllegalStateException) {
 				Log.e("SaveMedia", "IllegalState: ${e.printStackTrace()}")
+				return@withContext false
 			} catch (e: NullPointerException) {
 				Log.e("SaveMediaNull", "${e.printStackTrace()}")
+				return@withContext false
 			} catch (e: java.lang.Exception) {
 				Log.e("SaveMediaException", "${e.printStackTrace()}")
+				return@withContext false
 			}
 		}
 	}
@@ -920,10 +924,10 @@ class MeasureViewModel : ViewModel() {
 
 				// 5. 최종 저장 로직 호출
 				val tempUri = Uri.fromFile(tempFile)
-				saveMediaToStorage(activity, tempUri, name, true)
+				val success = saveMediaToStorage(activity, tempUri, name, true)
 
-				Log.d("captureImage", "✅ 이미지 저장 완료: $name")
-				true
+				Log.d("captureImage", "✅ 이미지 저장 완료?: $success: $name")
+				success
 			} catch (e: Exception) {
 				Log.e("captureImage", "❌ 이미지 로드/저장 실패: ${e.message}", e)
 				false

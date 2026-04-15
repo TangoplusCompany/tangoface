@@ -54,7 +54,6 @@ class UserSetupDialogFragment : DialogFragment() {
 	companion object {
 		private const val ARG_PARENT = "PARENT_TYPE"
 		fun newInstance(parent: Int) : UserSetupDialogFragment {
-			// TODO 여기서 input dialogfragment에다가 args를 건네줘서 onboarding 체크리스트 안보이게하기.
 			val fragment = UserSetupDialogFragment()
 			val args = Bundle()
 			args.putInt(ARG_PARENT, parent)
@@ -108,8 +107,7 @@ class UserSetupDialogFragment : DialogFragment() {
 	@SuppressLint("ClickableViewAccessibility")
 	override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
 		super.onViewCreated(view, savedInstanceState)
-		val bundle = Bundle()
-		val parentCase = bundle.getInt(ARG_PARENT)
+		val parentCase = arguments?.getInt(ARG_PARENT) ?: 0
 		// 초기 설정: 이름 입력창이 나오고, 키보드가 올라옴
 		bd.etUSDMobile.visibility = View.INVISIBLE
 		bd.btnUSDProgres.visibility = View.INVISIBLE
@@ -208,6 +206,7 @@ class UserSetupDialogFragment : DialogFragment() {
 				}
 			}
 		})
+
 		bd.etUSDMobile.setOnEditorActionListener { _, actionId, _ ->
 			if (actionId == EditorInfo.IME_ACTION_DONE || actionId == EditorInfo.IME_ACTION_NEXT) {
 				if (ivm.mobileCondition.value == true) {
@@ -268,7 +267,6 @@ class UserSetupDialogFragment : DialogFragment() {
 		bd.etUSDName.setText("")
 		bd.etUSDMobile.setText("")
 	}
-
 
 	private fun namePatternCheck(ivm: InputViewModel, input: EditText): TextWatcher {
 		val nameRegex = "^[가-힣]{2,5}$|^[a-zA-Z]{2,20}$"

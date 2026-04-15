@@ -24,7 +24,7 @@ class MeasureImageViewModel : ViewModel() {
 	var targetIndex: Int = 0 // 현재 작업 중인 인덱스 (0 또는 1)
 
 	fun setImage(index: Int, path: String) {
-		val current = _imagePaths.value ?: mutableListOf<String?>(null, null)
+		val current = _imagePaths.value?.toMutableList() ?: mutableListOf<String?>(null, null)
 		current[index] = path
 		_imagePaths.value = current
 	}

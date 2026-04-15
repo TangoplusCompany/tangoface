@@ -26,7 +26,6 @@
             android:layout_marginStart="20dp"
             android:layout_marginTop="15dp"
             android:background="@drawable/effect_28"
-            android:backgroundTint="@color/subColor700"
             android:gravity="center"
             android:text="이"
             android:textColor="@color/subColor100"

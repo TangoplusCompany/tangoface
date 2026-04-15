@@ -1,7 +1,6 @@
 package com.tangoplus.facebeautyexpert.ui.measure
 
 import android.app.Activity
-import android.content.Intent
 import android.content.res.ColorStateList
 import android.graphics.Bitmap
 import android.net.Uri
@@ -25,6 +24,7 @@ import com.tangoplus.facebeautyexpert.data.db.FaceDao
 import com.tangoplus.facebeautyexpert.data.db.FaceDatabase
 import com.tangoplus.facebeautyexpert.data.db.FaceStatic.Companion.getCurrentDateTime
 import com.tangoplus.facebeautyexpert.databinding.FragmentMeasureImageBinding
+import com.tangoplus.facebeautyexpert.domain.util.AnimationUtility.setupGuideBanner
 import com.tangoplus.facebeautyexpert.domain.util.ClassifyUtility.calculateHorizontalRatio
 import com.tangoplus.facebeautyexpert.domain.util.FileUtility.saveImageToInternalStorage
 import com.tangoplus.facebeautyexpert.domain.util.FileUtility.setOnSingleClickListener
@@ -34,14 +34,11 @@ import com.tangoplus.facebeautyexpert.domain.util.LandmarkUtility.calculateScree
 import com.tangoplus.facebeautyexpert.domain.util.LandmarkUtility.calculateScreenY
 import com.tangoplus.facebeautyexpert.domain.util.PreferenceUtility
 import com.tangoplus.facebeautyexpert.domain.util.clearAll
-import com.tangoplus.facebeautyexpert.domain.vision.face.FaceBlendshapesResultAdapter
 import com.tangoplus.facebeautyexpert.domain.vision.face.FaceLandmarkerHelper
 import com.tangoplus.facebeautyexpert.domain.vision.pose.PoseLandmarkerHelper
-import com.tangoplus.facebeautyexpert.domain.vo.Sequence
 import com.tangoplus.facebeautyexpert.ui.LoadingDialogFragment
 import com.tangoplus.facebeautyexpert.ui.adapter.MeasureImageRVAdapter
 import com.tangoplus.facebeautyexpert.ui.adapter.MeasureImageVPAdapter
-import com.tangoplus.facebeautyexpert.ui.info.vm.InformationViewModel
 import com.tangoplus.facebeautyexpert.ui.main.MainActivity
 import com.tangoplus.facebeautyexpert.ui.main.vm.MainViewModel
 import com.tangoplus.facebeautyexpert.ui.measure.vm.InputViewModel
@@ -58,14 +55,14 @@ import java.io.File
 
 class MeasureImageFragment : Fragment() {
 	private lateinit var bd : FragmentMeasureImageBinding
+	private val mainVm : MainViewModel by activityViewModels()
 	private val mivm: MeasureImageViewModel by viewModels()
-	private val mvm: MeasureViewModel by viewModels()
+	private val mvm: MeasureViewModel by activityViewModels()
 	private val ivm: InputViewModel by activityViewModels()
 	private val viewModel: MainViewModel by viewModels()
 	private lateinit var fDao: FaceDao
-	private val faceBlendshapesResultAdapter by lazy {
-		FaceBlendshapesResultAdapter()
-	}
+	var isAllSuccessful = true
+
 	private lateinit var prefsUtil: PreferenceUtility
 
 	override fun onCreateView(
@@ -81,24 +78,28 @@ class MeasureImageFragment : Fragment() {
 		initFace()
 		initPose()
 		initSettings()
+		setupGuideBanner(
+			bannerView = bd.guideBanner1.root,
+			closeButton = bd.guideBanner1.btnCloseGuide,
+			textView = bd.guideBanner1.tvGuideText,
+			message = "+ 버튼을 눌러 사진을 첨부해보세요. 분석 결과를 쉽게 확인할 수 있습니다 !\n🔔️ 뎁스카메라를 사용하지 않아 얼굴 크기 등 실제 길이 확인은 제한됩니다. 양해부탁드립니다",
+			prefKey = "measureImageGuide"
+		)
+
 		ivm.isFinishInput.observe(requireActivity()) {
-			Log.v("시작", "플래그확인: ${ivm.isFinishInput.value}")
 
 			if (it) {
-//				val loading = LoadingDialogFragment()
-//				loading.show(requireActivity().supportFragmentManager, "")
-				Log.v("시작", "플래그확인: true-${ivm.isFinishInput.value}")
+				val loading = LoadingDialogFragment()
+				loading.show(requireActivity().supportFragmentManager, "")
 
 				lifecycleScope.launch {
 					val paths = mivm.imagePaths.value ?: emptyList()
 					for (path in paths) {
 						if (path != null) {
-							Log.v("path갯수", "path: -> ${paths} / ${path}")
 							// suspend 함수이므로 여기서 처리가 끝날 때까지 기다립니다.
 							val success = mvm.scannedImage(requireActivity() as AppCompatActivity, paths, mvm.currentSeq)
 
 							if (success) {
-								Log.v("시작", "번들투제이슨시작: ${mvm.currentSeq}")
 
 								mvm.resultBundleToJson(mvm.currentSeq)
 
@@ -118,97 +119,122 @@ class MeasureImageFragment : Fragment() {
 										}
 									}
 								}
-								Log.v("시작", "번들투제이슨시작: ${mvm.currentHairLine3DCoordinate}")
 								mvm.currentHairLine3DCoordinate.clear()
 								mvm.moveToNextSeq()
+							} else {
+								isAllSuccessful = false
+
+								withContext(Dispatchers.Main) {
+									loading.dismiss()
+									Toast.makeText(context, "분석 결과를 도출할 수 없습니다. 얼굴이 잘 나온 사진으로 다시 시도해주세요!", Toast.LENGTH_LONG).show()
+								}
+								// 더 이상 남은 path를 스캔하지 않고 반복문 즉시 탈출
+								break
 							}
 						}
 					} // for 루프 끝
-
-					// 2 seq 둘다 했고, 이제 저장하고 메인 화면으로 가기
-					if (ivm.birthdayValue.value == "날짜 선택") {
-						ivm.birthdayValue.value = ""
-					}
-
-					withContext(Dispatchers.IO) {
-						val fd = FaceDatabase.getDatabase(requireContext())
-						fDao = fd.faceDao()
-
-						Log.v("userSn설정잘됐는지", "is init? = ${mvm.currentUserSn}, ${mvm.allSeqs}")
-						val allSeqs = mvm.allSeqs
-						val staticJos = mutableListOf<JSONObject>()
-
-						allSeqs.forEachIndexed { index, sequence ->
-							Log.v("staticJA", "${mvm.staticJA}")
-							val staticJSON = mvm.setJo(mvm.staticJA.getJSONObject(index), sequence, ivm, prefsUtil, false)
-							Log.v("staticJSON", "${mvm.staticJA.getJSONObject(index)}")
-							staticJos.add(staticJSON)
+					if (isAllSuccessful) {
+						// 2 seq 둘다 정상적으로 끝났고, 이제 저장하고 메인 화면으로 가기
+						if (ivm.birthdayValue.value == "날짜 선택") {
+							ivm.birthdayValue.value = ""
 						}
-						Log.v("staticJson까보기0", "${staticJos.size}")
+						withContext(Dispatchers.IO) {
+							val fd = FaceDatabase.getDatabase(requireContext())
+							fDao = fd.faceDao()
 
-						// 받아온 user_sn으로 수정
-						val now = getCurrentDateTime()
-						val transStatics = staticJos.map {
-							it.toFaceStatic().copy(
-								user_sn = mvm.currentUserSn,
-								reg_date = now
-							)
-						}
-						// 부여 받은 user_sn넣기
-						for (static in transStatics) {
-							fDao.insertStatic(static)
-						}
+							Log.v("userSn설정잘됐는지", "is init? = ${mvm.currentUserSn}, ${mvm.allSeqs}")
+							val allSeqs = mvm.allSeqs
+							val staticJos = mutableListOf<JSONObject>()
 
-						// data
-						Log.v("mvm.plrJA", "${mvm.plrJA.length()}")
-						val mergedJOBeforeFileName = mutableListOf<JSONObject>()
-						for (i in 0 until staticJos.size) {
-							val currentStatic = transStatics[i]
-							val mergedJSON = JSONObject().apply {
-								put("data", JSONObject(transStatics[i].toJsonString()))
+							allSeqs.forEachIndexed { index, sequence ->
+								Log.v("staticJA", "${mvm.staticJA}")
+								val staticJSON = mvm.setJo(mvm.staticJA.getJSONObject(index), sequence, ivm, prefsUtil, false)
+								Log.v("staticJSON", "${mvm.staticJA.getJSONObject(index)}")
+								staticJos.add(staticJSON)
+							}
+							Log.v("staticJson까보기0", "${staticJos.size}")
 
-								Log.v("LEN", "i=$i, coordinatesLen=${mvm.coordinatesJA.length()}, plrLen=${mvm.plrJA.length()}, mediaNames=${mvm.mediaFileNames.size}")
-								put("face_landmark", mvm.coordinatesJA.optJSONArray(i))
-								put("pose_landmark", mvm.plrJA.optJSONArray(i))
+							// 받아온 user_sn으로 수정
+							val now = getCurrentDateTime()
+							val transStatics = staticJos.map {
+								it.toFaceStatic().copy(
+									user_sn = mvm.currentUserSn,
+									reg_date = now
+								)
+							}
+							// 부여 받은 user_sn넣기
+							for (static in transStatics) {
+								fDao.insertStatic(static)
+							}
 
-								if (i == 0) {
-									put("hairline_landmark", mvm.hairLineJA.optJSONArray(i))
+							// data
+							Log.v("mvm.plrJA", "${mvm.plrJA.length()}")
+							val mergedJOBeforeFileName = mutableListOf<JSONObject>()
+							for (i in 0 until staticJos.size) {
+								val currentStatic = transStatics[i]
+								val mergedJSON = JSONObject().apply {
+									put("data", JSONObject(transStatics[i].toJsonString()))
+
+//								Log.v("LEN", "i=$i, coordinatesLen=${mvm.coordinatesJA.length()}, plrLen=${mvm.plrJA.length()}, mediaNames=${mvm.mediaFileNames.size}")
+									put("face_landmark", mvm.coordinatesJA.optJSONArray(i))
+									put("pose_landmark", mvm.plrJA.optJSONArray(i))
+
+									if (i == 0) {
+										put("hairline_landmark", mvm.hairLineJA.optJSONArray(i))
+									}
+								}
+								mergedJOBeforeFileName.add(mergedJSON)
+//							Log.v("json저장 전", "seq: $i")
+								val jsonPath = mvm.saveJsonToStorage(
+									requireActivity() as AppCompatActivity,
+									mergedJSON,
+									if (i == staticJos.size - 1 && currentStatic.seq == 9) {
+										mvm.hsvMediaFileName.replace(".webp", "").replace(".mp4", "")
+									} else {
+										mvm.mediaFileNames[i].replace(".webp", "").replace(".mp4", "")
+									}
+								)
+
+
+								mergedJOBeforeFileName[i].put("json_file_name", jsonPath)
+								mvm.mergedJA.put(mergedJOBeforeFileName[i])
+							}
+
+//						Log.v("mvm.mergedJson", "${mvm.mergedJA.length()}")
+
+							withContext(Dispatchers.Main) {
+								try {
+									val lastTempServerSn = prefsUtil.getLastTempServerSn()
+									prefsUtil.setNextTempServerSn()
+
+									viewModel.comparisonDoubleItem = null
+									Log.v("전부 끝", "저장완료, $lastTempServerSn")
+
+									if (lastTempServerSn != -1) {
+										val statics = withContext(Dispatchers.IO) {
+											fDao.getStatic(lastTempServerSn)
+										}
+										val insight = withContext(Dispatchers.IO) {
+											fDao.getInsight(lastTempServerSn)
+										}
+										val result = withContext(Dispatchers.IO) {
+											mainVm.convertToFaceResult(requireContext(), statics, insight)
+										}
+
+										mainVm.currentResult.value = result
+										loading.dismiss()
+										(activity as MainActivity).navigateToMeasureHistoryInformation()
+									} else {
+										loading.dismiss()
+									}
+								} catch (e: Exception) {
+									Log.e("LoadingError", "Error: ${e.message}", e)
+									loading.dismiss()
 								}
 							}
-							mergedJOBeforeFileName.add(mergedJSON)
-							Log.v("json저장 전", "seq: $i")
-							val jsonPath = mvm.saveJsonToStorage(
-								requireActivity() as AppCompatActivity,
-								mergedJSON,
-								if (i == staticJos.size - 1 && currentStatic.seq == 9) {
-									mvm.hsvMediaFileName.replace(".webp", "").replace(".mp4", "")
-								} else {
-									mvm.mediaFileNames[i].replace(".webp", "").replace(".mp4", "")
-								}
-							)
-
-
-							mergedJOBeforeFileName[i].put("json_file_name", jsonPath)
-							mvm.mergedJA.put(mergedJOBeforeFileName[i])
-						}
-
-						Log.v("mvm.mergedJson", "${mvm.mergedJA.length()}")
-
-						withContext(Dispatchers.Main) {
-							val lastTempServerSn = prefsUtil.getLastTempServerSn()
-							// prefs에서 마지막 sn을 +1 하기
-							prefsUtil.setNextTempServerSn()
-
-//						Log.v("스태틱스Sn", "$lastTempServerSn, ${mvm.currentUserSn}: ${transStatics.map { it.user_sn }}")
-							viewModel.comparisonDoubleItem = null
-							Log.v("전부 끝", "저장완료, $lastTempServerSn")
-//							val intent = Intent(context, MainActivity::class.java)
-//							intent.putExtra("isMeasureFinish", true)
-//							intent.putExtra("serverSn", lastTempServerSn)
-//							startActivity(intent)
-
 						}
 					}
+
 				}
 			}
 		}
@@ -216,6 +242,7 @@ class MeasureImageFragment : Fragment() {
 		setAdapter()
 		mivm.imagePaths.observe(viewLifecycleOwner) { paths ->
 			// 1. 기존 가이드 텍스트 숨김 처리 (하나라도 있으면 숨김)
+			Log.v("path확인", "수정해도 path가 감지되나요? $paths")
 			bd.tvMIGuide.visibility = if (paths.any { it != null }) View.GONE else View.VISIBLE
 
 			setVPAdapter()
@@ -227,12 +254,10 @@ class MeasureImageFragment : Fragment() {
 
 			if (isBothFilled) {
 				// 둘 다 사진이 들어왔을 때: 활성화 색상 (예: 파란색)
-				bd.btnMI.setBackgroundDrawable(ContextCompat.getDrawable(requireContext(), R.drawable.color_gradation_main_64))
 				bd.btnMI.backgroundTintList = null
 				bd.btnMI.isEnabled = true
 			} else {
 				// 아직 둘 다 채워지지 않았을 때: 비활성화 색상 (예: 회색)
-				bd.btnMI.setBackgroundDrawable(ContextCompat.getDrawable(requireContext(), R.drawable.color_gradation_main_64))
 				bd.btnMI.backgroundTintList = ColorStateList.valueOf((ContextCompat.getColor(requireContext(), R.color.bg300)))
 				bd.btnMI.isEnabled = false
 			}
@@ -280,16 +305,14 @@ class MeasureImageFragment : Fragment() {
 	}
 
 	private fun handleCroppedImage(croppedUri: Uri) {
-
-		// 이전 대화에서 만든 16:9 패딩 유틸리티 사용 추천
 		val processedUri = mivm.make169WithPadding(requireContext(), croppedUri)
 
 		processedUri?.let { uri ->
-			val fileName = "measure_${mivm.targetIndex}.jpg" // 인덱스별로 파일명 고정
+			val timestamp = System.currentTimeMillis()
+			val fileName = "measure_${mivm.targetIndex}_${timestamp}.jpg"
 			val finalPath = saveImageToInternalStorage(requireContext(), uri, fileName)
 
 			finalPath?.let { path ->
-				// VM에 경로 저장 (여기서 LiveData가 업데이트됨)
 				mivm.setImage(mivm.targetIndex, path)
 			}
 		}

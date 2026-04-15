@@ -9,6 +9,7 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.tangoplus.facebeautyexpert.data.db.FaceDatabase
+import com.tangoplus.facebeautyexpert.data.db.FaceInsight
 import com.tangoplus.facebeautyexpert.data.db.FaceStatic
 import com.tangoplus.facebeautyexpert.domain.util.FileUtility
 import com.tangoplus.facebeautyexpert.domain.vision.face.FaceLandmarkerHelper
@@ -133,6 +134,7 @@ class MainViewModel : ViewModel() {
 			val sorted = allData.sortedWith(compareByDescending(collator) { it.regDate })
 			currentUserItems = sorted
 			staticDataLoad.postValue(true)
+			Log.v("유저아이템가져오기", "$sorted")
 		}
 	}
 	val allDataLoaded = MediatorLiveData<Boolean>().apply {
@@ -147,7 +149,7 @@ class MainViewModel : ViewModel() {
 	}
 
 	//-------------------------------# info로 들어가는 dataClass 변환 #-------------------------------
-	fun convertToFaceResult(context: Context, faceStatics: List<FaceStatic>): FaceResult {
+	fun convertToFaceResult(context: Context, faceStatics: List<FaceStatic>, faceInsight: FaceInsight?): FaceResult {
 
 		val mediaUri = mutableListOf<Uri?>()
 		val jsonArray = JSONArray()
@@ -200,8 +202,10 @@ class MainViewModel : ViewModel() {
 			results = jsonArray,
 			depthResult = validData.depth_result,
 			seqs = seqs.toSet(),
+			factors = factors,
+			insight = faceInsight?.insight ?: "",
 			regDate = validData.reg_date,
-			factors = factors
+
 		)
 	}
 
@@ -242,7 +246,6 @@ class MainViewModel : ViewModel() {
 
 	val currentResult = MutableLiveData<FaceResult>()
 
-	var isMeasureFinish = false
 	var tempServerSnAfterMeasure = 0
 
 	// TODO 여기서 DP에서 기록 가져오기 (data class 하나 필요할 듯 )

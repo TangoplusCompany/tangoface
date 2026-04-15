@@ -49,27 +49,6 @@ class MeasureHistoryFragment : Fragment(), OnUserClickListener {
 			if (isLoaded == true) {
 				mvm.clearLoadDataFlag()
 				setAdapter()
-				mvm.isMeasureFinish = activity?.intent?.getBooleanExtra("isMeasureFinish", false) ?: false
-				mvm.tempServerSnAfterMeasure = activity?.intent?.getIntExtra("serverSn", -1) ?: -1
-
-				// 측정이 완료되고 바로 결과를 볼 때
-				if (mvm.isMeasureFinish && mvm.tempServerSnAfterMeasure != -1) {
-					lifecycleScope.launch(Dispatchers.IO) {
-						val statics = fDao.getStatic(mvm.tempServerSnAfterMeasure)
-
-						withContext(Dispatchers.Main) {
-							mvm.currentResult.value = mvm.convertToFaceResult(requireContext(), statics)
-							requireActivity().supportFragmentManager.beginTransaction().apply {
-								replace(R.id.flMain, InformationFragment())
-								commit()
-							}
-							mvm.isMeasureFinish = false
-							mvm.tempServerSnAfterMeasure = -1
-							activity?.intent?.removeExtra("isMeasureFinish")
-							activity?.intent?.removeExtra("serverSn")
-						}
-					}
-				}
 			}
 		}
 
@@ -110,7 +89,8 @@ class MeasureHistoryFragment : Fragment(), OnUserClickListener {
 
 		lifecycleScope.launch(Dispatchers.IO) {
 			val statics = fDao.getStatic(tempServerSn)
-			val result = mvm.convertToFaceResult(requireContext(), statics)
+			val insight = fDao.getInsight(tempServerSn)
+			val result = mvm.convertToFaceResult(requireContext(), statics, insight)
 //        scrollToView(bd.ibtnMBack, bd.nsvM)
 			withContext(Dispatchers.Main) {
 				mvm.currentResult.value = result
@@ -119,6 +99,7 @@ class MeasureHistoryFragment : Fragment(), OnUserClickListener {
 				}
 				activity?.let { fa -> fa.supportFragmentManager.beginTransaction().apply {
 					replace(R.id.flMain, InformationFragment())
+					addToBackStack("information")
 					commit()
 				} }
 			}

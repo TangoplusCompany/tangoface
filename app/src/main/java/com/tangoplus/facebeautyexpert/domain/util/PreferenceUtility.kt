@@ -16,6 +16,7 @@ class PreferenceUtility(context: Context) {
 	private val bPrefs = context.getSharedPreferences("backup_prefs", Context.MODE_PRIVATE)
 	private val mPrefs = context.getSharedPreferences("measure_prefs", Context.MODE_PRIVATE)
 	private val fPrefs = context.getSharedPreferences("flicker_prefs", Context.MODE_PRIVATE)
+	private val veloPrefs = context.getSharedPreferences("velocity_prefs", Context.MODE_PRIVATE)
 	private val pPrefs = context.getSharedPreferences("poster_prefs", Context.MODE_PRIVATE)
 	private val KEY_LAST_SN = "last_temp_server_sn"
 	private val KEY_LAST_COUNT = "last_data_count"
@@ -137,5 +138,16 @@ class PreferenceUtility(context: Context) {
 			e.printStackTrace()
 			null
 		}
+	}
+
+	// --------# count prefs #------
+	fun setSlideVelocity(velo: Float) {
+		veloPrefs.edit {
+			putFloat("SLIDE_VELOCITY", velo)
+		}
+	}
+
+	fun getSlideVelocity(): Float {
+		return veloPrefs.getFloat("SLIDE_VELOCITY" , 7.0f)
 	}
 }

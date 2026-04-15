@@ -22,6 +22,18 @@
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent" />
 
+        <include
+            android:id="@+id/guideBanner1"
+            layout="@layout/guide_banner"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="20dp"
+            android:layout_marginTop="20dp"
+            android:layout_marginEnd="20dp"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/textView7" />
+
         <TextView
             android:id="@+id/tvMIGuide"
             android:layout_width="wrap_content"
@@ -49,7 +61,7 @@
             app:layout_constraintBottom_toTopOf="@+id/btnMI"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@+id/textView7"
+            app:layout_constraintTop_toBottomOf="@+id/guideBanner1"
             app:layout_constraintVertical_bias="0.0" />
 
         <androidx.appcompat.widget.AppCompatButton
@@ -58,7 +70,7 @@
             android:layout_height="0dp"
             android:layout_gravity="bottom|center_horizontal"
             android:layout_margin="30dp"
-            android:background="@drawable/color_gradation_main_64"
+            android:background="@drawable/color_gradation_accent_64"
             android:paddingStart="36dp"
             android:paddingTop="24dp"
             android:paddingEnd="36dp"

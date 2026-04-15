@@ -13,5 +13,6 @@ data class FaceResult(
 	val depthResult: Boolean = false,
 	val seqs: Set<Sequence>,
 	val factors: Factor,
+	var insight: String,
 	var regDate: String? = null
 )

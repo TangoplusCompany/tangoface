@@ -724,7 +724,6 @@ class DepthCameraActivity : BaseActivity(), FaceLandmarkerHelper.LandmarkerListe
 //						Log.v("스태틱스Sn", "$lastTempServerSn, ${mvm.currentUserSn}: ${transStatics.map { it.user_sn }}")
 						viewModel.comparisonDoubleItem = null
 						val intent = Intent(this@DepthCameraActivity, MainActivity::class.java)
-						intent.putExtra("isMeasureFinish", true)
 						intent.putExtra("serverSn", lastTempServerSn)
 						startActivity(intent)
 						finishAffinity()

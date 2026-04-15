@@ -17,7 +17,7 @@
             android:layout_height="0dp"
             android:layout_gravity="bottom|end"
             android:layout_margin="40dp"
-            android:background="@drawable/color_gradation_main_64"
+            android:background="@drawable/color_gradation_accent_64"
             android:padding="24dp"
             android:text="사진으로 분석 🔎"
             android:textColor="@color/subColor100"

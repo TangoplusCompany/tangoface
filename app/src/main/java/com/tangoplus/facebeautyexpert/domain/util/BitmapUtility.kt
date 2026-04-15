@@ -1761,13 +1761,17 @@ object BitmapUtility {
 				val finalPos = calculateFinalPixel(boxLocation.x, boxLocation.y)
 				val rawData = extractRawData(dim, DrawLine.FACE)
 				if (rawData.isNotEmpty()) {
+					val v10 = rawData.getOrNull(1)
+					val v20 = rawData.getOrNull(2)
+					val v1 = if (v10 == null || v10 == "0") "🚫" else v10 + "cm"
+					val v2 = if (v20 == null || v20 == "0") "🚫" else v20 + "cm"
 					textBoxes.add(TextBoxData(
 						anchorX = finalPos.x, anchorY = finalPos.y,
 						targetGridIndex = 15, // 얼굴 왼쪽 구역
 						info = TextDrawInfo("얼굴 정보", if (dim.seq == Sequence.COMFORT) {
 							listOf(
-								TextItem("너비:", "${rawData.getOrNull(1) ?: ""}cm"),
-								TextItem("높이:", "${rawData.getOrNull(2) ?: ""}cm"),
+								TextItem("너비:", v1),
+								TextItem("높이:", v2),
 								TextItem("각도:", "${rawData.getOrNull(0) ?: ""}º")
 							)
 						} else  listOf(
@@ -1805,15 +1809,26 @@ object BitmapUtility {
 				if (rawData.isNotEmpty()) {
 					// 왼쪽 눈 (233번)
 					val leftEyePos = calculateFinalPixel(flm[233].x, flm[233].y,)
+
+					val v1 = listOf(
+						rawData.getOrNull(6),
+						rawData.getOrNull(8),
+					).joinToString(" | ") { if (it == null || it == "0") "🚫" else "${it}cm" }
+
 					textBoxes.add(TextBoxData(
 						anchorX = leftEyePos.x, anchorY = leftEyePos.y,
 						targetGridIndex = 16, // 좌측 상단
 						info = TextDrawInfo("왼쪽 눈", listOf(
 							TextItem("눈매:", "${rawData.getOrNull(0)}º"),
-							TextItem("너비 | 높이:", "${rawData.getOrNull(6)}cm | ${rawData.getOrNull(8)}cm"),
+							TextItem("너비 | 높이:", v1),
 							TextItem("눈꼬리 | 눈앞머리", "${rawData.getOrNull(4)}º | ${rawData.getOrNull(2)}º")
 						))
 					))
+
+					val v2 = listOf(
+						rawData.getOrNull(7),
+						rawData.getOrNull(9),
+					).joinToString(" | ") { if (it == null || it == "0") "🚫" else "${it}cm" }
 
 					// 오른쪽 눈 (453번)
 					val rightEyePos = calculateFinalPixel(flm[453].x, flm[453].y,)
@@ -1822,7 +1837,7 @@ object BitmapUtility {
 						targetGridIndex = 18, // 우측 상단
 						info = TextDrawInfo("오른쪽 눈", listOf(
 							TextItem("눈매:", "${rawData.getOrNull(1)}º"),
-							TextItem("너비 | 높이:", "${rawData.getOrNull(7)}cm | ${rawData.getOrNull(9)}cm"),
+							TextItem("너비 | 높이:", v2),
 							TextItem("눈앞머리 | 눈꼬리", "${rawData.getOrNull(3)} | ${rawData.getOrNull(5)}º")
 						))
 					))
@@ -1834,14 +1849,27 @@ object BitmapUtility {
 				if (rawData.isNotEmpty()) {
 					// 왼쪽 눈 (233번)
 					val leftEyePos = calculateFinalPixel(flm[66].x, flm[66].y,)
+
+					val v1 = listOf(
+						rawData.getOrNull(4),
+						rawData.getOrNull(3),
+						rawData.getOrNull(2)
+					).joinToString(" | ") { if (it == null || it == "0") "🚫" else "${it}cm" }
+
 					textBoxes.add(TextBoxData(
 						anchorX = leftEyePos.x, anchorY = leftEyePos.y,
 						targetGridIndex = 6, // 좌측 상단
 						info = TextDrawInfo("왼쪽 눈썹", listOf(
 							TextItem("각도: ", "${rawData.getOrNull(0)}º"),
-							TextItem("두께: ", "${rawData.getOrNull(4)}cm | ${rawData.getOrNull(3)}cm | ${rawData.getOrNull(2)}cm")
+							TextItem("두께: ", v1)
 						))
 					))
+
+					val v2 = listOf(
+						rawData.getOrNull(5),
+						rawData.getOrNull(6),
+						rawData.getOrNull(7)
+					).joinToString(" | ") { if (it == null || it == "0") "🚫" else "${it}cm" }
 
 					// 오른쪽 눈 (453번)
 					val rightEyePos = calculateFinalPixel(flm[296].x, flm[296].y,)
@@ -1850,7 +1878,7 @@ object BitmapUtility {
 						targetGridIndex = 8, // 우측 상단
 						info = TextDrawInfo("오른쪽 눈썹", listOf(
 							TextItem("각도: ", "${rawData.getOrNull(1)}º"),
-							TextItem("두께: ", "${rawData.getOrNull(5)}cm | ${rawData.getOrNull(6)}cm | ${rawData.getOrNull(7)}cm")
+							TextItem("두께: ", v2)
 						))
 					))
 				}
@@ -1860,11 +1888,17 @@ object BitmapUtility {
 				val noseCenter = calculateFinalPixel(flm[164].x, flm[164].y)
 				val rawData = extractRawData(dim, DrawLine.NOSE)
 				if (rawData.isNotEmpty()) {
+
+					val v1 = listOf(
+						rawData.getOrNull(0),
+						rawData.getOrNull(1),
+					).joinToString(" | ") { if (it == null || it == "0") "🚫" else "${it}cm" }
+
 					textBoxes.add(TextBoxData(
 						anchorX = noseCenter.x, anchorY = noseCenter.y,
 						targetGridIndex = 18, // 중앙 상단 (얼굴 중앙)
 						info = TextDrawInfo("코 정보", listOf(
-							TextItem("길이 | 너비:", "${rawData.getOrNull(0)}cm | ${rawData.getOrNull(1)}cm"),
+							TextItem("길이 | 너비:", v1),
 							TextItem("콧날개 각:", "${rawData.getOrNull(2)}º")
 						))
 					))
@@ -1930,19 +1964,25 @@ object BitmapUtility {
 
 				// 좌측 볼 (132번)
 				if (rawData.isNotEmpty()) {
+
+					val v10 = rawData.getOrNull(0)
+					val v1 = if (v10 == null || v10 == "0") "🚫" else v10 + "㎠"
+
 					val leftPos = calculateFinalPixel(flm[132].x, flm[132].y,)
 					textBoxes.add(TextBoxData(
 						anchorX = leftPos.x, anchorY = leftPos.y,
 						targetGridIndex = 20, // 왼쪽 하단부
-						info = TextDrawInfo("볼 너비(좌)", listOf(TextItem("", "${rawData.getOrNull(0) ?: ""}㎠")))
+						info = TextDrawInfo("볼 너비(좌)", listOf(TextItem("", v1)))
 					))
 
+					val v20 = rawData.getOrNull(1)
+					val v2 = if (v20 == null || v20 == "0") "🚫" else v20 + "㎠"
 					// 우측 볼 (361번)
 					val rightPos = calculateFinalPixel(flm[361].x, flm[361].y,)
 					textBoxes.add(TextBoxData(
 						anchorX = rightPos.x, anchorY = rightPos.y,
 						targetGridIndex = 24, // 오른쪽 하단부
-						info = TextDrawInfo("볼 너비(우)", listOf(TextItem("", "${rawData.getOrNull(1) ?: ""}㎠")))
+						info = TextDrawInfo("볼 너비(우)", listOf(TextItem("", v2)))
 					))
 				}
 			}
@@ -1950,15 +1990,29 @@ object BitmapUtility {
 				val mousePos = calculateFinalPixel(flm[17].x, flm[17].y,)
 				val rawData = extractRawData(dim, DrawLine.MOUSE)
 				if (rawData.isNotEmpty()) {
+
+					val v10 = rawData.getOrNull(2)
+					val v20 = rawData.getOrNull(3)
+					val v30 = rawData.getOrNull(4)
+					val v40 = rawData.getOrNull(5)
+
+					val v1 = if (v10 == null || v10 == "0") "🚫" else v10 + "cm"
+					val v2 = if (v20 == null || v20 == "0") "🚫" else v20 + "cm"
+					val v3 = if (v30 == null || v10 == "0") "🚫" else v30 + "cm"
+					val v4 = if (v40 == null || v20 == "0") "🚫" else v40 + "cm"
+
+
+
+
 					textBoxes.add(TextBoxData(
 						anchorX = mousePos.x, anchorY = mousePos.y,
 						targetGridIndex = 27, // 하단 중앙
 						info = TextDrawInfo("입 정보", listOf(
-							TextItem("인중 길이:", "${rawData.getOrNull(2)}cm"),
-							TextItem("입 길이", "${rawData.getOrNull(3)}cm"),
+							TextItem("인중 길이:", v1),
+							TextItem("입 길이", v2),
 							TextItem("입꼬리 각도:", "${rawData.getOrNull(0)}º / ${rawData.getOrNull(1)}º"),
-							TextItem("윗입술 두께", "${rawData.getOrNull(4)}cm"),
-							TextItem("아래입술 두께", "${rawData.getOrNull(5)}cm")
+							TextItem("윗입술 두께", v3),
+							TextItem("아래입술 두께", v4)
 						))
 					))
 				}

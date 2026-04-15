@@ -1,6 +1,7 @@
 package com.tangoplus.facebeautyexpert.ui.main
 
 import android.Manifest
+import android.app.Activity
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.content.res.ColorStateList
@@ -18,21 +19,53 @@ import android.view.ViewGroup
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.activityViewModels
+import androidx.lifecycle.lifecycleScope
 import androidx.viewpager2.widget.ViewPager2
 import com.tangoplus.facebeautyexpert.databinding.FragmentMainBinding
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.tangoplus.facebeautyexpert.R
+import com.tangoplus.facebeautyexpert.data.db.FaceDao
+import com.tangoplus.facebeautyexpert.data.db.FaceDatabase
 import com.tangoplus.facebeautyexpert.domain.util.FileUtility.setOnSingleClickListener
 import com.tangoplus.facebeautyexpert.domain.util.PreferenceUtility
 import com.tangoplus.facebeautyexpert.ui.adapter.AdVPAdapter
+import com.tangoplus.facebeautyexpert.ui.info.InformationFragment
 import com.tangoplus.facebeautyexpert.ui.measure.DepthCameraActivity
 import com.tangoplus.facebeautyexpert.ui.main.vm.MainViewModel
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlin.math.abs
 
 
 class MainFragment : Fragment() {
 	private lateinit var bd: FragmentMainBinding
 	private val mvm: MainViewModel by activityViewModels()
+
+	private val cameraResultLauncher = registerForActivityResult(
+		ActivityResultContracts.StartActivityForResult()
+	) { result ->
+		if (result.resultCode == Activity.RESULT_OK) {
+			val serverSn = result.data?.getIntExtra("EXTRA_MEASURE_SN", -1) ?: -1
+
+			if (serverSn != -1) {
+				// DB 작업 실행
+				lifecycleScope.launch(Dispatchers.IO) {
+					val fd = FaceDatabase.getDatabase(requireContext())
+					val statics = fd.faceDao().getStatic(serverSn)
+					val insight = fd.faceDao().getInsight(serverSn)
+
+					val faceResult = mvm.convertToFaceResult(requireContext(), statics, insight)
+
+					withContext(Dispatchers.Main) {
+						mvm.currentResult.value = faceResult
+						// 2. 작업이 끝나면 MainActivity의 함수를 호출해서 화면/탭 전환!
+						(requireActivity() as MainActivity).navigateToMeasureHistoryInformation()
+					}
+				}
+			}
+		}
+	}
 
 	override fun onCreateView(
 		inflater: LayoutInflater, container: ViewGroup?,
@@ -50,7 +83,6 @@ class MainFragment : Fragment() {
 			checkStoragePermission()
 		}
 		setupViewPager()
-
 	}
 
 	private fun checkStoragePermission() {
@@ -92,8 +124,8 @@ class MainFragment : Fragment() {
 	}
 
 	private fun navigateToDepthCamera() {
-		val intent = Intent(context, DepthCameraActivity::class.java)
-		startActivity(intent)
+		val intent = Intent(requireContext(), DepthCameraActivity::class.java)
+		cameraResultLauncher.launch(intent)
 		requireActivity().finishAffinity()
 	}
 
@@ -181,14 +213,16 @@ class MainFragment : Fragment() {
 	}
 	private fun startAutoScroll() {
 		stopAutoScroll() // 기존 것 제거
-
+		val prefs = PreferenceUtility(requireContext())
+		val setedVelo = prefs.getSlideVelocity()
 		autoScrollRunnable = object : Runnable {
 			override fun run() {
-				bd.vpM.currentItem = bd.vpM.currentItem + 1
-				autoScrollHandler.postDelayed(this, 6500) // 5초마다
+				bd.vpM.currentItem += 1
+
+				autoScrollHandler.postDelayed(this, (setedVelo * 1000).toLong()) // 5초마다
 			}
 		}
-		autoScrollHandler.postDelayed(autoScrollRunnable!!, 6500)
+		autoScrollHandler.postDelayed(autoScrollRunnable!!, (setedVelo * 1000).toLong())
 	}
 
 	private fun stopAutoScroll() {

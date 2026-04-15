@@ -96,6 +96,21 @@ class LoadingDialogFragment : DialogFragment() {
 			1 -> "결과를 저장중입니다."
 			else -> ""
 		}
+		bd.clLD.isClickable = false
+
+		// 7초 후 클릭 활성화
+		bd.clLD.postDelayed({
+			bd.clLD.isClickable = true
+			bd.clLD.setOnClickListener {
+				dismiss()
+			}
+		}, 3000)
+		bd.ibtnLDExit.postDelayed({
+			bd.ibtnLDExit.visibility = View.VISIBLE
+			bd.ibtnLDExit.setOnClickListener {
+				dismiss()
+			}
+		}, 3000)
 	}
 
 	private fun unlockScreenOrientation() {
