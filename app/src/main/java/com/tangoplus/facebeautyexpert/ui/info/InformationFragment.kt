@@ -10,6 +10,8 @@ import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.view.animation.BounceInterpolator
+import android.view.animation.DecelerateInterpolator
 import android.widget.ArrayAdapter
 import android.widget.Toast
 import androidx.fragment.app.Fragment
@@ -57,7 +59,6 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
 
-// TODO 하단에 스크롤 하라고 일렁일렁 효과만 추가 하기
 class InformationFragment : Fragment(), OnFacialPartClickListener {
 	private lateinit var bd: FragmentInformationBinding
 	private val svm: SelectViewModel by activityViewModels()
@@ -117,12 +118,13 @@ class InformationFragment : Fragment(), OnFacialPartClickListener {
 			layoutManager = vLayoutManager
 		}
 		val fAdapter = FactorRVAdapter(this@InformationFragment, mvm.currentResult.value?.factors ?: Factor(
-			FacialAxisShape.DEFAULT, FaceShape.DEFAULT, Pair(0f, 0f)))
+			FacialAxisShape.DEFAULT, FaceShape.DEFAULT, null,Pair(0f, 0f)))
 		val fLayoutManager = LinearLayoutManager(requireContext(), LinearLayoutManager.VERTICAL, false)
 		bd.rvGD2.apply {
 			adapter = fAdapter
 			layoutManager = fLayoutManager
 		}
+		startScrollHintAnimation()
 	}
 
 	private fun setRatioBtn() {
@@ -252,7 +254,8 @@ class InformationFragment : Fragment(), OnFacialPartClickListener {
 		ivm.currentCheckedLines.clear()
 		Log.v("클릭드", "${part}")
 		val drawLines = when (part) {
-			FacialPart.DERIVE -> listOf(DrawLine.NECK, DrawLine.FACE, DrawLine.A_SAGGING_FACE, DrawLine.A_FACIAL_AXIS, DrawLine.A_HORIZON)
+			FacialPart.DERIVE -> listOf(DrawLine.NECK, DrawLine.FACE, DrawLine.A_SAGGING_FACE, DrawLine.A_FACIAL_AXIS, DrawLine.A_HORIZON,
+				DrawLine.A_SHOULDER)
 			FacialPart.RATIO -> listOf(DrawLine.A_RATIO_HORIZON, DrawLine.A_RATIO_VERTI)
 			FacialPart.TOP -> listOf(DrawLine.EYE,  DrawLine.EYEBROW,  DrawLine.L_CORNEA)
 			FacialPart.MIDDLE -> listOf(DrawLine.NOSE,DrawLine.A_ALAR_ORAL, DrawLine.A_SIDE_HEAD, DrawLine.E_CHEEKBONE, )
@@ -362,7 +365,6 @@ class InformationFragment : Fragment(), OnFacialPartClickListener {
 		typingJob = lifecycleScope.launch {
 			while (this.isActive) {
 				typingList.forEachIndexed { idx, text ->
-					Log.v("안내 텍스트 시작", "$idx -> $text")
 					startTypingAnimation(bd.tvIGeminiShimmer, text, 45)
 					delay(1000)
 				}
@@ -445,11 +447,11 @@ class InformationFragment : Fragment(), OnFacialPartClickListener {
 					}
 
 				} else {
-					showErrorToast()
+					Toast.makeText(context, "AI 인사이트를 가져오는데 실패했습니다. 잠시 후 다시 시도해주세요.", Toast.LENGTH_LONG).show()
 				}
 			} catch (e: Exception) {
 				e.printStackTrace()
-				showErrorToast()
+				Toast.makeText(context, "AI 인사이트를 가져오는데 실패했습니다. 잠시 후 다시 시도해주세요.", Toast.LENGTH_LONG).show()
 			} finally {
 				// 4. 성공하든 실패하든 쉬머는 무조건 멈춰야 합니다.
 				stopGeminiShimmer()
@@ -457,7 +459,34 @@ class InformationFragment : Fragment(), OnFacialPartClickListener {
 		}
 	}
 
-	private fun showErrorToast() {
-		Toast.makeText(context, "AI 인사이트를 가져오는데 실패했습니다. 잠시 후 다시 시도해주세요.", Toast.LENGTH_LONG).show()
+	private var bounceJob: Job? = null
+
+	private fun startScrollHintAnimation() {
+		bounceJob?.cancel()
+		bounceJob = lifecycleScope.launch {
+			while (isActive) {
+				// 1. 위로 부드럽게 슉! 올라가기 (Y축 -30px 이동)
+				bd.tvIScrollHint.animate()
+					.translationY(-30f)
+					.setDuration(400)
+					.setInterpolator(DecelerateInterpolator())
+					.withEndAction {
+						// 2. 올라간 뒤, 통통 튀며 제자리(0f)로 떨어지기
+						bd.tvIScrollHint.animate()
+							.translationY(0f)
+							.setDuration(600)
+							.setInterpolator(BounceInterpolator()) // 핵심: 통통 튀는 물리 효과
+							.start()
+					}
+					.start()
+				delay(3500)
+			}
+		}
 	}
+
+	private fun stopScrollHintAnimation() {
+		bounceJob?.cancel()
+		bd.tvIScrollHint.translationY = 0f // 원래 위치로 초기화
+	}
+
 }

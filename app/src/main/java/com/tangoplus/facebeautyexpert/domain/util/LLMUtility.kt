@@ -3,11 +3,6 @@ package com.tangoplus.facebeautyexpert.domain.util
 import com.google.ai.client.generativeai.GenerativeModel
 import com.google.gson.Gson
 import com.tangoplus.facebeautyexpert.BuildConfig
-import com.tangoplus.facebeautyexpert.data.db.FaceShape
-import com.tangoplus.facebeautyexpert.data.db.FaceStatic
-import com.tangoplus.facebeautyexpert.data.db.FacialAxisShape
-import com.tangoplus.facebeautyexpert.domain.util.FileUtility.toJsonString
-import com.tangoplus.facebeautyexpert.domain.vo.FaceGeminiData
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
@@ -21,7 +16,7 @@ object LLMUtility {
 
 				// 1. 모델 초기화 (AI Studio에서 확인한 flash 모델명을 적어주세요)
 				val generativeModel = GenerativeModel(
-					modelName = "gemini-2.5-flash", // 또는 "gemini-1.5-flash"
+					modelName = "gemini-3-flash-preview", // 또는 "gemini-1.5-flash"
 					apiKey = BuildConfig.GEMINI_API_KEY
 				)
 				val jsonInput = mergedResults(results)
@@ -38,10 +33,10 @@ object LLMUtility {
 			    $jsonInput
 			
 			    [요청 사항]
-			    1. 전체적인 인상을 두괄식으로 2~3줄 요약해줘.
-			    2. 상안부, 중안부, 하안부 각각의 특징을 2마디 이내로 개조식 문체로 적어줘.
-			    3. 수치적으로 가장 눈에 띄는 균형이나 특징이 있다면 해당 key값을 한글로 해석해서, 한글로만 1~2개만 짚어줘. 
-			    4. 전체 10줄 이내로 작성해줘.
+			    1. 두괄식으로 구성해줘. 먼저 전체적인 분석 결과를  2~3줄 요약해줘.
+			    2. 상안부, 중안부, 하안부 각각의 특징을 2마디 이내로 개조식 문체로 적고 문단은 이모지를 사용해서 만들어줘.
+			    3. 수치적으로 가장 눈에 띄는 균형이나 특징이 있다면 1~2개만 짚어줘. 분석 데이터에 포함된 key값은 적지 말아줘.
+			    4. 전체 12줄 이내로 작성해줘.
 				""".trimIndent()
 				// 3. API 요청 및 응답 받기
 				val response = generativeModel.generateContent(prompt)

@@ -27,6 +27,7 @@ abstract class FaceDatabase : RoomDatabase() {
                 `insight` TEXT NOT NULL
             )
         """.trimIndent())
+				db.execSQL("ALTER TABLE `t_face_static` ADD COLUMN `comfort_face_shape_sub` TEXT NOT NULL DEFAULT 'DEFAULT'")
 			}
 		}
 

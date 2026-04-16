@@ -90,6 +90,7 @@ data class FaceStatic(
 	val vertical_ratio: String = "",
 
 	val comfort_face_shape: FaceShape = FaceShape.DEFAULT,
+	val comfort_face_shape_sub: FaceShape = FaceShape.DEFAULT,
 	val comfort_left_sagging_scale: Float = 0f,
 	val comfort_right_sagging_scale: Float = 0f,
 	val comfort_length_symmetry_factor : Float = 0f,

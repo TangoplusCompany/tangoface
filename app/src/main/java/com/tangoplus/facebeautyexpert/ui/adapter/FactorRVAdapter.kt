@@ -49,16 +49,21 @@ class FactorRVAdapter(private val fragment : Fragment, private val currentFactor
 			val rightSaggingState = createState(currentItem.saggingScale.second)
 			tvFIValue10.text = "왼쪽\n\n${leftSaggingState}\n${leftSagging}"
 			tvFIValue11.text = "오른쪽\n\n${rightSaggingState}\n${rightSagging}"
-
-			tvFIValue2.text = "${getImoji(currentItem.faceShape)} ${currentItem.faceShape.displayName}"
+			val faceShapeString = buildString {
+				append("1순위: ${getImoji(currentItem.primaryFaceShape)} ${currentItem.primaryFaceShape.displayName}")
+				currentItem.secondaryFaceShape?.let { secondary ->
+					append("\n2순위: ${getImoji(secondary)} ${secondary.displayName}")
+				}
+			}
+			tvFIValue2.text = faceShapeString
 
 			val balloon0 = createBalloon("비대칭 지수", info0)
 			val balloon1 = createBalloon("피부처짐 지수", info1, R.drawable.drawable_sagging_standard)
 			val balloon2 = createBalloon("얼굴형", info2 )
 
-			tvFIValue0.setOnSingleClickListener { balloon0.showAlignBottom(tvFIValue0) }
-			llFIValue.setOnSingleClickListener { balloon1.showAlignBottom(llFIValue) }
-			tvFIValue2.setOnSingleClickListener { balloon2.showAlignBottom(tvFIValue2) }
+			tvFIValue0.setOnSingleClickListener { balloon0.showAlignTop(tvFIValue0) }
+			llFIValue.setOnSingleClickListener { balloon1.showAlignTop(llFIValue) }
+			tvFIValue2.setOnSingleClickListener { balloon2.showAlignTop(tvFIValue2) }
 		}
 	}
 
@@ -114,9 +119,9 @@ class FactorRVAdapter(private val fragment : Fragment, private val currentFactor
 	private fun createState(value: Float): String {
 
 		return when (value) {
-			in 0f..2f -> "매우 우수"
-			in 3f..5f -> "보통"
-			in 6f..10f -> "탄력 저하"
+			in 1f..1.25f -> "매우 우수"
+			in 1.25f..1.4f -> "보통"
+			in 1.41f..1.6f -> "탄력 저하"
 			else -> "심한 처짐" // 10 이상(초과)인 모든 경우
 		}
 	}

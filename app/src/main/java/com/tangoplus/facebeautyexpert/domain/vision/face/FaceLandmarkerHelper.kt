@@ -381,7 +381,7 @@ class FaceLandmarkerHelper(
 
 	interface LandmarkerListener {
 		fun onError(error: String, errorCode: Int = OTHER_ERROR)
-		fun onResults(resultBundle: ResultBundle) // TODO 251027 detectAsync를 통해 bitmap을 전달해서 이를 정리할 수 있게끔 해야함 (https://gemini.google.com/app/43ddc10dbb073f23)
+		fun onResults(resultBundle: ResultBundle)
 		fun onEmpty() {}
 	}
 }

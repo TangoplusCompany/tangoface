@@ -155,14 +155,13 @@ class MainFragment : Fragment() {
 	private fun setupViewPager() {
 
 		val pPrefs = PreferenceUtility(requireContext())
-		val savedPosters = pPrefs.getPosters()
+		var savedPosters = pPrefs.getPosters()
 
 		// 2. 데이터가 없을 경우를 대비한 예외 처리
 		if (savedPosters.isEmpty()) {
-			// 데이터가 없으면 ViewPager를 숨기거나 기본 이미지를 띄우는 처리가 필요해
-			return
+			pPrefs.initDefaultPosters(requireContext())
 		}
-
+		savedPosters = pPrefs.getPosters()
 		// 3. 어댑터 연결 (String 리스트를 받도록 AdVPAdapter가 수정되었다고 가정)
 		val adapter = AdVPAdapter(savedPosters)
 		bd.vpM.adapter = adapter

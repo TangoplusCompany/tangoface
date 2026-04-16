@@ -95,12 +95,12 @@ class MeasureViewModel : ViewModel() {
 	// ----------# flag들 #-----------
 
 	// 🍿🍿🍿🍿🍿 results들 🍿🍿🍿🍿🍿
-	var latestResult: List<Point3D> = listOf()
-	var customResult: FaceLandmarkResult? = null
+	var face3DResult: List<Point3D> = listOf()
+	var face2DResult: FaceLandmarkResult? = null
 	// 🍿🍿🍿🍿🍿🍿🍿🍿🍿🍿🍿🍿🍿🍿🍿🍿🍿🍿🍿🍿🍿🍿🍿🍿🍿🍿🍿🍿
 	// detect Face Pose Landmarker
-	var poseLandmarker: PoseLandmarkerHelper? = null
-	var flh: FaceLandmarkerHelper? = null
+//	var poseLandmarker: PoseLandmarkerHelper? = null
+//	var flh: FaceLandmarkerHelper? = null
 	// 🍿🍿🍿🍿🍿🍿🍿🍿🍿🍿🍿🍿🍿🍿🍿🍿🍿🍿🍿🍿🍿🍿🍿🍿🍿🍿🍿🍿
 
 	// 측정 초기화
@@ -204,9 +204,9 @@ class MeasureViewModel : ViewModel() {
 //		flr3D: List<Point3D> = listOf(),
 		seq: Sequence
 	) {
-		Log.v("3d좌표?", "${latestResult.size}")
-		if (customResult?.landmarks?.isNotEmpty() == true) {
-			val flr = customResult?.landmarks!!
+		Log.v("3d좌표?", "${face3DResult.size}")
+		if (face2DResult?.landmarks?.isNotEmpty() == true) {
+			val flr = face2DResult?.landmarks!!
 			Log.v("3d좌표?", "현재seq: ${flr}")
 
 			/* 1. 키오스크 -> pose좌표까지 좌우 반전 -> 8이 왼쪽 어깨
@@ -224,13 +224,11 @@ class MeasureViewModel : ViewModel() {
 			current3DCoordinate.clear()
 
 			flr.forEachIndexed { index, faceLandmark ->
-				val scaledX = calculateScreenX(
-					if (isDepthCameraMeasure) (1f - faceLandmark.x) else faceLandmark.x
-				)
+				val scaledX = calculateScreenX(1f - faceLandmark.x)
 				val scaledY = calculateScreenY( faceLandmark.y)
-				val x = latestResult.getOrNull(index)?.x ?: 0f
-				val y = latestResult.getOrNull(index)?.y ?: 0f
-				val z = latestResult.getOrNull(index)?.z ?: 0f
+				val x = face3DResult.getOrNull(index)?.x ?: 0f
+				val y = face3DResult.getOrNull(index)?.y ?: 0f
+				val z = face3DResult.getOrNull(index)?.z ?: 0f
 
 				val ja = JSONArray().apply {
 					put(index)
@@ -251,9 +249,7 @@ class MeasureViewModel : ViewModel() {
 					)
 				)
 				// 3d 변환 좌표
-				if (isDepthCameraMeasure) {
-					current3DCoordinate.add(Triple(x, y, z))
-				}
+				current3DCoordinate.add(Triple(x, y, z))
 			}
 			// seq 1개의 좌표를 담고 tempCoordinates는 초기화
 			coordinatesJA.put(tempCoordinateJA)
@@ -348,7 +344,14 @@ class MeasureViewModel : ViewModel() {
 					get3DFloorDistance(flr3D[2], rightAlaEndPoint),
 				)
 				val earFlapAngle = calculateSlope(vmFlr[61].first, vmFlr[61].second, vmFlr[291].first, vmFlr[291].second)
-				val alaAngle = calculateSlope(leftAlaStartPoint.first, leftAlaStartPoint.second, rightAlaEndPoint.first, rightAlaEndPoint.second)
+
+				val leftAla2DPoint = listOf(209, 49, 64)
+					.map { flr[it] }
+					.minByOrNull { it.x } ?: flr[49]
+				val rightAla2DPoint = listOf(429, 279, 294)
+					.map { flr[it] }
+					.maxByOrNull { it.x } ?: flr[279]
+				val alaAngle = calculateSlope(leftAla2DPoint.x, leftAla2DPoint.y, rightAla2DPoint.x, rightAla2DPoint.y)
 
 				// 🎀🎀🎀🎀🎀 하안부 🎀🎀🎀🎀🎀
 
@@ -479,16 +482,20 @@ class MeasureViewModel : ViewModel() {
 				val rightFacePoint = rightIndices.map { flr3D[it] }.maxByOrNull { it.first } ?: flr3D[454]
 
 				val faceWidth = get3DFloorDistance(leftFacePoint, rightFacePoint)
-				val faceShape = classifyFaceShape(vmFlr, currentHairLine3DCoordinate)
+				val fs = classifyFaceShape(vmFlr, currentHairLine3DCoordinate)
+				val faceShape = fs.primaryShape
+				val faceShapeSub = fs.secondaryShape
 				val facialAxisShape = classifyFacialAxis(vmFlr)
 				val verticalRatio = calculateVerticalRatio(vmFlr)
 				val seggingDepths = classifySaggingDepth(vmFlr)
 				val asymmetrys = classifyFacialAsymmetry(vmFlr)
 				// 양쪾을 벌렸을 때 7.2 안벌렸을 때 4.6
+
 				val tempStatic = JSONObject().apply {
 
 					put("vertical_ratio", verticalRatio)
-					put("comfort_face_shape", faceShape.shape)
+					put("comfort_face_shape", faceShape)
+					put("comfort_face_shape_sub", faceShapeSub)
 					put("comfort_left_sagging_scale", seggingDepths.first)
 					put("comfort_right_sagging_scale", seggingDepths.second)
 					put("comfort_length_symmetry_factor", asymmetrys.first)
@@ -662,10 +669,15 @@ class MeasureViewModel : ViewModel() {
 		}
 	}
 
-	suspend fun saveMediaToStorage(context: Context, uri: Uri, fileName: String, isImage: Boolean): Boolean {
+	suspend fun saveMediaToStorage(
+		context: Context,
+		uri: Uri,
+		fileName: String,
+		flh: FaceLandmarkerHelper,
+		poseLandmarker: PoseLandmarkerHelper): Boolean {
 		return withContext(Dispatchers.IO) {
 			try {
-				val extension = if (isImage) ".webp" else ".mp4"
+				val extension = ".webp"
 //			val file = File(context.cacheDir, "$fileName$extension")
 
 				val contentValues = ContentValues().apply {
@@ -732,15 +744,18 @@ class MeasureViewModel : ViewModel() {
 				)
 				latestBitmap = bitmap
 				// --------------------------# poselandmark를 잡기 위한 detectAsync #-------------------------
+				// ⚠️⚠️⚠️⚠️⚠️⚠️ MeasureImage일 때만 flh image로 init 한다음 detectImage하기  ⚠️⚠️⚠️⚠️⚠️⚠️
+				if (!isDepthCameraMeasure) {
+					val flResultBundle = flh.detectImage(bitmap)
+					face2DResult = flResultBundle?.result?.let { FaceLandmarkAdapter.toCustomFaceLandmarkResult(it) }
+				}
 
-				val flResultBundle = flh?.detectImage(bitmap)
-				customResult = flResultBundle?.result?.let { FaceLandmarkAdapter.toCustomFaceLandmarkResult(it) }
 				if (currentSeq == Sequence.COMFORT) {
-					if (customResult == null) {
+					if (face2DResult == null) {
 						Log.w("saveMedia", "얼굴 랜드마크 검출 실패. 저장을 중단합니다.")
 						return@withContext false // ❌ 중단
 					}
-					val absoluteLandmarks = customResult!!.landmarks.map { landmark ->
+					val absoluteLandmarks = face2DResult!!.landmarks.map { landmark ->
 						FaceLandmarkResult.FaceLandmark(
 							x = calculateScreenX(landmark.x),
 							y = calculateScreenY(landmark.y)
@@ -798,7 +813,7 @@ class MeasureViewModel : ViewModel() {
 				}
 
 				// --------------------------# poselandmark를 잡기 위한 detectAsync #-------------------------
-				val resultBundle = poseLandmarker?.detectImage(bitmap)
+				val resultBundle = poseLandmarker.detectImage(bitmap)
 				if (resultBundle?.results?.first()?.landmarks()?.isNotEmpty() == true) {
 					val plr = resultBundle.results.first().landmarks()[0]
 
@@ -845,7 +860,6 @@ class MeasureViewModel : ViewModel() {
 						currentPlrCoordinate.add(Pair(targetLandmark.x(), targetLandmark.y()))
 						current3DPlrCoordinate.add(Triple(point3D.x, point3D.y, point3D.z))
 					}
-					Log.v("tempPlrJA", "포즈랜드마크JA 들어감: ${plrJA}")
 					plrJA.put(tempPlrJA)
 				} else {
 					withContext(Dispatchers.Main) {
@@ -891,7 +905,13 @@ class MeasureViewModel : ViewModel() {
 		}
 	}
 
-	suspend fun scannedImage(activity: AppCompatActivity, imagePaths : List<String?>, seq: Sequence): Boolean {
+	suspend fun scannedImage(
+		activity: AppCompatActivity,
+		imagePaths : List<String?>,
+		seq: Sequence,
+		flh: FaceLandmarkerHelper,
+		plh: PoseLandmarkerHelper
+	): Boolean {
 		// 1. 파일명 생성
 		val name = getFileName(seq)
 		val contentResolver = activity.contentResolver
@@ -924,12 +944,12 @@ class MeasureViewModel : ViewModel() {
 
 				// 5. 최종 저장 로직 호출
 				val tempUri = Uri.fromFile(tempFile)
-				val success = saveMediaToStorage(activity, tempUri, name, true)
+				val success = saveMediaToStorage(activity, tempUri, name, flh, plh)
 
-				Log.d("captureImage", "✅ 이미지 저장 완료?: $success: $name")
+				Log.d("scannedImage", "✅ 이미지 저장 완료?: $success: $name")
 				success
 			} catch (e: Exception) {
-				Log.e("captureImage", "❌ 이미지 로드/저장 실패: ${e.message}", e)
+				Log.e("scannedImage", "❌ 이미지 로드/저장 실패: ${e.message}", e)
 				false
 			}
 		}

@@ -42,6 +42,22 @@ object MathHelpers {
 		return toDegrees(angleRadians.toDouble()).toFloat()
 	}
 
+	// 얼굴형 계산 목적/input이 Pair
+	fun calculateAngle(
+		p1: Pair<Float, Float>,
+		p2: Pair<Float, Float>, // 꼭짓점
+		p3: Pair<Float, Float>
+	): Float {
+		val v1x = p1.first - p2.first
+		val v1y = p1.second - p2.second
+		val v2x = p3.first - p2.first
+		val v2y = p3.second - p2.second
+
+		val dot = v1x * v2x + v1y * v2y
+		val cross = v1x * v2y - v1y * v2x
+		val angle = Math.toDegrees(atan2(cross.toDouble(), dot.toDouble())).toFloat()
+		return abs(angle)
+	}
 	fun calculatePolygonArea(points: List<Pair<Float, Float>>): Float {
 		if (points.size < 3) return 0.0f  // 다각형이 안 됨
 

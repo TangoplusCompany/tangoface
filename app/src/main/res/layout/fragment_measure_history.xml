@@ -29,7 +29,7 @@
             app:layout_constraintHorizontal_bias="1.0"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent"
-            app:layout_constraintVertical_bias="0.92"
+            app:layout_constraintVertical_bias="0.975"
             app:layout_constraintWidth_percent="0.3" />
 
         <LinearLayout
@@ -80,7 +80,7 @@
             android:padding="10dp"
             android:textColor="@color/bg"
             android:textColorHint="@color/subColor100"
-            android:visibility="invisible"
+            android:visibility="gone"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent" />

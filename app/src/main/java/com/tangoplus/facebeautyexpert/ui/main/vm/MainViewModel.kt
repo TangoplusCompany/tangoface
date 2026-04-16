@@ -10,6 +10,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.tangoplus.facebeautyexpert.data.db.FaceDatabase
 import com.tangoplus.facebeautyexpert.data.db.FaceInsight
+import com.tangoplus.facebeautyexpert.data.db.FaceShape
 import com.tangoplus.facebeautyexpert.data.db.FaceStatic
 import com.tangoplus.facebeautyexpert.domain.util.FileUtility
 import com.tangoplus.facebeautyexpert.domain.vision.face.FaceLandmarkerHelper
@@ -134,7 +135,7 @@ class MainViewModel : ViewModel() {
 			val sorted = allData.sortedWith(compareByDescending(collator) { it.regDate })
 			currentUserItems = sorted
 			staticDataLoad.postValue(true)
-			Log.v("유저아이템가져오기", "$sorted")
+
 		}
 	}
 	val allDataLoaded = MediatorLiveData<Boolean>().apply {
@@ -190,7 +191,8 @@ class MainViewModel : ViewModel() {
 		val validData = faceStatics.find { it.media_file_name.isNotBlank() } ?: faceStatics[0]
 		val factors = Factor(
 			facialAxis = validData.comfort_facial_axis_shape,
-			faceShape = validData.comfort_face_shape,
+			primaryFaceShape = validData.comfort_face_shape,
+			secondaryFaceShape = if (validData.comfort_face_shape_sub == FaceShape.DEFAULT) null else validData.comfort_face_shape_sub,
 			saggingScale = Pair(validData.comfort_left_sagging_scale, validData.comfort_right_sagging_scale)
 		)
 		Log.v("목폄확인", "$seqs")

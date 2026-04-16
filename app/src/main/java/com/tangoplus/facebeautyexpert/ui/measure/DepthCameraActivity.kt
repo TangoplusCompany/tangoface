@@ -52,7 +52,7 @@ import com.tangoplus.facebeautyexpert.ui.view.OverlayView
 import com.tangoplus.facebeautyexpert.domain.util.FileUtility.setOnSingleClickListener
 import com.tangoplus.facebeautyexpert.domain.util.MathHelpers.calculateScaleFromPart
 import com.tangoplus.facebeautyexpert.domain.util.MathHelpers.calculateSlope
-import com.tangoplus.facebeautyexpert.domain.util.SoundManager.playSound
+import com.tangoplus.facebeautyexpert.domain.util.UXUtility.playSound
 import com.tangoplus.facebeautyexpert.domain.vision.face.FaceBlendshapesResultAdapter
 import com.tangoplus.facebeautyexpert.domain.vision.face.FaceLandmarkerHelper
 import kotlinx.coroutines.Dispatchers
@@ -70,7 +70,6 @@ import com.tangoplus.facebeautyexpert.domain.util.FileUtility.toFaceStatic
 import com.tangoplus.facebeautyexpert.domain.util.FileUtility.toJsonString
 import com.tangoplus.facebeautyexpert.domain.util.MathHelpers.calculateAngle
 import com.tangoplus.facebeautyexpert.domain.util.MathHelpers.getNormalizedDistance
-import com.tangoplus.facebeautyexpert.domain.util.MathHelpers.getScaleFactor
 import com.tangoplus.facebeautyexpert.domain.util.MathHelpers.setScaleFactor
 import com.tangoplus.facebeautyexpert.domain.util.MeasureUtility
 import com.tangoplus.facebeautyexpert.domain.util.MeasureUtility.animationSet
@@ -98,6 +97,7 @@ import com.tangoplus.facebeautyexpert.domain.util.LandmarkUtility.calculateScree
 import com.tangoplus.facebeautyexpert.domain.util.LandmarkUtility.colorFrameToBitmapSafe
 import com.tangoplus.facebeautyexpert.domain.util.LandmarkUtility.convertFaceLandmarksTo3D
 import com.tangoplus.facebeautyexpert.domain.util.LandmarkUtility.scaleAndCropIntrinsicCenterCrop
+import com.tangoplus.facebeautyexpert.domain.util.UXUtility.startLongVibrate
 import com.tangoplus.facebeautyexpert.domain.util.clearAll
 import com.tangoplus.facebeautyexpert.ui.main.vm.MainViewModel
 import com.tangoplus.facebeautyexpert.ui.statistics.GyroDialogFragment
@@ -107,17 +107,7 @@ class DepthCameraActivity : BaseActivity(), FaceLandmarkerHelper.LandmarkerListe
 	private lateinit var bd: ActivityDepthCameraBinding
 	companion object {
 		private const val TAG = "Face Landmarker"
-
-		init {
-//			System.loadLibrary("facebeautyexpert")
-//			if (!OpenCVLoader.initLocal()) {
-//				Log.e("CameraActivity", "OpenCV initialization failure!")
-//			} else {
-//				Log.d("CameraActivity", "OpenCV Initialization Successful!")
-//			}
-		}
 	}
-	// TODO ort 추가해야함
 	// ------------# pipeline #------------
 	private var mPipeline: Pipeline? = null
 	private var mStreamThread: Thread? = null
@@ -136,17 +126,18 @@ class DepthCameraActivity : BaseActivity(), FaceLandmarkerHelper.LandmarkerListe
 	}
 	private var isCountDown = false
 
+	// landmarker helper
 	private lateinit var backgroundExecutor: ExecutorService
 	private var timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"))
-
+	private lateinit var plh : PoseLandmarkerHelper
+	private lateinit var flh: FaceLandmarkerHelper
 
 	private lateinit var fDao: FaceDao
 	private lateinit var prefsUtil: PreferenceUtility
 	private var bounceAnimator: AnimatorSet? = null
-
 	private var mHoleFillingFilter: HoleFillingFilter? = null
 
-	override fun getDeviceChangedCallback(): DeviceChangedCallback? {
+	override fun getDeviceChangedCallback(): DeviceChangedCallback {
 		return mDeviceChangedCallback
 	}
 
@@ -295,8 +286,8 @@ class DepthCameraActivity : BaseActivity(), FaceLandmarkerHelper.LandmarkerListe
 			}
 
 			override fun onFinish() {
-				Log.v("카운트 시작", "${mvm.coordinatesJA.length()}, 현재 seq: ${mvm.currentSeq}")
-				if (mvm.latestResult.isNotEmpty()) {
+				Log.v("카운트 끝", "${mvm.face3DResult}, 현재 seq: ${mvm.currentSeq}")
+				if (mvm.face3DResult.isNotEmpty()) {
 					timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"))
 					hideViews()
 					playSound(R.raw.camera_shutter)
@@ -305,12 +296,11 @@ class DepthCameraActivity : BaseActivity(), FaceLandmarkerHelper.LandmarkerListe
 						viewModel.setContourSave(true)
 
 						val success = captureImage(mvm.currentSeq)  // 여기서 saveMediaStorage까지 전부 완료
-
 						if (success) {
 							// hairline, pose 전부 끝난 시점
 							mvm.resultBundleToJson( mvm.currentSeq)
 							if (mvm.currentHairLine3DCoordinate.size == 7) {
-								val absoluteLandmarkPairs = mvm.customResult?.landmarks?.map {
+								val absoluteLandmarkPairs = mvm.face2DResult?.landmarks?.map {
 									Pair(calculateScreenX( it.x), calculateScreenY( it.y))
 								}?.toMutableList()
 								// 🕊️🕊️🕊️🕊️ 여기서 vertical 비율 넣기
@@ -331,6 +321,7 @@ class DepthCameraActivity : BaseActivity(), FaceLandmarkerHelper.LandmarkerListe
 							}
 							mvm.currentHairLine3DCoordinate.clear()
 							bd.overlay.setOnScanFinishedListener {
+								startLongVibrate(this@DepthCameraActivity)
 								// 이 블록 안의 코드는 애니메이션이 왕복을 마치고 완전히 멈췄을 때 실행됩니다.
 								viewModel.setSeqFinishedFlag(true)
 								updateUI()
@@ -342,6 +333,10 @@ class DepthCameraActivity : BaseActivity(), FaceLandmarkerHelper.LandmarkerListe
 							bd.overlay.stopScanAnimation()
 						}
 					}
+				} else {
+					Toast.makeText(this@DepthCameraActivity, "얼굴 인식에 문제가 발생했습니다. 다시 시도해주세요", Toast.LENGTH_SHORT).show()
+					updateUI()
+					setPreviousStep()
 				}
 			}
 		}
@@ -491,8 +486,8 @@ class DepthCameraActivity : BaseActivity(), FaceLandmarkerHelper.LandmarkerListe
 
 									val timestamp = System.currentTimeMillis()
 									mainHandler.post {
-										if (mvm.flh?.isClose() == false) {
-											mvm.flh?.detectAsync(mpImage!!, timestamp)
+										if (flh?.isClose() == false) {
+											flh?.detectAsync(mpImage!!, timestamp)
 										}
 									}
 								}
@@ -541,7 +536,7 @@ class DepthCameraActivity : BaseActivity(), FaceLandmarkerHelper.LandmarkerListe
 							val params = mDevice?.calibrationCameraParamList
 							val currentTime = System.currentTimeMillis()
 							if (currentTime - last3DCalculateTime >= calculationInterval
-								&& mvm.customResult != null
+								&& mvm.face2DResult != null
 								&& params != null
 							) {
 								val paramsUnit = params.getCameraParam(0) // 캘리브 원해상도 기준
@@ -549,13 +544,14 @@ class DepthCameraActivity : BaseActivity(), FaceLandmarkerHelper.LandmarkerListe
 								mvm.latestIntrinsic = base
 								last3DCalculateTime = currentTime
 								val landmarks3D = convertFaceLandmarksTo3D(
-									mvm.customResult!!,
+									mvm.face2DResult!!,
 									depthData,
 									w,
 									h,
 									base
 								)
-								mvm.latestResult = landmarks3D
+								mvm.face3DResult = landmarks3D
+								Log.v("레이티스트왜 안들어감", "${landmarks3D} 3d좌표 왜 안들어감")
 								runOnUiThread {
 									bd.overlay.setResults(landmarks3D)
 									bd.overlay.invalidate()
@@ -775,13 +771,13 @@ class DepthCameraActivity : BaseActivity(), FaceLandmarkerHelper.LandmarkerListe
 //        Log.v("결과가 나오긴함?", "onResult is started. ${resultBundle.result.faceLandmarks()[0].size}")
 
 		runOnUiThread {
-			mvm.customResult = FaceLandmarkAdapter.toCustomFaceLandmarkResult(resultBundle.result)
-			if (mvm.customResult != null) {
+			mvm.face2DResult = FaceLandmarkAdapter.toCustomFaceLandmarkResult(resultBundle.result)
+			if (mvm.face2DResult != null) {
 				// depthCamera Stream 좌우반전 대응 - 얼굴 랜드마크 좌우 반전
-				val flippedLandmarks = mvm.customResult!!.landmarks.map { landmark ->
+				val flippedLandmarks = mvm.face2DResult!!.landmarks.map { landmark ->
 					landmark.copy(x = 1.0f - landmark.x)
 				}
-				val overlayResult = mvm.customResult!!.copy(landmarks = flippedLandmarks)
+				val overlayResult = mvm.face2DResult!!.copy(landmarks = flippedLandmarks)
 
 				bd.overlay.setResults(
 					overlayResult,
@@ -795,7 +791,7 @@ class DepthCameraActivity : BaseActivity(), FaceLandmarkerHelper.LandmarkerListe
 			mvm.initWidthHeight(resultBundle)
 			mvm.initOverlaySize(bd.overlay)
 			mvm.initScaleFactor(bd.overlay)
-			val landmarks = mvm.customResult?.landmarks
+			val landmarks = mvm.face2DResult?.landmarks
 
 			if (!landmarks.isNullOrEmpty()) {
 				val point1 = landmarks.getOrNull(468)
@@ -1160,7 +1156,7 @@ class DepthCameraActivity : BaseActivity(), FaceLandmarkerHelper.LandmarkerListe
 						bitmap.compress(Bitmap.CompressFormat.WEBP_LOSSY, 100, fos)
 					}
 					val tempUri = Uri.fromFile(tempFile)
-					mvm.saveMediaToStorage(this@DepthCameraActivity, tempUri, name, true)
+					mvm.saveMediaToStorage(this@DepthCameraActivity, tempUri, name, flh, plh)
 					return@withContext true
 				} ?: false
 			} catch (e: Exception) {
@@ -1169,8 +1165,6 @@ class DepthCameraActivity : BaseActivity(), FaceLandmarkerHelper.LandmarkerListe
 			}
 		}
 	}
-
-
 
 	// --------------------------------- # pose landmark # -----------------------------------------
 	private val poseLandmarkListener = object : PoseLandmarkerHelper.LandmarkerListener {
@@ -1194,7 +1188,7 @@ class DepthCameraActivity : BaseActivity(), FaceLandmarkerHelper.LandmarkerListe
 					backgroundExecutor = Executors.newSingleThreadExecutor()
 				}
 				backgroundExecutor.execute {
-					mvm.flh = FaceLandmarkerHelper(
+					flh = FaceLandmarkerHelper(
 						context = this@DepthCameraActivity,
 						runningMode = RunningMode.LIVE_STREAM,
 						minFaceDetectionConfidence = viewModel.currentMinFaceDetectionConfidence,
@@ -1220,8 +1214,8 @@ class DepthCameraActivity : BaseActivity(), FaceLandmarkerHelper.LandmarkerListe
 			Log.d("이닛", "initializing PoseLandmarker resources...")
 			// 이제 this가 완전히 초기화된 상태
 			try {
-				mvm.poseLandmarker = PoseLandmarkerHelper(
-					context = this.applicationContext,
+				plh = PoseLandmarkerHelper(
+					context = this@DepthCameraActivity,
 					runningMode = RunningMode.IMAGE,
 					minPoseDetectionConfidence = PoseLandmarkerHelper.DEFAULT_POSE_DETECTION_CONFIDENCE,
 					minPoseTrackingConfidence = PoseLandmarkerHelper.DEFAULT_POSE_TRACKING_CONFIDENCE,
@@ -1251,7 +1245,7 @@ class DepthCameraActivity : BaseActivity(), FaceLandmarkerHelper.LandmarkerListe
 			}
 
 			// FaceLandmarkerHelper 해제
-			mvm.flh?.clearFaceLandmarker()
+			flh.clearFaceLandmarker()
 
 			Log.d("릴리즈", "FaceLandmarker released.")
 		} catch (e: Exception) {
@@ -1262,8 +1256,8 @@ class DepthCameraActivity : BaseActivity(), FaceLandmarkerHelper.LandmarkerListe
 	private fun releasePose() {
 		try {
 			Log.d("릴리즈", "Releasing PoseLandmarker resources...")
-			if (mvm.poseLandmarker?.isClose() == false) {
-				mvm.poseLandmarker?.clearPoseLandmarker()
+			if (plh.isClose() == false) {
+				plh.clearPoseLandmarker()
 			}
 			Log.d("릴리즈", "PoseLandmarker released.")
 		} catch (e: Exception) {
@@ -1281,7 +1275,7 @@ class DepthCameraActivity : BaseActivity(), FaceLandmarkerHelper.LandmarkerListe
 
 //		mvm.allSeqs = prefsUtil.getLastMeasureSeqs().sortedBy { it.ordinal }.toMutableList()
 		mvm.currentSeq = mvm.allSeqs[0]
-
+		mvm.isDepthCameraMeasure = true
 		bd.tvPrevious.apply {
 			visibility = View.INVISIBLE
 		}

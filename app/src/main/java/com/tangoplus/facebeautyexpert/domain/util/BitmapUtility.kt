@@ -327,7 +327,7 @@ object BitmapUtility {
 				val y00 = topLm0.y
 				val x01 = bottomLm0.x
 				val y01 = bottomLm0.y
-				drawExtendedLine(canvas, x00, y00, x01, y01, 50f, 50f, whitePaint, )
+				drawExtendedLine(canvas, x00, y00, x01, y01, 0f, 0f, whitePaint, )
 			}
 
 			if (dim.setedLine.contains(DrawLine.NECK)) {

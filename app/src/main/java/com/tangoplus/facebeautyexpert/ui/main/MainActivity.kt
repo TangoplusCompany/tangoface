@@ -15,7 +15,6 @@ import android.os.Looper
 import android.provider.MediaStore
 import android.provider.Settings
 import android.util.Log
-import android.view.WindowManager
 import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.enableEdgeToEdge
@@ -37,12 +36,12 @@ import com.tangoplus.facebeautyexpert.databinding.ActivityMainBinding
 import com.tangoplus.facebeautyexpert.domain.util.FileUtility.backupUserData
 import com.tangoplus.facebeautyexpert.domain.util.PermissionUtility.getAllPermissions
 import com.tangoplus.facebeautyexpert.domain.util.PreferenceUtility
-import com.tangoplus.facebeautyexpert.domain.util.SoundManager
+import com.tangoplus.facebeautyexpert.domain.util.UXUtility
+import com.tangoplus.facebeautyexpert.domain.util.UXUtility.startLongVibrate
 import com.tangoplus.facebeautyexpert.ui.info.InformationFragment
 import com.tangoplus.facebeautyexpert.ui.info.MeasureHistoryFragment
 import com.tangoplus.facebeautyexpert.ui.main.vm.FragmentViewModel
 import com.tangoplus.facebeautyexpert.ui.main.vm.MainViewModel
-import com.tangoplus.facebeautyexpert.ui.measure.MeasureImageFragment
 import com.tangoplus.facebeautyexpert.ui.statistics.StatisticsFragment
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -107,7 +106,7 @@ class MainActivity : AppCompatActivity() {
 			systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
 		}
 		checkMemoryUsage()
-		SoundManager.init(this@MainActivity)
+//		SoundManager.init(this@MainActivity)
 
 		onBackPressedDispatcher.addCallback(this, onBackPressedCallback)
 		if (savedInstanceState == null) {
@@ -117,6 +116,7 @@ class MainActivity : AppCompatActivity() {
 		}
 
 		bd.bnv.setOnItemSelectedListener {
+			startLongVibrate(this@MainActivity)
 			setCurrentFragment(it.itemId)
 			true
 		}
@@ -275,7 +275,7 @@ class MainActivity : AppCompatActivity() {
 				if (backPressedOnce) {
 					FaceDatabase.closeDatabase()
 					finishAffinity()
-					SoundManager.release()
+					UXUtility.release()
 				} else {
 					backPressedOnce = true
 					Toast.makeText(this@MainActivity, "한 번 더 누르시면 앱이 종료됩니다.", Toast.LENGTH_SHORT).show()
@@ -533,7 +533,7 @@ class MainActivity : AppCompatActivity() {
 				setPositiveButton("예") { _, _ ->
 					FaceDatabase.closeDatabase()
 					finishAffinity()
-					SoundManager.release()
+					UXUtility.release()
 				}
 				setNegativeButton("아니오") { _, _ -> }
 			}

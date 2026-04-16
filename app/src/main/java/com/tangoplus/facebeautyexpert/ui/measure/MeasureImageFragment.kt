@@ -33,6 +33,7 @@ import com.tangoplus.facebeautyexpert.domain.util.FileUtility.toJsonString
 import com.tangoplus.facebeautyexpert.domain.util.LandmarkUtility.calculateScreenX
 import com.tangoplus.facebeautyexpert.domain.util.LandmarkUtility.calculateScreenY
 import com.tangoplus.facebeautyexpert.domain.util.PreferenceUtility
+import com.tangoplus.facebeautyexpert.domain.util.UXUtility.startLongVibrate
 import com.tangoplus.facebeautyexpert.domain.util.clearAll
 import com.tangoplus.facebeautyexpert.domain.vision.face.FaceLandmarkerHelper
 import com.tangoplus.facebeautyexpert.domain.vision.pose.PoseLandmarkerHelper
@@ -65,6 +66,9 @@ class MeasureImageFragment : Fragment() {
 
 	private lateinit var prefsUtil: PreferenceUtility
 
+	private lateinit var plh : PoseLandmarkerHelper
+	private lateinit var flh: FaceLandmarkerHelper
+
 	override fun onCreateView(
 		inflater: LayoutInflater, container: ViewGroup?,
 		savedInstanceState: Bundle?
@@ -89,6 +93,7 @@ class MeasureImageFragment : Fragment() {
 		ivm.isFinishInput.observe(requireActivity()) {
 
 			if (it) {
+				mvm.isDepthCameraMeasure = false
 				val loading = LoadingDialogFragment()
 				loading.show(requireActivity().supportFragmentManager, "")
 
@@ -97,14 +102,14 @@ class MeasureImageFragment : Fragment() {
 					for (path in paths) {
 						if (path != null) {
 							// suspend 함수이므로 여기서 처리가 끝날 때까지 기다립니다.
-							val success = mvm.scannedImage(requireActivity() as AppCompatActivity, paths, mvm.currentSeq)
+							val success = mvm.scannedImage(requireActivity() as AppCompatActivity, paths, mvm.currentSeq, flh, plh)
 
 							if (success) {
 
 								mvm.resultBundleToJson(mvm.currentSeq)
 
 								if (mvm.currentHairLine3DCoordinate.size == 7) {
-									val absoluteLandmarkPairs = mvm.customResult?.landmarks?.map {
+									val absoluteLandmarkPairs = mvm.face2DResult?.landmarks?.map {
 										Pair(calculateScreenX(it.x), calculateScreenY(it.y))
 									}?.toMutableList()
 
@@ -188,11 +193,7 @@ class MeasureImageFragment : Fragment() {
 								val jsonPath = mvm.saveJsonToStorage(
 									requireActivity() as AppCompatActivity,
 									mergedJSON,
-									if (i == staticJos.size - 1 && currentStatic.seq == 9) {
-										mvm.hsvMediaFileName.replace(".webp", "").replace(".mp4", "")
-									} else {
-										mvm.mediaFileNames[i].replace(".webp", "").replace(".mp4", "")
-									}
+									mvm.mediaFileNames[i].replace(".webp", "").replace(".mp4", "")
 								)
 
 
@@ -220,21 +221,24 @@ class MeasureImageFragment : Fragment() {
 										val result = withContext(Dispatchers.IO) {
 											mainVm.convertToFaceResult(requireContext(), statics, insight)
 										}
-
+										startLongVibrate(requireContext())
 										mainVm.currentResult.value = result
 										loading.dismiss()
 										(activity as MainActivity).navigateToMeasureHistoryInformation()
+										ivm.isFinishInput.value = false
 									} else {
 										loading.dismiss()
+										ivm.isFinishInput.value = false
 									}
 								} catch (e: Exception) {
 									Log.e("LoadingError", "Error: ${e.message}", e)
+									startLongVibrate(requireContext())
+									ivm.isFinishInput.value = false
 									loading.dismiss()
 								}
 							}
 						}
 					}
-
 				}
 			}
 		}
@@ -343,7 +347,7 @@ class MeasureImageFragment : Fragment() {
 			Log.d("이닛", "initializing FaceLandmarker resources...")
 			// 이제 this가 완전히 초기화된 상태
 			try {
-				mvm.flh = FaceLandmarkerHelper(
+				flh = FaceLandmarkerHelper(
 					context = requireContext(),
 					runningMode = RunningMode.IMAGE,
 					minFaceDetectionConfidence = viewModel.currentMinFaceDetectionConfidence,
@@ -368,7 +372,7 @@ class MeasureImageFragment : Fragment() {
 			Log.d("이닛", "initializing PoseLandmarker resources...")
 			// 이제 this가 완전히 초기화된 상태
 			try {
-				mvm.poseLandmarker = PoseLandmarkerHelper(
+				plh = PoseLandmarkerHelper(
 					context = requireContext(), // 이제 this가 완전히 초기화된 상태
 					runningMode = RunningMode.IMAGE,
 					minPoseDetectionConfidence = PoseLandmarkerHelper.DEFAULT_POSE_DETECTION_CONFIDENCE,
@@ -391,8 +395,8 @@ class MeasureImageFragment : Fragment() {
 		try {
 			Log.d("릴리즈", "Releasing FaceLandmarker resources...")
 
-			if (mvm.flh?.isClose() == true) {
-				mvm.flh?.clearFaceLandmarker()
+			if (flh.isClose() == true) {
+				flh.clearFaceLandmarker()
 			}
 			Log.d("릴리즈", "FaceLandmarker released.")
 		} catch (e: Exception) {
@@ -403,8 +407,8 @@ class MeasureImageFragment : Fragment() {
 	private fun releasePose() {
 		try {
 			Log.d("릴리즈", "Releasing PoseLandmarker resources...")
-			if (mvm.poseLandmarker?.isClose() == true) {
-				mvm.poseLandmarker?.clearPoseLandmarker()
+			if (plh.isClose()) {
+				plh.clearPoseLandmarker()
 			}
 			Log.d("릴리즈", "PoseLandmarker released.")
 		} catch (e: Exception) {

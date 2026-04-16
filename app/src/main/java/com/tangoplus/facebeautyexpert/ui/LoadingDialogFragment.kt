@@ -104,13 +104,13 @@ class LoadingDialogFragment : DialogFragment() {
 			bd.clLD.setOnClickListener {
 				dismiss()
 			}
-		}, 3000)
+		}, 1500)
 		bd.ibtnLDExit.postDelayed({
 			bd.ibtnLDExit.visibility = View.VISIBLE
 			bd.ibtnLDExit.setOnClickListener {
 				dismiss()
 			}
-		}, 3000)
+		}, 1500)
 	}
 
 	private fun unlockScreenOrientation() {
