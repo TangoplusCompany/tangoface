@@ -108,9 +108,14 @@ class UserSetupDialogFragment : DialogFragment() {
 	override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
 		super.onViewCreated(view, savedInstanceState)
 		val parentCase = arguments?.getInt(ARG_PARENT) ?: 0
+		bd.btnUSDProgres.text = when (parentCase) {
+			0 -> "사전 체크리스트 시작"
+			else -> "입력 완료"
+		}
+
 		// 초기 설정: 이름 입력창이 나오고, 키보드가 올라옴
 		bd.etUSDMobile.visibility = View.INVISIBLE
-		bd.btnUSDProgres.visibility = View.INVISIBLE
+//		bd.btnUSDProgres.visibility = View.INVISIBLE
 		bd.clUSDGender.visibility = View.INVISIBLE
 		bd.clUSDAgeRange.visibility = View.INVISIBLE
 		setGuideAnimation(bd.etUSDName)

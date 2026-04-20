@@ -3,7 +3,6 @@ package com.tangoplus.facebeautyexpert.ui.view
 import android.content.Context
 import android.graphics.Canvas
 import android.graphics.Color
-import android.graphics.DashPathEffect
 import android.graphics.Paint
 import android.graphics.PointF
 import android.graphics.RectF
@@ -81,13 +80,14 @@ class TextBoxOverlayView @JvmOverloads constructor(
 	private fun calculateFluidGridPosition(
 		gridIndex: Int,
 		anchor: PointF?,
-		gridRect: RectF // onDraw에서 계산한 화면 기준 확장된 얼굴 그리드 영역
+		gridRect: RectF,
+		boxW: Float,  // 추가
+		boxH: Float   // 추가
 	): PointF {
 		val viewW = width.toFloat()
 		val viewH = height.toFloat()
 		if (viewW <= 0 || viewH <= 0 || gridRect.isEmpty) return PointF(0f, 0f)
 
-		// 1. 확장된 얼굴 그리드 영역 내에서 5 * 7 좌표 계산
 		val colCount = 5
 		val rowCount = 7
 		val cellW = gridRect.width() / colCount
@@ -96,40 +96,43 @@ class TextBoxOverlayView @JvmOverloads constructor(
 		val col = gridIndex % colCount
 		val row = gridIndex / colCount
 
-		// 박스의 원래 고향 (Home Position)
+		// 1. 기본 그리드 고향 위치 계산
 		val gridX = gridRect.left + (col * cellW) + (cellW / 2f)
 		val gridY = gridRect.top + (row * cellH) + (cellH / 2f)
 
-		// 2. 앵커가 화면 안에 있으면 자기 고향(그리드)에 가만히 있기
+		// 2. 화면 경계 마진 (박스가 테두리에 딱 붙지 않게 여유를 줌)
+		val safeMargin = 8.dp
+		val minX = boxW / 2f + safeMargin
+		val maxX = viewW - (boxW / 2f) - safeMargin
+		val minY = boxH / 2f + safeMargin
+		val maxY = viewH - (boxH / 2f) - safeMargin
+
+		// 3. 앵커가 화면 안에 있을 때도 그리드 위치 자체가 화면 밖이면 화면 안으로 밀어넣기
 		if (anchor != null && anchor.x in 0f..viewW && anchor.y in 0f..viewH) {
-			return PointF(gridX, gridY)
+			return PointF(gridX.coerceIn(minX, maxX), gridY.coerceIn(minY, maxY))
 		}
 
-		// 3. 레이더 추적 로직 (그리드 홈 기준 벡터 추적)
-		// 앵커가 없으면(null) 일단 그리드 홈에 둠
+		// 4. 레이더 추적 및 테두리 부착 로직
 		val tx = anchor?.x ?: gridX
 		val ty = anchor?.y ?: gridY
 		val dx = tx - gridX
 		val dy = ty - gridY
 
-		// 화면 테두리 여백 (박스 크기 절반 정도)
-		val marginW = 85.dp
-		val marginH = 45.dp
+		val distToL = gridX - minX
+		val distToR = maxX - gridX
+		val distToT = gridY - minY
+		val distToB = maxY - gridY
 
-		// 그리드 위치에서 각 테두리까지의 거리 계산
-		val distToL = gridX - marginW
-		val distToR = viewW - gridX - marginW
-		val distToT = gridY - marginH
-		val distToB = viewH - gridY - marginH
-
-		// 테두리에 부딪히는 비율(Scale) 계산
 		val scaleX = if (dx < 0) Math.abs(distToL / dx) else if (dx > 0) Math.abs(distToR / dx) else Float.MAX_VALUE
 		val scaleY = if (dy < 0) Math.abs(distToT / dy) else if (dy > 0) Math.abs(distToB / dy) else Float.MAX_VALUE
 
-		// 가장 먼저 부딪히는 비율을 선택 (최대 1.0 coerce)
 		val scale = Math.min(scaleX, scaleY).coerceAtMost(1.0f)
 
-		return PointF(gridX + dx * scale, gridY + dy * scale)
+		// 최종 좌표도 다시 한번 안전하게 고정
+		val finalX = (gridX + dx * scale).coerceIn(minX, maxX)
+		val finalY = (gridY + dy * scale).coerceIn(minY, maxY)
+
+		return PointF(finalX, finalY)
 	}
 
 	override fun onDraw(canvas: Canvas) {
@@ -166,11 +169,20 @@ class TextBoxOverlayView @JvmOverloads constructor(
 		var needInvalidate = false
 
 		textBoxes.forEach { box ->
-			// 앵커의 실제 화면 좌표
 			val screenAnchor = iv.sourceToViewCoord(box.anchorX, box.anchorY)
+			val isCollapsed = collapsedIndices.contains(box.targetGridIndex)
 
-			// ⭐ 유동 그리드 로직으로 목표 좌표 계산 ⭐
-			val target = calculateFluidGridPosition(box.targetGridIndex, screenAnchor, gridRect)
+			// 박스 크기 미리 계산
+			val (boxW, boxH) = getBoxDimensions(box.info, isCollapsed)
+
+			// 수정된 함수 호출 (크기 정보 전달)
+			val target = calculateFluidGridPosition(
+				box.targetGridIndex,
+				screenAnchor,
+				gridRect,
+				boxW,
+				boxH
+			)
 
 			val animPos = animatedPositions.getOrPut(box.targetGridIndex) {
 				AnimatedPosition(target.x, target.y, target.x, target.y)
@@ -335,5 +347,23 @@ class TextBoxOverlayView @JvmOverloads constructor(
 		}
 		invalidate() // 다시 그리기
 	}
+	private fun getBoxDimensions(info: BitmapUtility.TextDrawInfo, isCollapsed: Boolean): Pair<Float, Float> {
+		val p = 10.dp
+		if (isCollapsed) return Pair(32.dp, 32.dp)
 
+		val titlePaint = Paint().apply { textSize = 16.sp; isFakeBoldText = true }
+		val itemPaint = Paint().apply { textSize = 14.sp }
+
+		val hasTitle = info.title.isNotEmpty()
+		var maxW = if (hasTitle) titlePaint.measureText(info.title) else 0f
+		info.items.forEach { maxW = maxOf(maxW, itemPaint.measureText("${it.label} ${it.value}")) }
+
+		val lineH = 18.dp
+		val titleSectionH = if (hasTitle) titlePaint.textSize else 0f
+
+		val boxW = maxW + p * 2
+		val boxH = p * 2 + titleSectionH + (info.items.size * lineH)
+
+		return Pair(boxW, boxH)
+	}
 }

@@ -57,4 +57,6 @@ object UXUtility {
 		val vibrator = getVibrator(context)
 		vibrator.vibrate(VibrationEffect.createPredefined(VibrationEffect.EFFECT_HEAVY_CLICK))
 	}
+
+
 }

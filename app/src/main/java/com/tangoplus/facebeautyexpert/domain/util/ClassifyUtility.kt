@@ -48,7 +48,7 @@ object ClassifyUtility {
 
 		val lm = faceLandmarks
 
-		// --- 1. 데이터 추출 ---
+		// --- 1. 기본 골격 데이터 추출 ---
 		val cheekWidth    = abs(lm[454].first - lm[234].first)
 		val foreheadWidth = abs(lm[332].first - lm[103].first)
 		val jawWidth      = abs(lm[397].first - lm[172].first)
@@ -58,79 +58,89 @@ object ClassifyUtility {
 		val chinY     = lm[152].second
 		val faceHeight = abs(chinY - hairlineY)
 
-		val rightEyeOuter = lm[33].first
-		val leftEyeOuter = lm[263].first
-		val eyeToEyeWidth = abs(leftEyeOuter - rightEyeOuter)
-		val sideFleshWidth = cheekWidth - eyeToEyeWidth
-		val sideFleshRatio = sideFleshWidth / cheekWidth
+		val widthToHeight   = cheekWidth / faceHeight
+		val cheekToJaw      = cheekWidth / jawWidth
+		val foreheadToJaw   = foreheadWidth / jawWidth
+		val cheekToForehead = cheekWidth / foreheadWidth
 
 		val chinAngle = calculateAngle(lm[132], lm[152], lm[361])
 
-		val cheekToForehead = cheekWidth / foreheadWidth
-		val cheekToJaw      = cheekWidth / jawWidth
-		val foreheadToJaw   = foreheadWidth / jawWidth
-		val widthToHeight   = cheekWidth / faceHeight
-		val cheekHollowRatio = midFaceWidth / cheekWidth
+		// --- 2. ✨ NEW: 상/하단 볼살(Flesh) 여백 추출 ---
+		// [상단 여백] 눈 끝 ~ 얼굴 외곽 (광대 부각 및 상단 볼살 확인)
+		val upperFleshWidth = abs(lm[454].first - lm[263].first) + abs(lm[33].first - lm[234].first)
+		val upperFleshRatio = upperFleshWidth / cheekWidth
 
-		val ratios = mapOf(
-			"cheekToForehead" to cheekToForehead,
-			"cheekToJaw"      to cheekToJaw,
-			"foreheadToJaw"   to foreheadToJaw,
-			"widthToHeight"   to widthToHeight,
-			"cheekHollow"     to cheekHollowRatio,
-			"sideFleshRatio"  to sideFleshRatio,
-			"chinAngle"       to chinAngle
-		)
+		// [하단 여백] 입꼬리 ~ 얼굴 외곽 (심술보, 하단 볼살 두께 확인)
+		// 좌측: 외곽(58) - 입꼬리(61) / 우측: 외곽(288) - 입꼬리(291)
+		val lowerFleshWidth = abs(lm[61].first - lm[58].first) + abs(lm[288].first - lm[291].first)
+		val lowerFleshRatio = lowerFleshWidth / cheekWidth
 
-		// --- 2. 얼굴형 점수판 (Scoreboard) 세팅 ---
+		// --- 1. 핵심 판별 플래그 (Celebrity 데이터 기반 최적화) ---
+// 김정은(0.45), 봉준호(0.44) 등 '머리 너비'가 넓은 타입
+		val isUpperWide = upperFleshRatio > 0.42f
+// 김정은(0.64) 등 하단 볼살이 비정상적으로 많은 타입
+		val isChubby = upperFleshRatio > 0.43f && lowerFleshRatio > 0.60f
+// 정호연(0.37), 한효주(0.35) 등 뼈가 도드라지고 하단은 매끈한 타입
+		val isBoneProminent = upperFleshRatio > 0.33f && lowerFleshRatio <= 0.54f
+
+// --- 2. 얼굴형 점수판 세팅 ---
 		val scores = mutableMapOf(
-			FaceShape.CIRCLE to 0f,
-			FaceShape.RHOMBUS to 0f,
 			FaceShape.EGG to 0f,
+			FaceShape.HEART to 0f,
 			FaceShape.HEXAGON to 0f,
-			FaceShape.PEANUT to 0f,
-			FaceShape.HEART to 0f
+			FaceShape.CIRCLE to 0f,
+			FaceShape.RHOMBUS to 0f
 		)
-		fun add(shape: FaceShape, points: Float) { scores[shape] = scores[shape]!! + points }
+		fun add(shape: FaceShape, points: Float) { scores[shape] = (scores[shape] ?: 0f) + points }
 
 		// --- 3. 특징별 채점 시작 ---
 
-		// [둥근형 특성] - 김정은, 봉준호, 트럼프
-		if (sideFleshRatio > 0.38f) add(FaceShape.CIRCLE, 60f) // 볼 여백이 많으면 압도적 1위 후보
-		if (sideFleshRatio > 0.42f) add(FaceShape.CIRCLE, 40f) // 초고도비만형 가중치
-		if (chinAngle > 125f) add(FaceShape.CIRCLE, 30f)      // 턱이 둥글면 추가
-		if (cheekHollowRatio > 0.92f) add(FaceShape.CIRCLE, 20f) // 볼패임이 전혀 없으면 둥근형
+		// [A. 둥근형(CIRCLE)] - 김정은, 봉준호 타겟
+		if (widthToHeight > 0.83f) add(FaceShape.CIRCLE, 40f)
+		if (isChubby) add(FaceShape.CIRCLE, 60f) // 고도비만형
+		if (isUpperWide) add(FaceShape.CIRCLE, 50f) // 상단 너비가 넓은 넙데데형
 
-		// [마름모형 특성] - 카리나
-		if (cheekToForehead > 1.12f && sideFleshRatio < 0.37f) {
-			add(FaceShape.RHOMBUS, 40f)
-			if (chinAngle < 118f) add(FaceShape.RHOMBUS, 20f) // 턱이 뾰족해야만 진짜 마름모
-		} else if (sideFleshRatio >= 0.38f) {
-			add(FaceShape.RHOMBUS, -50f) // ❌ 살집이 있으면 마름모일 확률 마이너스
+		// [B. 골격형 판별 (마름모 vs 육각형)] - 정호연, 한효주 타겟
+		if (isBoneProminent) {
+			if (cheekToJaw > 1.28f) {
+				// 💎 정호연 타입 (턱이 극단적으로 좁은 마름모/다이아몬드)
+				add(FaceShape.RHOMBUS, 80f)
+				add(FaceShape.HEART, 40f)
+				if (chinAngle < 100f) add(FaceShape.RHOMBUS, 20f)
+			} else {
+				// 📐 한효주 타입 (턱 골격이 우아하게 살아있는 육각형)
+				add(FaceShape.HEXAGON, 90f)
+				add(FaceShape.HEART, 20f)
+				if (widthToHeight in 0.70f..0.80f) add(FaceShape.HEXAGON, 20f)
+			}
+		} else if (cheekToJaw < 1.10f && !isChubby) {
+			// 일반 사각턱 타입 육각형
+			add(FaceShape.HEXAGON, 60f)
 		}
 
-		// [계란형 특성] - 밸런스 지표
-		if (widthToHeight in 0.75f..0.82f) add(FaceShape.EGG, 30f)
-		if (chinAngle in 115f..125f) add(FaceShape.EGG, 20f)
-		if (cheekHollowRatio > 0.85f) add(FaceShape.EGG, 20f)
-		if (cheekToForehead in 0.95f..1.10f) add(FaceShape.EGG, 20f)
+		// [C. 계란형(EGG)] - 고윤정 타겟
+		// 💡 계란형은 뼈 부각, 살집, 넓은 상단이 모두 없을 때만 도달 가능
+		if (!isChubby && !isUpperWide && !isBoneProminent) {
+			if (chinAngle < 116f) add(FaceShape.EGG, 60f)
+			if (cheekToJaw > 1.25f) add(FaceShape.EGG, 30f)
+			if (widthToHeight <= 0.82f) add(FaceShape.EGG, 10f)
+		} else {
+			// 특징이 하나라도 튀면 계란형에서 강력 제외
+			add(FaceShape.EGG, -100f)
+		}
 
-		// [육각형 특성] - 유해진 님이 육각형으로 빠지는 것 방지 (조건을 더 엄격하게 뼈대로 한정)
-		if (cheekToJaw <= 1.08f) add(FaceShape.HEXAGON, 40f) // 턱이 광대만큼 '확실하게' 넓어야 함
-		if (chinAngle > 122f && sideFleshRatio <= 0.35f) add(FaceShape.HEXAGON, 30f) // 살이 아닌 진짜 골격으로 각진 경우
+		// [D. 하트형(HEART)] - 역삼각형 실루엣 보정
+		if (!isChubby) {
+			// 턱이 뾰족하면 하트형 점수를 주되, 뼈 부각 시 육각형/마름모보다 낮게 설정
+			if (chinAngle < 105f) {
+				// 턱이 1.28보다 좁을 때만 하트형 점수 비중을 높임
+				val heartBonus = if (cheekToJaw > 1.28f) 50f else 20f
+				add(FaceShape.HEART, heartBonus)
+			}
+			if (foreheadToJaw > 1.15f) add(FaceShape.HEART, 20f)
+		}
 
-		// [땅콩형 특성] - 안젤리나 졸리
-		if (cheekHollowRatio < 0.83f) add(FaceShape.PEANUT, 50f) // 볼이 쏙 패임 (핵심)
-		if (cheekToJaw < 1.15f) add(FaceShape.PEANUT, 30f)
-		if (chinAngle > 115f) add(FaceShape.PEANUT, 20f)
-
-		// [하트형 특성] - 극단적 V라인뿐만 아니라 '자연스럽게 좁아지는 하관' 포함 (유해진, 봉준호 타겟)
-		if (foreheadToJaw > 1.12f) add(FaceShape.HEART, 30f) // 이마/상단이 하관보다 확실히 넓음
-		if (cheekToJaw in 1.12f..1.28f) add(FaceShape.HEART, 40f) // 💡 광대>턱이지만 마름모처럼 극단적으로 좁지 않음 (핵심)
-		if (chinAngle < 118f) add(FaceShape.HEART, 30f) // 극단적 V라인이 아니어도 어느 정도 갸름하게 떨어지면 점수 부여
-
-
-		// --- 4. 순위 매기기 ---
+		// --- 5. 순위 매기기 ---
 		val sortedScores = scores.entries.sortedByDescending { it.value }
 		val firstPlace = sortedScores[0]
 		val secondPlace = sortedScores[1]
@@ -138,19 +148,23 @@ object ClassifyUtility {
 		val primaryShape = firstPlace.key
 		var secondaryShape: FaceShape? = null
 
-		// 💡 2순위 결정 로직:
-		// 1. 2순위 점수가 의미 있는 수준(예: 30점 이상)이고,
-		// 2. 1순위가 압도적이지 않은 경우(예: 김정은처럼 둥근형이 100점이고 2순위가 10점이면 서브 얼굴형 없음)
-		if (secondPlace.value >= 30f && secondPlace.value >= firstPlace.value * 0.4f) {
+		// 2순위 결정 (1순위가 압도적이지 않고, 2순위가 유의미한 점수일 때)
+		if (secondPlace.value >= 30f && secondPlace.value >= firstPlace.value * 0.5f) {
 			secondaryShape = secondPlace.key
 		}
 
-		Log.v("얼굴형비율", "광대/이마:${"%.2f".format(cheekToForehead)} | 광대/턱:${"%.2f".format(cheekToJaw)} | 가로세로:${"%.2f".format(widthToHeight)} | 여백:${"%.2f".format(sideFleshRatio)} | 턱각도:${"%.1f".format(chinAngle)}")
-		Log.v("얼굴형채점", "1위: ${firstPlace.key.name}(${firstPlace.value}점) | 2위: ${secondPlace.key.name}(${secondPlace.value}점)")
-
-		val displaySecondary = if(secondaryShape != null) " + ${secondaryShape.displayName}" else " (단독)"
-		Log.v("얼굴형최종결과", "${primaryShape.displayName}$displaySecondary")
-
+		// 디버깅용 정밀 로그 (임계값 조절 시 이 로그를 꼭 확인하세요!)
+		Log.v("얼굴여백분석", "상단볼살(Upper): ${"%.3f".format(upperFleshRatio)} | 하단볼살(Lower): ${"%.3f".format(lowerFleshRatio)}")
+		Log.v("얼굴살판별", "비만형(Chubby): $isChubby | 뼈부각(Bone): $isBoneProminent")
+		Log.v("얼굴형비율", "광대/턱: ${"%.2f".format(cheekToJaw)} | 가로/세로: ${"%.2f".format(widthToHeight)} | 턱각도: ${"%.1f".format(chinAngle)}")
+		Log.v("얼굴형최종결과", "1위: ${primaryShape.name}(${firstPlace.value}점) | 2위: ${secondaryShape?.name ?: "없음"}")
+		val ratios = mapOf(
+			"widthToHeight"   to widthToHeight,
+			"cheekToJaw"      to cheekToJaw,
+			"upperFlesh"      to upperFleshRatio,
+			"lowerFlesh"      to lowerFleshRatio,
+			"chinAngle"       to chinAngle
+		)
 		return FaceShapeResult(primaryShape, secondaryShape, ratios)
 	}
 

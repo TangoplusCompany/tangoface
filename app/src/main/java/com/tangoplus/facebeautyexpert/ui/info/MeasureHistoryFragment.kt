@@ -6,11 +6,9 @@ import androidx.fragment.app.Fragment
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import androidx.core.view.isVisible
 import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.GridLayoutManager
-import androidx.recyclerview.widget.LinearLayoutManager
 import com.tangoplus.facebeautyexpert.R
 import com.tangoplus.facebeautyexpert.data.db.FaceDao
 import com.tangoplus.facebeautyexpert.data.db.FaceDatabase
@@ -22,7 +20,6 @@ import com.tangoplus.facebeautyexpert.ui.listener.OnUserClickListener
 import com.tangoplus.facebeautyexpert.ui.main.MainActivity
 import com.tangoplus.facebeautyexpert.ui.main.vm.MainViewModel
 import com.tangoplus.facebeautyexpert.ui.measure.MeasureImageFragment
-import com.tangoplus.facebeautyexpert.ui.statistics.StatisticsFragment
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -84,7 +81,7 @@ class MeasureHistoryFragment : Fragment(), OnUserClickListener {
 
 	override fun onUserClick(tempServerSn: Int) {
 		if (!loadingDialog.isAdded && !loadingDialog.isVisible) {
-			loadingDialog.show(requireActivity().supportFragmentManager, "LoadingDialogFragment")
+			loadingDialog.show(requireActivity().supportFragmentManager, "loading_tag")
 		}
 
 		lifecycleScope.launch(Dispatchers.IO) {

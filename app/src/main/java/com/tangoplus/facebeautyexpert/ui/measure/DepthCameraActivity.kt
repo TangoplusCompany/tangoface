@@ -551,7 +551,6 @@ class DepthCameraActivity : BaseActivity(), FaceLandmarkerHelper.LandmarkerListe
 									base
 								)
 								mvm.face3DResult = landmarks3D
-								Log.v("레이티스트왜 안들어감", "${landmarks3D} 3d좌표 왜 안들어감")
 								runOnUiThread {
 									bd.overlay.setResults(landmarks3D)
 									bd.overlay.invalidate()
@@ -698,11 +697,7 @@ class DepthCameraActivity : BaseActivity(), FaceLandmarkerHelper.LandmarkerListe
 						val jsonPath = mvm.saveJsonToStorage(
 							this@DepthCameraActivity,
 							mergedJSON,
-							if (i == staticJos.size - 1 && currentStatic.seq == 9) {
-								mvm.hsvMediaFileName.replace(".webp", "").replace(".mp4", "")
-							} else {
-								mvm.mediaFileNames[i].replace(".webp", "").replace(".mp4", "")
-							}
+							mvm.mediaFileNames[i].replace(".webp", "").replace(".mp4", "")
 						)
 
 
@@ -1315,11 +1310,6 @@ class DepthCameraActivity : BaseActivity(), FaceLandmarkerHelper.LandmarkerListe
 		viewModel.setGuideTextFlag(false)
 		viewModel.setCountDownFlag(false)
 		viewModel.setTextAnimationFlag(false)
-		mvm.resultTargetFs.clearAll()
-		mvm.hsvColorJo.clearAll()
-		mvm.hsvFLCoordinatesJA.clearAll()
-		mvm.hsvPLCoordinatesJA.clearAll()
-		mvm.hsvMediaFileName = ""
 		mvm.staticJA.clearAll()
 		mvm.coordinatesJA.clearAll()
 		mvm.mediaFileNames.clear()

@@ -61,6 +61,7 @@ import androidx.core.net.toUri
 import com.tangoplus.facebeautyexpert.domain.util.MathHelpers.getScaleFactor
 import com.tangoplus.facebeautyexpert.domain.util.PreferenceUtility
 import com.tangoplus.facebeautyexpert.domain.vision.face.FaceLandmarkAdapter
+import kotlin.math.abs
 import kotlin.text.replace
 
 class MeasureViewModel : ViewModel() {
@@ -106,11 +107,11 @@ class MeasureViewModel : ViewModel() {
 	// 측정 초기화
 	var initMeasure = MutableLiveData(true)
 
-	val resultTargetFs = JSONArray()
-	val hsvColorJo = JSONObject()
-	val hsvFLCoordinatesJA = JSONArray() // 484개의 얼굴좌표 담는 곳
-	val hsvPLCoordinatesJA = JSONArray()
-	var hsvMediaFileName = ""
+//	val resultTargetFs = JSONArray()
+//	val hsvColorJo = JSONObject()
+//	val hsvFLCoordinatesJA = JSONArray() // 484개의 얼굴좌표 담는 곳
+//	val hsvPLCoordinatesJA = JSONArray()
+//	var hsvMediaFileName = ""
 
 	// 결과값 임시로 담을 곳 (영상 녹화가 끝나면 초기화)
 	var tempStaticJo: JSONObject? = null
@@ -376,8 +377,8 @@ class MeasureViewModel : ViewModel() {
 				)
 
 				val cheeksExtents = if (isDepthCameraMeasure) {
-					val leftCheeksPoint = leftCheeks.map { current3DCoordinate[it] }
-					val rightCheeksPoint = rightCheeks.map { current3DCoordinate[it] }
+//					val leftCheeksPoint = leftCheeks.map { current3DCoordinate[it] }
+//					val rightCheeksPoint = rightCheeks.map { current3DCoordinate[it] }
 //						Log.v("뎁스카메라", "5-Cheeks: $leftCheeksPoint, $rightCheeksPoint")
 					Pair(
 						calculateAreaWithScaling(leftCheeks, currentCoordinate, current3DCoordinate),
@@ -462,27 +463,17 @@ class MeasureViewModel : ViewModel() {
 				val leftIndices = listOf(162, 127, 234, 93, 132, 58)
 				val rightIndices = listOf(389, 356, 454, 323, 401, 435)
 
-// 1. Z값 보정을 "먼저" 전체적으로 실행 (Point-by-Point 검사)
-				for (i in leftIndices.indices) {
-					val leftIdx = leftIndices[i]
-					val rightIdx = rightIndices[i]
-
-					val leftPoint = flr3D[leftIdx]
-					val rightPoint = flr3D[rightIdx]
-
-					// 왼쪽 깊이가 대칭되는 오른쪽보다 0.5f(50cm) 이상 비정상적으로 멀다면
-					if ((leftPoint.third - rightPoint.third) > 0.5f) {
-						// X, Y는 원래 왼쪽 값을 유지하고, Z만 오른쪽 정상 값을 빌려와서 덮어쓰기
-						flr3D[leftIdx] = Triple(leftPoint.first, leftPoint.second, rightPoint.third)
-					}
+// 각 쌍의 수평 거리(dx)만 계산하여 리스트에 담습니다.
+				val widths = leftIndices.indices.map { i ->
+					val leftX = flr3D[leftIndices[i]].first
+					val rightX = flr3D[rightIndices[i]].first
+					abs(rightX - leftX) // 순수 수평 거리
 				}
 
-			// 2. 보정이 완료된 깨끗한 flr3D에서 최외곽 좌표 추출
-				val leftFacePoint = leftIndices.map { flr3D[it] }.minByOrNull { it.first } ?: flr3D[234]
-				val rightFacePoint = rightIndices.map { flr3D[it] }.maxByOrNull { it.first } ?: flr3D[454]
-
-				val faceWidth = get3DFloorDistance(leftFacePoint, rightFacePoint)
-				val fs = classifyFaceShape(vmFlr, currentHairLine3DCoordinate)
+				// 그중 가장 넓은 지점의 거리를 faceWidth로 결정합니다.
+				val maxHorizontalWidth = widths.maxOrNull() ?: 0f
+				val faceWidth = maxHorizontalWidth
+				val fs = classifyFaceShape(currentCoordinate, currentHairLine3DCoordinate)
 				val faceShape = fs.primaryShape
 				val faceShapeSub = fs.secondaryShape
 				val facialAxisShape = classifyFacialAxis(vmFlr)
@@ -824,7 +815,7 @@ class MeasureViewModel : ViewModel() {
 						else index
 						val targetLandmark = plr[swapIndex]
 
-						val scaledX = calculateScreenX(targetLandmark.x())
+						val scaledX = calculateScreenX(1 - targetLandmark.x())
 						val scaledY = calculateScreenY(targetLandmark.y())
 
 						// pose 랜드마크 3D 변환
@@ -961,11 +952,7 @@ class MeasureViewModel : ViewModel() {
 			Sequence.NECK_EXTENTION -> 6
 		}
 		val seqIndex = allSeqs.indexOf(seq)
-		val mediaFileName = if (seqInt == 9) {
-			hsvMediaFileName
-		} else {
-			mediaFileNames[seqIndex]
-		}
+		val mediaFileName = mediaFileNames[seqIndex]
 
 		return originJo.apply {
 			put("temp_server_sn", prefsUtil.getLastTempServerSn())

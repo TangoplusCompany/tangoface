@@ -46,12 +46,9 @@ data class PreCheckList(
 	val MOUTH_HOLLOW: Int = 0,
 	val PROGNATHISM: Int = 0,
 	val RETROGNATHIA: Int = 0,
-
 	) {
 	companion object {
 		fun getCurrentDateTime(): String =
 			LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))
 	}
-
-
 }

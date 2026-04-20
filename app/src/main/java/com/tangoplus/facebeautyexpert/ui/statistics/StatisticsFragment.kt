@@ -69,6 +69,17 @@ class StatisticsFragment : Fragment(), PreCheckListFilterCheckListener {
 	private fun setChart(counts: Map<String, Int>) {
 		val entries = ArrayList<BarEntry>()
 		val labels = ArrayList<String>()
+		val maxY = counts.values.maxOrNull() ?: 0
+		val unitHeightDp = 10f
+		val minHeightDp = 256f
+		val maxHeightDp = 500f
+		val density = resources.displayMetrics.density
+		val calculatedHeight = (maxY * unitHeightDp).let {
+			if (it < minHeightDp) minHeightDp else if (it > maxHeightDp) maxHeightDp else it
+		} * density
+		val bc = bd.bcCD
+		bc.layoutParams.height = calculatedHeight.toInt()
+		bc.requestLayout()
 
 		var index = 0f
 		for ((title, count) in counts) {
@@ -99,8 +110,6 @@ class StatisticsFragment : Fragment(), PreCheckListFilterCheckListener {
 		}
 		val bcData = BarData(dataSet)
 		bcData.barWidth = 0.5f
-
-		val bc = bd.bcCD
 
 		// ⭐ 렌더러와 기본 설정은 최초 1회만 설정
 		if (!isChartInitialized) {

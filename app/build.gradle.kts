@@ -191,7 +191,8 @@ dependencies {
 
     //noinspection Aligned16KB
     implementation("net.zetetic:android-database-sqlcipher:4.5.4")
-
+    androidTestImplementation("androidx.test.espresso:espresso-intents:3.5.1")
+    androidTestImplementation("androidx.test.uiautomator:uiautomator:2.2.0")
     implementation("androidx.core:core-ktx:1.14.0")
     implementation("androidx.appcompat:appcompat:1.7.1")
     implementation("com.google.android.material:material:1.12.0")

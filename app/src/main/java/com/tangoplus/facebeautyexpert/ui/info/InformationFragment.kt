@@ -117,6 +117,7 @@ class InformationFragment : Fragment(), OnFacialPartClickListener {
 			adapter = sAdapter
 			layoutManager = vLayoutManager
 		}
+
 		val fAdapter = FactorRVAdapter(this@InformationFragment, mvm.currentResult.value?.factors ?: Factor(
 			FacialAxisShape.DEFAULT, FaceShape.DEFAULT, null,Pair(0f, 0f)))
 		val fLayoutManager = LinearLayoutManager(requireContext(), LinearLayoutManager.VERTICAL, false)

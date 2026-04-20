@@ -37,6 +37,7 @@ import com.tangoplus.facebeautyexpert.domain.util.UXUtility.startLongVibrate
 import com.tangoplus.facebeautyexpert.domain.util.clearAll
 import com.tangoplus.facebeautyexpert.domain.vision.face.FaceLandmarkerHelper
 import com.tangoplus.facebeautyexpert.domain.vision.pose.PoseLandmarkerHelper
+import com.tangoplus.facebeautyexpert.domain.vo.Sequence
 import com.tangoplus.facebeautyexpert.ui.LoadingDialogFragment
 import com.tangoplus.facebeautyexpert.ui.adapter.MeasureImageRVAdapter
 import com.tangoplus.facebeautyexpert.ui.adapter.MeasureImageVPAdapter
@@ -79,14 +80,14 @@ class MeasureImageFragment : Fragment() {
 
 	override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
 		super.onViewCreated(view, savedInstanceState)
+		prefsUtil = PreferenceUtility(requireContext())
 		initFace()
 		initPose()
-		initSettings()
 		setupGuideBanner(
 			bannerView = bd.guideBanner1.root,
 			closeButton = bd.guideBanner1.btnCloseGuide,
 			textView = bd.guideBanner1.tvGuideText,
-			message = "+ 버튼을 눌러 사진을 첨부해보세요. 분석 결과를 쉽게 확인할 수 있습니다 !\n🔔️ 뎁스카메라를 사용하지 않아 얼굴 크기 등 실제 길이 확인은 제한됩니다. 양해부탁드립니다",
+			message = "🤗목폄 자세가 없을 경우 일반 정면 사진을 추가해보세요\n🔔뎁스카메라를 사용하지 않아 얼굴 크기 등 실제 길이 확인은 제한될 수 있습니다",
 			prefKey = "measureImageGuide"
 		)
 
@@ -94,8 +95,7 @@ class MeasureImageFragment : Fragment() {
 
 			if (it) {
 				mvm.isDepthCameraMeasure = false
-				val loading = LoadingDialogFragment()
-				loading.show(requireActivity().supportFragmentManager, "")
+				showLoading()
 
 				lifecycleScope.launch {
 					val paths = mivm.imagePaths.value ?: emptyList()
@@ -105,7 +105,6 @@ class MeasureImageFragment : Fragment() {
 							val success = mvm.scannedImage(requireActivity() as AppCompatActivity, paths, mvm.currentSeq, flh, plh)
 
 							if (success) {
-
 								mvm.resultBundleToJson(mvm.currentSeq)
 
 								if (mvm.currentHairLine3DCoordinate.size == 7) {
@@ -130,7 +129,7 @@ class MeasureImageFragment : Fragment() {
 								isAllSuccessful = false
 
 								withContext(Dispatchers.Main) {
-									loading.dismiss()
+									dismissLoading()
 									Toast.makeText(context, "분석 결과를 도출할 수 없습니다. 얼굴이 잘 나온 사진으로 다시 시도해주세요!", Toast.LENGTH_LONG).show()
 								}
 								// 더 이상 남은 path를 스캔하지 않고 반복문 즉시 탈출
@@ -223,18 +222,22 @@ class MeasureImageFragment : Fragment() {
 										}
 										startLongVibrate(requireContext())
 										mainVm.currentResult.value = result
-										loading.dismiss()
+										dismissLoading()
+
 										(activity as MainActivity).navigateToMeasureHistoryInformation()
+										initSettings()
 										ivm.isFinishInput.value = false
 									} else {
-										loading.dismiss()
+										dismissLoading()
+
 										ivm.isFinishInput.value = false
 									}
 								} catch (e: Exception) {
 									Log.e("LoadingError", "Error: ${e.message}", e)
 									startLongVibrate(requireContext())
 									ivm.isFinishInput.value = false
-									loading.dismiss()
+									dismissLoading()
+
 								}
 							}
 						}
@@ -246,7 +249,6 @@ class MeasureImageFragment : Fragment() {
 		setAdapter()
 		mivm.imagePaths.observe(viewLifecycleOwner) { paths ->
 			// 1. 기존 가이드 텍스트 숨김 처리 (하나라도 있으면 숨김)
-			Log.v("path확인", "수정해도 path가 감지되나요? $paths")
 			bd.tvMIGuide.visibility = if (paths.any { it != null }) View.GONE else View.VISIBLE
 
 			setVPAdapter()
@@ -423,25 +425,55 @@ class MeasureImageFragment : Fragment() {
 	}
 
 	private fun initSettings() {
-		prefsUtil = PreferenceUtility(requireContext())
+		Log.v("초기화!", "초기화")
+
 		viewModel.setSeqFinishedFlag(false)
 		viewModel.setGuideTextFlag(false)
 		viewModel.setCountDownFlag(false)
 		viewModel.setTextAnimationFlag(false)
-		mvm.resultTargetFs.clearAll()
-		mvm.hsvColorJo.clearAll()
-		mvm.hsvFLCoordinatesJA.clearAll()
-		mvm.hsvPLCoordinatesJA.clearAll()
-		mvm.hsvMediaFileName = ""
+		mvm.currentSeq = Sequence.COMFORT
+		mvm.face3DResult = listOf()
+		mvm.face2DResult = null
+
+
 		mvm.staticJA.clearAll()
 		mvm.coordinatesJA.clearAll()
 		mvm.mediaFileNames.clear()
 		mvm.plrJA.clearAll()
 		mvm.hairLineJA.clearAll()
+		mvm.mergedJA.clearAll()
+		mvm.currentPlrCoordinate.clear()
+		mvm.current3DPlrCoordinate.clear()
+		mvm.currentHairLine3DCoordinate.clear()
+
 		mvm.inputWidth = 0
 		mvm.inputHeight = 0
 		mvm.overlayW = 0f
 		mvm.overlayH = 0f
 
+
+		// measureImageViewModel
+		mivm.removeImage(0)
+		mivm.removeImage(1)
+		ivm.nameValue.value = ""
+		ivm.mobileValue.value = ""
+		ivm.genderValue.value = -1
+		ivm.birthdayValue.value = "날짜 선택"
+		ivm.nationalityValue.value = ""
+
+	}
+
+	fun showLoading() {
+		val fm = requireActivity().supportFragmentManager
+		// "loading"이라는 태그로 이미 떠 있는지 확인
+		if (fm.findFragmentByTag("loading_tag") == null) {
+			LoadingDialogFragment().show(fm, "loading_tag")
+		}
+	}
+
+	fun dismissLoading() {
+		val fm = requireActivity().supportFragmentManager
+		// 태그로 찾아서 해당 다이얼로그만 정확히 제거
+		(fm.findFragmentByTag("loading_tag") as? LoadingDialogFragment)?.dismiss()
 	}
 }

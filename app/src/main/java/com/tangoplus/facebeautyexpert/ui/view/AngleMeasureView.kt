@@ -72,6 +72,7 @@ class AngleMeasureView @JvmOverloads constructor(
 
 		when (event.action) {
 			MotionEvent.ACTION_DOWN -> {
+
 				lastX = x
 				lastY = y
 
@@ -94,7 +95,10 @@ class AngleMeasureView @JvmOverloads constructor(
 						activePoint = 3; selectedIndex = i; break
 					}
 				}
-				if (selectedIndex != -1) return true
+				if (selectedIndex != -1) {
+					parent.requestDisallowInterceptTouchEvent(true)
+					return true
+				}
 			}
 			MotionEvent.ACTION_MOVE -> {
 				if (selectedIndex != -1 && activePoint != 0) {
@@ -115,7 +119,8 @@ class AngleMeasureView @JvmOverloads constructor(
 					return true
 				}
 			}
-			MotionEvent.ACTION_UP -> {
+			MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+				parent.requestDisallowInterceptTouchEvent(false)
 				activePoint = 0
 				selectedIndex = -1 // 터치 종료 시 선택 해제
 			}

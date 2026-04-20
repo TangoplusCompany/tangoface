@@ -95,7 +95,7 @@ object MeasureUtility {
 
 		try {
 			loadingDialog = LoadingDialogFragment.newInstance(0).apply {
-				show(activity.supportFragmentManager, "loading")
+				show(activity.supportFragmentManager, "loading_tag")
 			}
 		} catch (e: Exception) {
 			Log.e("LoadingDialogManager", "Failed to show loading dialog", e)

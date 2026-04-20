@@ -321,8 +321,8 @@ object BitmapUtility {
 			}
 
 			if (dim.setedLine.contains(DrawLine.A_SHOULDER)) {
-				val topLm0 = dimFLS.landmarks[11]
-				val bottomLm0 = dimFLS.landmarks[12]
+				val topLm0 = dimPLS.landmarks[11]
+				val bottomLm0 = dimPLS.landmarks[12]
 				val x00 = topLm0.x
 				val y00 = topLm0.y
 				val x01 = bottomLm0.x
@@ -333,7 +333,6 @@ object BitmapUtility {
 			if (dim.setedLine.contains(DrawLine.NECK)) {
 				val topLm0 = dimPLS.landmarks[11]
 				val bottomLm0 = dimPLS.landmarks[12]
-
 				val middleShoulderX = (topLm0.x + bottomLm0.x) / 2
 				val middleShoulderY = (topLm0.y + bottomLm0.y) / 2
 				val nose = dimFLS.landmarks[1]
@@ -350,7 +349,7 @@ object BitmapUtility {
 					0f,
 					100f,
 					whitePaint,
-				) // neck에 대해서 끝 위치
+				)
 			}
 
 			if (dim.setedLine.contains(DrawLine.FACE)) {
@@ -413,8 +412,6 @@ object BitmapUtility {
 					100f,
 					whitePaint,
 				)
-
-
 
 				val leftLm1 = dimFLS.landmarks[234]
 				val rightLm1 = dimFLS.landmarks[454]
@@ -1716,7 +1713,7 @@ object BitmapUtility {
 						TextBoxData(
 							anchorX = finalPos.x,
 							anchorY = finalPos.y,
-							targetGridIndex = 27,
+							targetGridIndex = 26,
 							info = TextDrawInfo(
 								title = "처짐 지수",
 								items = listOf(
@@ -1737,7 +1734,7 @@ object BitmapUtility {
 				if (rawData.isNotEmpty()) {
 					textBoxes.add(TextBoxData(
 						anchorX = finalPos.x, anchorY = finalPos.y,
-						targetGridIndex = 32, // 중앙 하단부
+						targetGridIndex = 31, // 중앙 하단부
 						info = TextDrawInfo("어깨 각도", listOf(TextItem("너비:", "${rawData.getOrNull(0) ?: ""}º")))
 					))
 				}
