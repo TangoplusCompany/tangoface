@@ -27,7 +27,7 @@ class FactorRVAdapter(private val fragment : Fragment, private val currentFactor
 	중심축 이탈: 전체적으로 얼굴의 요소들이 한쪽으로 쏠린 상태
 	"""
 	private val info1 = "안면의 외곽 라인이 얼마나 매끄럽고 팽팽하게 유지되고 있는지를 정량화한 지표입니다."
-	private val info2 = "광대 크기, 턱의 너비, 볼살의 정도를 조합해 가장 유사한 얼굴형을 도출합니다.\n\n🥚 계란형, ♥️ 하트형, 🔶 마름모형, 🥜 땅콩형, 🛡️ 육각형, 🟠 둥근형\n\n으로 나눠집니다."
+	private val info2 = "광대 크기, 턱의 너비, 볼살의 정도를 조합해 가장 유사한 얼굴형을 도출합니다.\n\n🥚 계란형, ♥️ 하트형, 🔶 마름모형, 🛡️ 육각형, 🟠 둥근형\n\n으로 나눠집니다."
 
 	inner class FactorViewHolder(view: View) : RecyclerView.ViewHolder(view) {
 

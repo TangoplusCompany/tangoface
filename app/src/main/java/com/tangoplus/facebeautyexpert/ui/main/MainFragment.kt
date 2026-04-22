@@ -124,6 +124,7 @@ class MainFragment : Fragment() {
 	}
 
 	private fun navigateToDepthCamera() {
+		val isTablet = resources.configuration.smallestScreenWidthDp >= 600
 		val intent = Intent(requireContext(), DepthCameraActivity::class.java)
 		cameraResultLauncher.launch(intent)
 		requireActivity().finishAffinity()

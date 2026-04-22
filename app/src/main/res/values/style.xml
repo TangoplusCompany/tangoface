@@ -26,9 +26,8 @@
 
     <style name="CheckBoxColorOverlay">
         <item name="colorOnSurface">@color/accent</item>
-        <item name="colorOnSurfaceVariant">@color/bg15</item>
+        <item name="colorOnSurfaceVariant">@color/accent</item>
         <item name="colorPrimary">@color/accent</item>
-        <item name="colorOnPrimary">@color/white</item>
     </style>
 
     <!-- 사진 크기 적응형 dialogFragment-->

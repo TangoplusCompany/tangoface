@@ -129,8 +129,9 @@ class DepthCameraActivity : BaseActivity(), FaceLandmarkerHelper.LandmarkerListe
 	// landmarker helper
 	private lateinit var backgroundExecutor: ExecutorService
 	private var timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"))
-	private lateinit var plh : PoseLandmarkerHelper
 	private lateinit var flh: FaceLandmarkerHelper
+	private lateinit var plh : PoseLandmarkerHelper
+
 
 	private lateinit var fDao: FaceDao
 	private lateinit var prefsUtil: PreferenceUtility
@@ -412,7 +413,6 @@ class DepthCameraActivity : BaseActivity(), FaceLandmarkerHelper.LandmarkerListe
 		var buffer: ByteBuffer? = null
 		while (mIsStreamRunning && !Thread.currentThread().isInterrupted) {
 
-
 			if (mIsDeviceDetached) break
 
 			val pipeline = mPipeline
@@ -466,16 +466,7 @@ class DepthCameraActivity : BaseActivity(), FaceLandmarkerHelper.LandmarkerListe
 							}
 							buffer?.clear()
 							frame.getData(buffer)
-							bd.obglvC.setCenterCrop(true)
-							bd.obglvC.setRotation(0)
-							bd.obglvC.update(
-								frame.getWidth(),
-								frame.getHeight(),
-								StreamType.COLOR,
-								frame.getFormat(),
-								buffer,
-								1.0f
-							)
+
 							// ✅ Bitmap 생성 (한 번만!)
 							if (scaledIntrinsic != null && colorDistortion != null) {
 								bitmap = colorFrameToBitmapSafe(frame, 0)
@@ -486,8 +477,8 @@ class DepthCameraActivity : BaseActivity(), FaceLandmarkerHelper.LandmarkerListe
 
 									val timestamp = System.currentTimeMillis()
 									mainHandler.post {
-										if (flh?.isClose() == false) {
-											flh?.detectAsync(mpImage!!, timestamp)
+										if (!flh.isClose()) {
+											flh.detectAsync(mpImage!!, timestamp)
 										}
 									}
 								}
@@ -758,7 +749,6 @@ class DepthCameraActivity : BaseActivity(), FaceLandmarkerHelper.LandmarkerListe
 
 	// 녹화 시작과 종료
 	private var mouseClosedTime: Long? = null
-	private var recordingStartTime: Long? = null
 	override fun onResults(
 		resultBundle: FaceLandmarkerHelper.ResultBundle
 	) {
@@ -1015,44 +1005,6 @@ class DepthCameraActivity : BaseActivity(), FaceLandmarkerHelper.LandmarkerListe
 				ContextCompat.getDrawable(this@DepthCameraActivity, R.drawable.drawable_seq_1)
 			)
 			startLookUpAnimation()
-//			when (mvm.currentSeq) {
-//				Sequence.COMFORT,  -> {
-//					bd.fdgv.triggerOffAnimationIfNeeded()
-//					Handler(Looper.getMainLooper()).postDelayed({ bd.fdgv.visibility = View.INVISIBLE }, 800)
-//					bd.ivFrame.visibility = View.VISIBLE
-//					startFadeIn(bd.ivFrame)
-//				}
-//				else -> {
-//					bd.fdgv.visibility = View.VISIBLE
-//					bd.fdgv.triggerIntroAnimationIfNeeded()
-//					Handler(Looper.getMainLooper()).postDelayed({ bd.ivFrame.visibility = View.INVISIBLE }, 800)
-//					startFadeOut(bd.ivFrame)
-//				}
-//			}
-
-//			when (mvm.currentSeq) {
-//				Sequence.SIDE_LEFT -> bd.ivFrame.setImageDrawable(
-//					ContextCompat.getDrawable(
-//						this@DepthCameraActivity,
-//						R.drawable.drawable_seq_7
-//					)
-//				)
-//
-//				Sequence.SIDE_RIGHT -> bd.ivFrame.setImageDrawable(
-//					ContextCompat.getDrawable(
-//						this@DepthCameraActivity,
-//						R.drawable.drawable_seq_8
-//					)
-//				)
-//				Sequence.COMFORT -> bd.ivFrame.setImageDrawable(
-//					ContextCompat.getDrawable(
-//						this@DepthCameraActivity,
-//						R.drawable.drawable_seq_0
-//					)
-//				)
-//
-//				else -> {}
-//			}
 		}
 
 		bd.btnShooting.apply {
@@ -1326,21 +1278,5 @@ class DepthCameraActivity : BaseActivity(), FaceLandmarkerHelper.LandmarkerListe
 				R.drawable.drawable_seq_0
 			)
 		)
-		when (mvm.currentSeq) {
-			Sequence.COMFORT -> {
-				bd.fdgv.triggerOffAnimationIfNeeded()
-				Handler(Looper.getMainLooper()).postDelayed({ bd.fdgv.visibility = View.INVISIBLE }, 800)
-				bd.ivFrame.visibility = View.VISIBLE
-				startFadeIn(bd.ivFrame)
-			}
-			else -> {
-				bd.fdgv.visibility = View.VISIBLE
-				bd.fdgv.triggerIntroAnimationIfNeeded()
-				Handler(Looper.getMainLooper()).postDelayed({ bd.ivFrame.visibility = View.INVISIBLE }, 800)
-				startFadeOut(bd.ivFrame)
-			}
-		}
 	}
-
-
 }

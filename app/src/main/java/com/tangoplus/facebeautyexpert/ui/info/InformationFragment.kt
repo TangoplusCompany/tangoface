@@ -419,7 +419,7 @@ class InformationFragment : Fragment(), OnFacialPartClickListener {
 					Log.v("gemini호출", "Gemini API 요청 후 응답을 기다리고 있습니다")
 
 					// 최소 대기 시간 타이머
-					val minDelayTask = async { delay(7635L) } //45속도로 안내 메시지 최소 1번 송출
+					val minDelayTask = async { delay(7635L) } // 45 속도로 안내 메시지 최소 1번 송출
 
 					// 2. 동시에 API 호출 및 DB 저장을 시작합니다.
 					val apiTask = async(Dispatchers.IO) {

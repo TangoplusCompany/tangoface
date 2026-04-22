@@ -54,6 +54,13 @@
             </intent-filter>
         </activity>
         <activity
+            android:name="com.tangoplus.facebeautyexpert.ui.measure.NormalCameraActivity"
+            android:exported="true"
+            android:screenOrientation="portrait"
+            android:resizeableActivity="false"
+            android:excludeFromRecents="false"
+            tools:ignore="DiscouragedApi,LockedOrientationActivity" />
+        <activity
             android:name="com.tangoplus.facebeautyexpert.ui.measure.DepthCameraActivity"
             android:exported="true"
             android:screenOrientation="portrait"

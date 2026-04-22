@@ -9,16 +9,6 @@
     tools:context=".ui.measure.DepthCameraActivity">
 
 
-    <com.tangoplus.facebeautyexpert.orbbec.view.OBGLView
-        android:id="@+id/obglvC"
-        android:layout_width="0dp"
-        android:layout_height="0dp"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
-
-
     <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/clSeqGuide"
         android:layout_width="match_parent"
@@ -41,17 +31,6 @@
             app:layout_constraintTop_toTopOf="parent"
             app:layout_constraintVertical_bias="0.32999998"
             app:layout_constraintWidth_percent="0.4" />
-
-        <com.tangoplus.facebeautyexpert.ui.view.CircularGuideView
-            android:id="@+id/fdgv"
-            android:layout_width="0dp"
-            android:layout_height="0dp"
-            android:visibility="invisible"
-            app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="parent"
-            app:layout_constraintVertical_bias="0.33" />
 
         <TextView
             android:id="@+id/tvSeqGuide"
@@ -83,11 +62,7 @@
     <com.tangoplus.facebeautyexpert.ui.view.OverlayView
         android:id="@+id/overlay"
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        app:layout_constraintBottom_toBottomOf="@+id/obglvC"
-        app:layout_constraintEnd_toEndOf="@+id/obglvC"
-        app:layout_constraintStart_toStartOf="@+id/obglvC"
-        app:layout_constraintTop_toTopOf="@+id/obglvC" />
+        android:layout_height="match_parent" />
 
     <ImageView
         android:id="@+id/ivFrame"
@@ -164,19 +139,6 @@
             app:layout_constraintTop_toTopOf="parent" />
 
     </androidx.constraintlayout.widget.ConstraintLayout>
-
-    <FrameLayout
-        android:id="@+id/flCameraShutter"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:background="@color/white"
-        android:visibility="invisible"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent">
-
-    </FrameLayout>
 
     <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/constraintLayout"

@@ -1,6 +1,8 @@
 package com.tangoplus.facebeautyexpert.ui.info
 
 import android.os.Bundle
+import android.text.Editable
+import android.text.TextWatcher
 import android.util.Log
 import androidx.fragment.app.Fragment
 import android.view.LayoutInflater
@@ -9,6 +11,7 @@ import android.view.ViewGroup
 import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.GridLayoutManager
+import androidx.recyclerview.widget.LinearLayoutManager
 import com.tangoplus.facebeautyexpert.R
 import com.tangoplus.facebeautyexpert.data.db.FaceDao
 import com.tangoplus.facebeautyexpert.data.db.FaceDatabase
@@ -19,6 +22,7 @@ import com.tangoplus.facebeautyexpert.ui.adapter.UserRVAdapter
 import com.tangoplus.facebeautyexpert.ui.listener.OnUserClickListener
 import com.tangoplus.facebeautyexpert.ui.main.MainActivity
 import com.tangoplus.facebeautyexpert.ui.main.vm.MainViewModel
+import com.tangoplus.facebeautyexpert.ui.main.vo.UserItem
 import com.tangoplus.facebeautyexpert.ui.measure.MeasureImageFragment
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -45,7 +49,7 @@ class MeasureHistoryFragment : Fragment(), OnUserClickListener {
 		mvm.allDataLoaded.observe(viewLifecycleOwner) { isLoaded ->
 			if (isLoaded == true) {
 				mvm.clearLoadDataFlag()
-				setAdapter()
+				setAdapter(mvm.currentUserItems)
 			}
 		}
 
@@ -54,22 +58,23 @@ class MeasureHistoryFragment : Fragment(), OnUserClickListener {
 			val fd = FaceDatabase.getDatabase(requireContext())
 			fDao = fd.faceDao()
 			initUserUI()
-			setAdapter()
+			setAdapter(mvm.currentUserItems)
 			loadingDialog = LoadingDialogFragment()
 
 			bd.btnMHImage.setOnSingleClickListener {
 				(requireActivity() as MainActivity).navigateToSubFragment(MeasureImageFragment())
 			}
 		}
+		setSearchText()
 	}
 
 	private fun initUserUI() {
 		mvm.loadUserDataFromDB(requireContext())
 	}
 
-	private fun setAdapter() {
-		val lm = GridLayoutManager(requireContext(), 2)
-		val userAdapter = UserRVAdapter(requireContext(), mvm.currentUserItems)
+	private fun setAdapter(userItems: List<UserItem>) {
+		val lm = GridLayoutManager(requireContext(), 2) // LinearLayoutManager(requireContext(), LinearLayoutManager.VERTICAL, false)
+		val userAdapter = UserRVAdapter(requireContext(), userItems)
 		userAdapter.onUserClickListener = this@MeasureHistoryFragment
 		bd.rvMH.apply {
 			layoutManager = lm
@@ -103,5 +108,19 @@ class MeasureHistoryFragment : Fragment(), OnUserClickListener {
 		}
 	}
 
-
+	private fun setSearchText() {
+		bd.etMHSearch.addTextChangedListener(object: TextWatcher{
+			override fun beforeTextChanged(p0: CharSequence?, p1: Int, p2: Int, p3: Int) {}
+			override fun onTextChanged(p0: CharSequence?, p1: Int, p2: Int, p3: Int) {}
+			override fun afterTextChanged(p0: Editable?) {
+				val afterText = p0.toString()
+				if (afterText.isNotEmpty()) {
+					val filteredUserItems = mvm.currentUserItems.filter { it -> it.name?.contains(afterText) == true || it.mobile?.contains(afterText) == true }
+					setAdapter(filteredUserItems)
+				} else {
+					setAdapter(mvm.currentUserItems)
+				}
+			}
+		})
+	}
 }

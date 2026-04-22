@@ -87,7 +87,7 @@ class MeasureImageFragment : Fragment() {
 			bannerView = bd.guideBanner1.root,
 			closeButton = bd.guideBanner1.btnCloseGuide,
 			textView = bd.guideBanner1.tvGuideText,
-			message = "🤗목폄 자세가 없을 경우 일반 정면 사진을 추가해보세요\n🔔뎁스카메라를 사용하지 않아 얼굴 크기 등 실제 길이 확인은 제한될 수 있습니다",
+			message = "🤗목폄 자세가 없을 경우 일반 정면 사진을 추가해주세요\n🔔뎁스카메라를 사용하지 않아 얼굴 크기 등 실제 길이 확인은 제한될 수 있습니다",
 			prefKey = "measureImageGuide"
 		)
 
@@ -435,7 +435,6 @@ class MeasureImageFragment : Fragment() {
 		mvm.face3DResult = listOf()
 		mvm.face2DResult = null
 
-
 		mvm.staticJA.clearAll()
 		mvm.coordinatesJA.clearAll()
 		mvm.mediaFileNames.clear()
@@ -451,7 +450,6 @@ class MeasureImageFragment : Fragment() {
 		mvm.overlayW = 0f
 		mvm.overlayH = 0f
 
-
 		// measureImageViewModel
 		mivm.removeImage(0)
 		mivm.removeImage(1)
@@ -460,7 +458,6 @@ class MeasureImageFragment : Fragment() {
 		ivm.genderValue.value = -1
 		ivm.birthdayValue.value = "날짜 선택"
 		ivm.nationalityValue.value = ""
-
 	}
 
 	fun showLoading() {
