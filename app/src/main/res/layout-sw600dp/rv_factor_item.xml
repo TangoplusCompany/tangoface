@@ -1,0 +1,184 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="@drawable/bckgnd_20"
+    android:backgroundTint="@color/bg700">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="horizontal">
+
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_weight="1">
+
+            <TextView
+                android:id="@+id/tvFITitle0"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="15dp"
+                android:text="하관 비대칭"
+                android:textColor="@color/accent"
+                android:textSize="24sp"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent" />
+
+            <TextView
+                android:id="@+id/tvFIValue0"
+                android:layout_width="0dp"
+                android:layout_height="128dp"
+                android:layout_marginTop="5dp"
+                android:layout_marginBottom="15dp"
+                android:background="@drawable/bckgnd_20"
+                android:backgroundTint="@color/bg300"
+                android:gravity="center"
+                android:padding="10dp"
+                android:text="asdfasdfasdf"
+                android:textColor="@color/accent300"
+                android:textSize="20sp"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@id/tvFITitle0"
+                app:layout_constraintWidth_percent="0.5" />
+
+            <ImageButton
+                android:id="@+id/ibtnFIInfo0"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:background="@drawable/effect_12"
+                android:backgroundTint="@color/bg"
+                android:padding="4dp"
+                android:visibility="gone"
+                app:layout_constraintBottom_toBottomOf="@id/tvFITitle0"
+                app:layout_constraintStart_toEndOf="@+id/tvFITitle0"
+                app:layout_constraintTop_toTopOf="@+id/tvFITitle0"
+                app:srcCompat="@drawable/ic_alert_info" />
+        </androidx.constraintlayout.widget.ConstraintLayout>
+
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_weight="1">
+
+            <TextView
+                android:id="@+id/tvFITitle1"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="15dp"
+                android:text="피부처짐 지수"
+                android:textColor="@color/accent"
+                android:textSize="24sp"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent" />
+
+            <LinearLayout
+                android:id="@+id/llFIValue"
+                android:layout_width="wrap_content"
+                android:layout_height="128dp"
+                android:layout_marginTop="5dp"
+                android:layout_marginBottom="15dp"
+                android:background="@drawable/bckgnd_20"
+                android:backgroundTint="@color/bg300"
+                android:orientation="horizontal"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@+id/tvFITitle1">
+
+                <TextView
+                    android:id="@+id/tvFIValue10"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1"
+                    android:gravity="center"
+                    android:padding="10dp"
+                    android:textColor="@color/accent300"
+                    android:textSize="18sp" />
+
+                <TextView
+                    android:id="@+id/tvFIValue11"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1"
+                    android:gravity="center"
+                    android:padding="10dp"
+                    android:textColor="@color/accent300"
+                    android:textSize="18sp" />
+            </LinearLayout>
+
+            <ImageButton
+                android:id="@+id/ibtnFIInfo1"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:background="@drawable/effect_12"
+                android:backgroundTint="@color/bg"
+                android:padding="4dp"
+                android:visibility="gone"
+                app:layout_constraintBottom_toBottomOf="@id/tvFITitle1"
+                app:layout_constraintStart_toEndOf="@+id/tvFITitle1"
+                app:layout_constraintTop_toTopOf="@+id/tvFITitle1"
+                app:srcCompat="@drawable/ic_alert_info" />
+
+        </androidx.constraintlayout.widget.ConstraintLayout>
+
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_weight="1">
+
+            <TextView
+                android:id="@+id/tvFITitle2"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="15dp"
+                android:text="얼굴형"
+                android:textColor="@color/accent"
+                android:textSize="24sp"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent" />
+
+            <TextView
+                android:id="@+id/tvFIValue2"
+                android:layout_width="wrap_content"
+                android:layout_height="128dp"
+                android:layout_marginTop="5dp"
+                android:layout_marginBottom="15dp"
+                android:background="@drawable/bckgnd_20"
+                android:backgroundTint="@color/bg300"
+                android:gravity="center"
+                android:lineSpacingExtra="12dp"
+                android:padding="10dp"
+                android:text="asdfasdfasdf"
+                android:textColor="@color/accent300"
+                android:textSize="20sp"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@+id/tvFITitle2" />
+
+            <ImageButton
+                android:id="@+id/ibtnFIInfo2"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:background="@drawable/effect_12"
+                android:backgroundTint="@color/bg"
+                android:padding="4dp"
+                android:visibility="gone"
+                app:layout_constraintBottom_toBottomOf="@id/tvFITitle2"
+                app:layout_constraintStart_toEndOf="@+id/tvFITitle2"
+                app:layout_constraintTop_toTopOf="@+id/tvFITitle2"
+                app:srcCompat="@drawable/ic_alert_info" />
+
+        </androidx.constraintlayout.widget.ConstraintLayout>
+    </LinearLayout>
+
+</androidx.constraintlayout.widget.ConstraintLayout>

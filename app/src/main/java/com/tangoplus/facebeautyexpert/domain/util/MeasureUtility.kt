@@ -57,18 +57,6 @@ object MeasureUtility {
 		}
 	}
 
-	fun showReStartDialog(context: Context, callback: () -> Unit) {
-		MaterialAlertDialogBuilder(context, R.style.ThemeOverlay_App_MaterialAlertDialog).apply {
-			setTitle("알림")
-			setMessage("다시 시작하시겠습니까?")
-			setPositiveButton("예") { _, _ ->
-				callback()
-			}
-			setNegativeButton("아니오") { _, _ -> }
-			show()
-		}
-	}
-
 	fun showGoMainDialog(currentActivity: AppCompatActivity) {
 		MaterialAlertDialogBuilder(currentActivity, R.style.ThemeOverlay_App_MaterialAlertDialog)
 			.setTitle("알림")

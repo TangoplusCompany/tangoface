@@ -34,7 +34,7 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.FaceBeautyExpert"
         android:largeHeap="true"
-
+        android:requestLegacyExternalStorage="true"
         tools:targetApi="31">
         <activity
             android:name="com.yalantis.ucrop.UCropActivity"

@@ -1,0 +1,254 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/flUSD"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context=".ui.measure.UserSetupDialogFragment">
+
+    <androidx.core.widget.NestedScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:fillViewport="true">
+
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@color/bg">
+
+            <TextView
+                android:id="@+id/tvUSDSkip"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="32dp"
+                android:padding="6dp"
+                android:text="SKIP"
+                android:textColor="@color/subColor100"
+                android:textSize="24dp"
+                android:textStyle="bold"
+                app:layout_constraintBottom_toBottomOf="@+id/tvUSDGuide"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintTop_toTopOf="@+id/tvUSDGuide" />
+
+            <TextView
+                android:id="@+id/tvUSDGuide"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_margin="40dp"
+                android:text="안녕하세요\n분석을 위해 성함을 입력해주세요"
+                android:textColor="@color/subColor100"
+                android:textSize="36dp"
+                app:layout_constraintEnd_toStartOf="@+id/tvUSDSkip"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent" />
+
+            <EditText
+                android:id="@+id/etUSDName"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="40dp"
+                android:layout_marginTop="20dp"
+                android:layout_marginEnd="40dp"
+                android:backgroundTint="@color/accent"
+                android:ems="10"
+                android:hint="이름"
+                android:inputType="text"
+                android:paddingTop="20dp"
+                android:paddingBottom="20dp"
+                android:singleLine="true"
+                android:textColor="@color/subColor100"
+                android:textColorHint="@color/subColor100"
+                android:textSize="28dp"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@+id/tvUSDGuide" />
+
+            <EditText
+                android:id="@+id/etUSDMobile"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="40dp"
+                android:layout_marginTop="20dp"
+                android:layout_marginEnd="40dp"
+                android:backgroundTint="@color/accent"
+                android:ems="10"
+                android:hint="휴대폰 번호"
+                android:inputType="phone"
+                android:paddingTop="20dp"
+                android:paddingBottom="20dp"
+                android:singleLine="true"
+                android:textColor="@color/subColor100"
+                android:textColorHint="@color/subColor100"
+                android:textSize="28dp"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@+id/etUSDName" />
+
+            <androidx.appcompat.widget.AppCompatButton
+                android:id="@+id/btnUSDProgres"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:background="@drawable/effect_0"
+                android:backgroundTint="@color/accent"
+                android:padding="16dp"
+                android:text="사전 체크리스트 시작"
+                android:textColor="@color/white"
+                android:textSize="24dp"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent" />
+
+            <androidx.constraintlayout.widget.ConstraintLayout
+                android:id="@+id/clUSDGender"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="35dp"
+                android:layout_marginTop="20dp"
+                android:layout_marginEnd="35dp"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@+id/etUSDMobile">
+
+                <TextView
+                    android:id="@+id/textView20"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="5dp"
+                    android:text="성별"
+                    android:textColor="@color/subColor100"
+                    android:textSize="24dp"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toTopOf="parent" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:orientation="horizontal"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toBottomOf="@+id/textView20">
+
+                    <TextView
+                        android:id="@+id/tvUSDGender0"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_margin="5dp"
+                        android:layout_weight="1"
+                        android:background="@drawable/effect_20"
+                        android:backgroundTint="@color/bg500"
+                        android:elevation="2dp"
+                        android:gravity="center"
+                        android:paddingTop="40dp"
+                        android:paddingBottom="40dp"
+                        android:text="남성"
+                        android:textColor="@color/subColor100"
+                        android:textSize="28dp" />
+
+                    <TextView
+                        android:id="@+id/tvUSDGender1"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_margin="5dp"
+                        android:layout_weight="1"
+                        android:background="@drawable/effect_20"
+                        android:backgroundTint="@color/bg500"
+                        android:elevation="2dp"
+                        android:gravity="center"
+                        android:paddingTop="40dp"
+                        android:paddingBottom="40dp"
+                        android:text="여성"
+                        android:textColor="@color/subColor100"
+                        android:textSize="28dp" />
+                </LinearLayout>
+            </androidx.constraintlayout.widget.ConstraintLayout>
+
+            <androidx.constraintlayout.widget.ConstraintLayout
+                android:id="@+id/clUSDAgeRange"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="35dp"
+                android:layout_marginTop="20dp"
+                android:layout_marginEnd="35dp"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@+id/clUSDGender">
+
+                <LinearLayout
+                    android:id="@+id/linearLayout5"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        android:id="@+id/textView19"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:layout_marginStart="5dp"
+                        android:layout_weight="1"
+                        android:text="생년월일"
+                        android:textColor="@color/subColor100"
+                        android:textSize="24dp" />
+
+                    <TextView
+                        android:id="@+id/textView14"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:layout_weight="1"
+                        android:text="국적"
+                        android:textColor="@color/subColor100"
+                        android:textSize="24dp" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:layout_marginTop="10dp"
+                    android:orientation="horizontal"
+                    app:layout_constraintBottom_toBottomOf="parent"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toBottomOf="@+id/linearLayout5">
+
+                    <TextView
+                        android:id="@+id/tvUSDBirthday"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:layout_margin="5dp"
+                        android:layout_weight="1"
+                        android:background="@drawable/effect_20"
+                        android:backgroundTint="@color/bg500"
+                        android:elevation="2dp"
+                        android:gravity="center"
+                        android:paddingTop="15dp"
+                        android:paddingBottom="15dp"
+                        android:text="날짜 선택"
+                        android:textColor="@color/subColor100"
+                        android:textSize="24dp" />
+
+                    <com.hbb20.CountryCodePicker
+                        android:id="@+id/ccpUSD"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:layout_margin="5dp"
+                        android:layout_weight="1"
+                        android:background="@drawable/effect_20"
+                        android:backgroundTint="@color/bg500"
+                        android:elevation="2dp"
+                        android:paddingTop="15dp"
+                        android:paddingBottom="15dp"
+                        app:ccpDialog_textColor="@color/subColor100"
+                        app:ccp_arrowColor="@color/subColor100"
+                        app:ccp_contentColor="@color/subColor100"
+                        app:ccp_textSize="24dp" />
+
+
+                </LinearLayout>
+
+            </androidx.constraintlayout.widget.ConstraintLayout>
+
+        </androidx.constraintlayout.widget.ConstraintLayout>
+    </androidx.core.widget.NestedScrollView>
+
+</FrameLayout>

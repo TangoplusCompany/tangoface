@@ -19,8 +19,10 @@ import com.tangoplus.facebeautyexpert.databinding.FragmentPosterManageBinding
 import com.tangoplus.facebeautyexpert.domain.util.AnimationUtility.setupGuideBanner
 import com.tangoplus.facebeautyexpert.domain.util.FileUtility.saveImageToInternalStorage
 import com.tangoplus.facebeautyexpert.domain.util.PreferenceUtility
+import com.tangoplus.facebeautyexpert.orbbec.application.MyApplication
 import com.tangoplus.facebeautyexpert.ui.adapter.PosterRVAdapter
 import com.tangoplus.facebeautyexpert.ui.listener.OnPosterClickListener
+import com.tangoplus.facebeautyexpert.ui.main.MainActivity
 import com.tangoplus.facebeautyexpert.ui.statistics.vm.PosterViewModel
 import com.tangoplus.facebeautyexpert.ui.statistics.vm.PosterViewModelFactory
 import com.yalantis.ucrop.UCrop
@@ -71,7 +73,7 @@ class PosterManageFragment : Fragment(), OnPosterClickListener {
 		}
 
 		bd.rvPM.apply {
-			layoutManager = GridLayoutManager(context, 3)
+			layoutManager = GridLayoutManager(context, if (MyApplication.isTablet()) 3 else 2)
 			adapter = pmAdapter
 		}
 	}
@@ -97,7 +99,7 @@ class PosterManageFragment : Fragment(), OnPosterClickListener {
 	}
 
 	private val pickImage = registerForActivityResult(ActivityResultContracts.GetContent()) { uri ->
-		uri?.let { sourceUri ->
+				uri?.let { sourceUri ->
 			val tempFile = File(requireContext().cacheDir, "temp_crop_${System.currentTimeMillis()}.jpg")
 			val destinationUri = Uri.fromFile(tempFile)
 
@@ -108,9 +110,12 @@ class PosterManageFragment : Fragment(), OnPosterClickListener {
 				setFreeStyleCropEnabled(false)
 				setToolbarTitle("포스터 영역 선택")
 			}
+			val ratio = (activity as MainActivity).getFlMainSize()?.let { (width, height) ->
+				if (MyApplication.isTablet()) Pair(25.6f, 38.9f) else Pair(width.toFloat(), height.toFloat())
+			} ?: Pair(1f, 1f)
 
 			UCrop.of(sourceUri, destinationUri)
-				.withAspectRatio(25.6f, 38.9f)
+				.withAspectRatio(ratio.first, ratio.second)
 				.withOptions(options)
 				.getIntent(requireContext())
 				.let { uCropActivityResult.launch(it) }

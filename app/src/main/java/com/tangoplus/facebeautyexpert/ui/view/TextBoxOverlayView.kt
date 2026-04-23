@@ -14,6 +14,7 @@ import androidx.core.content.ContextCompat
 import androidx.core.graphics.toColorInt
 import com.davemorrissey.labs.subscaleview.SubsamplingScaleImageView
 import com.tangoplus.facebeautyexpert.domain.util.BitmapUtility
+import kotlin.math.abs
 
 class TextBoxOverlayView @JvmOverloads constructor(
 	context: Context,
@@ -59,6 +60,16 @@ class TextBoxOverlayView @JvmOverloads constructor(
 			}
 		})
 	}
+	private var padding = 8
+	private var dataTextSize = 12
+	fun setTabletUI() {
+		padding = 8
+		dataTextSize = 14
+	}
+	fun setMobileUI() {
+		padding = 4
+		dataTextSize = 12
+	}
 
 	/**
 	 * Fragment에서 계산한 얼굴 영역(finalBitmap 픽셀 기준)을 설정합니다.
@@ -101,7 +112,7 @@ class TextBoxOverlayView @JvmOverloads constructor(
 		val gridY = gridRect.top + (row * cellH) + (cellH / 2f)
 
 		// 2. 화면 경계 마진 (박스가 테두리에 딱 붙지 않게 여유를 줌)
-		val safeMargin = 8.dp
+		val safeMargin = padding.dp
 		val minX = boxW / 2f + safeMargin
 		val maxX = viewW - (boxW / 2f) - safeMargin
 		val minY = boxH / 2f + safeMargin
@@ -123,8 +134,8 @@ class TextBoxOverlayView @JvmOverloads constructor(
 		val distToT = gridY - minY
 		val distToB = maxY - gridY
 
-		val scaleX = if (dx < 0) Math.abs(distToL / dx) else if (dx > 0) Math.abs(distToR / dx) else Float.MAX_VALUE
-		val scaleY = if (dy < 0) Math.abs(distToT / dy) else if (dy > 0) Math.abs(distToB / dy) else Float.MAX_VALUE
+		val scaleX = if (dx < 0) abs(distToL / dx) else if (dx > 0) abs(distToR / dx) else Float.MAX_VALUE
+		val scaleY = if (dy < 0) abs(distToT / dy) else if (dy > 0) abs(distToB / dy) else Float.MAX_VALUE
 
 		val scale = Math.min(scaleX, scaleY).coerceAtMost(1.0f)
 
@@ -193,7 +204,7 @@ class TextBoxOverlayView @JvmOverloads constructor(
 
 			// Lerp (부드러운 추적 애니메이션)
 			val lerp = 0.2f
-			if (Math.abs(animPos.currentX - animPos.targetX) > 1f || Math.abs(animPos.currentY - animPos.targetY) > 1f) {
+			if (abs(animPos.currentX - animPos.targetX) > 1f || abs(animPos.currentY - animPos.targetY) > 1f) {
 				animPos.currentX += (animPos.targetX - animPos.currentX) * lerp
 				animPos.currentY += (animPos.targetY - animPos.currentY) * lerp
 				needInvalidate = true
@@ -236,8 +247,8 @@ class TextBoxOverlayView @JvmOverloads constructor(
 			// --- 2. 펼쳐진 상태: 기존 텍스트 박스 로직 ---
 			val hasTitle = info.title.isNotEmpty() // 타이틀 존재 여부 체크
 
-			val titlePaint = Paint(textPaint).apply { color = "#FF0055".toColorInt(); textSize = 16.sp; isFakeBoldText = true }
-			val itemPaint = Paint(textPaint).apply { color = Color.WHITE; textSize = 14.sp }
+			val titlePaint = Paint(textPaint).apply { color = "#FF0055".toColorInt(); textSize = (dataTextSize +2).dp; isFakeBoldText = true }
+			val itemPaint = Paint(textPaint).apply { color = Color.WHITE; textSize = (dataTextSize).dp }
 
 			// 1. 가로 길이 계산: 타이틀이 있을 때만 가로폭 측정에 포함
 			var maxW = if (hasTitle) titlePaint.measureText(info.title) else 0f

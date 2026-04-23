@@ -41,6 +41,7 @@ import com.tangoplus.facebeautyexpert.ui.main.vm.MainViewModel
 import kotlinx.coroutines.launch
 import com.tangoplus.facebeautyexpert.domain.util.BitmapUtility.setSSIV
 import com.tangoplus.facebeautyexpert.domain.util.LLMUtility.getGeminiInsight
+import com.tangoplus.facebeautyexpert.orbbec.application.MyApplication
 import com.tangoplus.facebeautyexpert.ui.adapter.FactorRVAdapter
 import com.tangoplus.facebeautyexpert.ui.adapter.SelectRVAdapter
 import com.tangoplus.facebeautyexpert.ui.info.vm.InformationViewModel
@@ -106,6 +107,11 @@ class InformationFragment : Fragment(), OnFacialPartClickListener {
 		setRatioBtn()
 		initAngleTool()
 		observeViewModel()
+
+		bd.tvIClose?.setOnSingleClickListener {
+			val behavior = BottomSheetBehavior.from(bd.bottomSheet)
+			behavior.state = BottomSheetBehavior.STATE_HIDDEN
+		}
 	}
 
 	private fun setAdapter() {
@@ -201,7 +207,8 @@ class InformationFragment : Fragment(), OnFacialPartClickListener {
 	}
 
 	private fun setBoxInfos(textInfos: List<BitmapUtility.TextBoxData>, faceRect : TextBoxOverlayView.FaceRect?) {
-
+		val isTablet = MyApplication.isTablet()
+		if (isTablet) bd.overlayView.setTabletUI() else bd.overlayView.setMobileUI()
 		bd.overlayView.setFaceRect(faceRect)
 		bd.overlayView.attachToImageView(bd.ssiv)
 		bd.overlayView.setTextBoxes(textInfos)
@@ -444,6 +451,8 @@ class InformationFragment : Fragment(), OnFacialPartClickListener {
 						bd.tvGDInsight.text = resultString
 						currentResultValue.insight = resultString
 					} else {
+						bd.tvGDInsight.text = "인사이트를 불러오는 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요."
+						currentResultValue.insight = "인사이트를 불러오는 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요."
 						throw Exception("Empty Insight")
 					}
 

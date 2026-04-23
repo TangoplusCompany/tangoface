@@ -17,6 +17,7 @@ import com.tangoplus.facebeautyexpert.data.db.FaceDao
 import com.tangoplus.facebeautyexpert.data.db.FaceDatabase
 import com.tangoplus.facebeautyexpert.databinding.FragmentMeasureHistoryBinding
 import com.tangoplus.facebeautyexpert.domain.util.FileUtility.setOnSingleClickListener
+import com.tangoplus.facebeautyexpert.orbbec.application.MyApplication
 import com.tangoplus.facebeautyexpert.ui.LoadingDialogFragment
 import com.tangoplus.facebeautyexpert.ui.adapter.UserRVAdapter
 import com.tangoplus.facebeautyexpert.ui.listener.OnUserClickListener
@@ -73,7 +74,8 @@ class MeasureHistoryFragment : Fragment(), OnUserClickListener {
 	}
 
 	private fun setAdapter(userItems: List<UserItem>) {
-		val lm = GridLayoutManager(requireContext(), 2) // LinearLayoutManager(requireContext(), LinearLayoutManager.VERTICAL, false)
+		val currentSpanCount = if (MyApplication.isTablet()) 2 else 1
+		val lm = GridLayoutManager(requireContext(), currentSpanCount) // LinearLayoutManager(requireContext(), LinearLayoutManager.VERTICAL, false)
 		val userAdapter = UserRVAdapter(requireContext(), userItems)
 		userAdapter.onUserClickListener = this@MeasureHistoryFragment
 		bd.rvMH.apply {
@@ -115,7 +117,7 @@ class MeasureHistoryFragment : Fragment(), OnUserClickListener {
 			override fun afterTextChanged(p0: Editable?) {
 				val afterText = p0.toString()
 				if (afterText.isNotEmpty()) {
-					val filteredUserItems = mvm.currentUserItems.filter { it -> it.name?.contains(afterText) == true || it.mobile?.contains(afterText) == true }
+					val filteredUserItems = mvm.currentUserItems.filter { it.name?.contains(afterText) == true || it.mobile?.contains(afterText) == true }
 					setAdapter(filteredUserItems)
 				} else {
 					setAdapter(mvm.currentUserItems)

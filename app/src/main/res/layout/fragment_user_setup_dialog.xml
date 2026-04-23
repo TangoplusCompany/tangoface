@@ -21,11 +21,11 @@
                 android:id="@+id/tvUSDSkip"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginEnd="32dp"
+                android:layout_marginEnd="14dp"
                 android:padding="6dp"
                 android:text="SKIP"
                 android:textColor="@color/subColor100"
-                android:textSize="24dp"
+                android:textSize="16sp"
                 android:textStyle="bold"
                 app:layout_constraintBottom_toBottomOf="@+id/tvUSDGuide"
                 app:layout_constraintEnd_toEndOf="parent"
@@ -35,10 +35,10 @@
                 android:id="@+id/tvUSDGuide"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_margin="40dp"
+                android:layout_margin="20dp"
                 android:text="안녕하세요\n분석을 위해 성함을 입력해주세요"
                 android:textColor="@color/subColor100"
-                android:textSize="36dp"
+                android:textSize="18sp"
                 app:layout_constraintEnd_toStartOf="@+id/tvUSDSkip"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toTopOf="parent" />
@@ -47,9 +47,9 @@
                 android:id="@+id/etUSDName"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="40dp"
-                android:layout_marginTop="20dp"
-                android:layout_marginEnd="40dp"
+                android:layout_marginStart="20dp"
+                android:layout_marginTop="10dp"
+                android:layout_marginEnd="20dp"
                 android:backgroundTint="@color/accent"
                 android:ems="10"
                 android:hint="이름"
@@ -59,7 +59,7 @@
                 android:singleLine="true"
                 android:textColor="@color/subColor100"
                 android:textColorHint="@color/subColor100"
-                android:textSize="28dp"
+                android:textSize="16sp"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toBottomOf="@+id/tvUSDGuide" />
@@ -68,9 +68,9 @@
                 android:id="@+id/etUSDMobile"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="40dp"
-                android:layout_marginTop="20dp"
-                android:layout_marginEnd="40dp"
+                android:layout_marginStart="20dp"
+                android:layout_marginTop="10dp"
+                android:layout_marginEnd="20dp"
                 android:backgroundTint="@color/accent"
                 android:ems="10"
                 android:hint="휴대폰 번호"
@@ -80,7 +80,7 @@
                 android:singleLine="true"
                 android:textColor="@color/subColor100"
                 android:textColorHint="@color/subColor100"
-                android:textSize="28dp"
+                android:textSize="16sp"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toBottomOf="@+id/etUSDName" />
@@ -91,10 +91,10 @@
                 android:layout_height="wrap_content"
                 android:background="@drawable/effect_0"
                 android:backgroundTint="@color/accent"
-                android:padding="16dp"
+                android:padding="12sp"
                 android:text="사전 체크리스트 시작"
                 android:textColor="@color/white"
-                android:textSize="24dp"
+                android:textSize="16sp"
                 app:layout_constraintBottom_toBottomOf="parent"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent" />
@@ -103,9 +103,9 @@
                 android:id="@+id/clUSDGender"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="35dp"
+                android:layout_marginStart="15dp"
                 android:layout_marginTop="20dp"
-                android:layout_marginEnd="35dp"
+                android:layout_marginEnd="15dp"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toBottomOf="@+id/etUSDMobile">
@@ -117,7 +117,7 @@
                     android:layout_marginStart="5dp"
                     android:text="성별"
                     android:textColor="@color/subColor100"
-                    android:textSize="24dp"
+                    android:textSize="20sp"
                     app:layout_constraintStart_toStartOf="parent"
                     app:layout_constraintTop_toTopOf="parent" />
 
@@ -140,11 +140,11 @@
                         android:backgroundTint="@color/bg500"
                         android:elevation="2dp"
                         android:gravity="center"
-                        android:paddingTop="40dp"
-                        android:paddingBottom="40dp"
+                        android:paddingTop="20dp"
+                        android:paddingBottom="20dp"
                         android:text="남성"
                         android:textColor="@color/subColor100"
-                        android:textSize="28dp" />
+                        android:textSize="16sp" />
 
                     <TextView
                         android:id="@+id/tvUSDGender1"
@@ -156,11 +156,11 @@
                         android:backgroundTint="@color/bg500"
                         android:elevation="2dp"
                         android:gravity="center"
-                        android:paddingTop="40dp"
-                        android:paddingBottom="40dp"
+                        android:paddingTop="20dp"
+                        android:paddingBottom="20dp"
                         android:text="여성"
                         android:textColor="@color/subColor100"
-                        android:textSize="28dp" />
+                        android:textSize="16sp" />
                 </LinearLayout>
             </androidx.constraintlayout.widget.ConstraintLayout>
 
@@ -168,9 +168,9 @@
                 android:id="@+id/clUSDAgeRange"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="35dp"
+                android:layout_marginStart="15dp"
                 android:layout_marginTop="20dp"
-                android:layout_marginEnd="35dp"
+                android:layout_marginEnd="15dp"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toBottomOf="@+id/clUSDGender">
@@ -189,7 +189,7 @@
                         android:layout_weight="1"
                         android:text="생년월일"
                         android:textColor="@color/subColor100"
-                        android:textSize="24dp" />
+                        android:textSize="20sp" />
 
                     <TextView
                         android:id="@+id/textView14"
@@ -198,7 +198,7 @@
                         android:layout_weight="1"
                         android:text="국적"
                         android:textColor="@color/subColor100"
-                        android:textSize="24dp" />
+                        android:textSize="20sp" />
                 </LinearLayout>
 
                 <LinearLayout
@@ -225,7 +225,7 @@
                         android:paddingBottom="15dp"
                         android:text="날짜 선택"
                         android:textColor="@color/subColor100"
-                        android:textSize="24dp" />
+                        android:textSize="16sp" />
 
                     <com.hbb20.CountryCodePicker
                         android:id="@+id/ccpUSD"
@@ -241,7 +241,7 @@
                         app:ccpDialog_textColor="@color/subColor100"
                         app:ccp_arrowColor="@color/subColor100"
                         app:ccp_contentColor="@color/subColor100"
-                        app:ccp_textSize="24dp" />
+                        app:ccp_textSize="16sp" />
 
 
                 </LinearLayout>

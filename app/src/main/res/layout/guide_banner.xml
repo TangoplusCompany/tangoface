@@ -5,16 +5,16 @@
     android:layout_height="wrap_content"
     android:background="@drawable/bckgnd_12"
     android:backgroundTint="@color/accent"
-    android:padding="16dp">
+    android:padding="10dp">
 
     <TextView
         android:id="@+id/tvGuideText"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:lineSpacingExtra="12dp"
+        android:lineSpacingExtra="4dp"
         android:text="여기에 안내 메시지가 들어갑니다.\n여기에 안내 메시지가 들어갑니다."
         android:textColor="@color/subColor100"
-        android:textSize="18sp"
+        android:textSize="14sp"
         app:layout_constraintEnd_toStartOf="@+id/btnCloseGuide"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />

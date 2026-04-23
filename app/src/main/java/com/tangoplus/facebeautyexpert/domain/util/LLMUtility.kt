@@ -34,10 +34,10 @@ object LLMUtility {
 			
 			    [요청 사항]
 			    1. 두괄식으로 구성해줘. 먼저 전체적인 분석 결과를  2~3줄 요약해줘.
-			    2. 상안부, 중안부, 하안부 각각의 특징을 2마디 이내로 개조식 문체로 적고 문단은 이모지를 사용해서 만들어줘.
+			    2. 상안부, 중안부, 하안부 각각의 특징을 3마디 이내로 개조식 문체로 적고 문단은 이모지를 사용해서 만들어줘.
 			    3. 수치적으로 가장 눈에 띄는 균형이나 특징이 있다면 1~2개만 짚어줘. 분석 데이터에 포함된 key값은 적지 말아줘.
 					4. 냉정하게 얼굴의 밸런스를 무너뜨리는 특정 부위나 데이터가 있으면 말해줘.
-			    5. 전체 12줄 이내로 작성해줘.
+			    5. 전체 20줄 이내로 작성해줘.
 				""".trimIndent()
 				// 3. API 요청 및 응답 받기
 				val response = generativeModel.generateContent(prompt)
@@ -46,9 +46,8 @@ object LLMUtility {
 				return@withContext response.text
 
 			} catch (e: Exception) {
-				e.printStackTrace()
 				// 에러 발생 시 기본 텍스트 반환 (또는 null 반환 후 UI에서 에러 처리)
-				return@withContext "인사이트를 불러오는 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요."
+				return@withContext null
 			}
 		}
 	}

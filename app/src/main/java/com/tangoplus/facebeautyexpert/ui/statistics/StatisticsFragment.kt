@@ -24,6 +24,7 @@ import com.tangoplus.facebeautyexpert.databinding.FragmentStatisticsBinding
 import com.tangoplus.facebeautyexpert.domain.util.BitmapUtility.getScreenOrientation
 import com.tangoplus.facebeautyexpert.domain.util.FileUtility.setOnSingleClickListener
 import com.tangoplus.facebeautyexpert.domain.vo.PreCheckList
+import com.tangoplus.facebeautyexpert.orbbec.application.MyApplication
 import com.tangoplus.facebeautyexpert.ui.adapter.ChartRVAdapter
 import com.tangoplus.facebeautyexpert.ui.adapter.PreCheckListFilterRVAdapter
 import com.tangoplus.facebeautyexpert.ui.adapter.SettingsRVAdapter
@@ -170,8 +171,8 @@ class StatisticsFragment : Fragment(), PreCheckListFilterCheckListener {
 	private fun setAdapter() {
 		val rvs = listOf(bd.rvS0, bd.rvS1, bd.rvS2)
 		rvs.forEachIndexed { i, rv ->
-			val isPortrait = activity?.getScreenOrientation()?.contains("portrait") == true
-			val layoutManager = GridLayoutManager(requireContext(), if (isPortrait) 4 else 2)
+			val isTablet = MyApplication.isTablet()
+			val layoutManager = GridLayoutManager(requireContext(), if (isTablet) 4 else 2)
 			val cAdapter = PreCheckListFilterRVAdapter(cvm, i)
 			cAdapter.preChecklistFilterCheckLister = this@StatisticsFragment
 			rv.layoutManager = layoutManager

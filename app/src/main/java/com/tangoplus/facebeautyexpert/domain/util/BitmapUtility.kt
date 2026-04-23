@@ -1441,16 +1441,14 @@ object BitmapUtility {
 		val seqIndex = seqss.indexOf(dim.seq)
 
 		val keys = when (dl) {
-			DrawLine.A_SAGGING_FACE ->
-				when (seq) {
-					Sequence.COMFORT -> listOf("comfort_left_sagging_scale", "comfort_right_sagging_scale")
-					else -> listOf()
-				}
+			DrawLine.A_SAGGING_FACE -> when (seq) {
+				Sequence.COMFORT -> listOf("comfort_left_sagging_scale", "comfort_right_sagging_scale")
+				else -> listOf()
+			}
 			DrawLine.A_SHOULDER -> when (seq) {
 				Sequence.COMFORT -> listOf("comfort_shoulder_horizontal_angle")
 				else -> listOf("neck_extention_shoulder_horizontal_angle")
 			}
-
 			DrawLine.NECK -> when (seq) {
 				Sequence.COMFORT -> listOf("comfort_neck_vertical_angle", "comfort_neck_length")
 				else -> listOf("neck_extention_neck_vertical_angle")
@@ -1484,8 +1482,6 @@ object BitmapUtility {
 					)
 					else -> listOf()
 				}
-
-
 			DrawLine.L_CORNEA -> when (seq) {
 				Sequence.COMFORT -> listOf(
 					"comfort_left_cornea_length",
@@ -1494,20 +1490,18 @@ object BitmapUtility {
 				else -> listOf()
 			}
 			DrawLine.EYEBROW -> when (seq) {
-					Sequence.COMFORT -> listOf(
-						"comfort_left_eyebrow_horizontal_angle",
-						"comfort_right_eyebrow_horizontal_angle",
-						"comfort_left_eyebrow_start_length",
-						"comfort_left_eyebrow_arch_length",
-						"comfort_left_eyebrow_end_length",
-						"comfort_right_eyebrow_start_length",
-						"comfort_right_eyebrow_arch_length",
-						"comfort_right_eyebrow_end_length",
-					)
-					else -> listOf()
-				}
-
-
+				Sequence.COMFORT -> listOf(
+					"comfort_left_eyebrow_horizontal_angle",
+					"comfort_right_eyebrow_horizontal_angle",
+					"comfort_left_eyebrow_start_length",
+					"comfort_left_eyebrow_arch_length",
+					"comfort_left_eyebrow_end_length",
+					"comfort_right_eyebrow_start_length",
+					"comfort_right_eyebrow_arch_length",
+					"comfort_right_eyebrow_end_length",
+				)
+				else -> listOf()
+			}
 			DrawLine.NOSE -> when (seq) {
 				Sequence.COMFORT -> listOf(
 					"comfort_nose_height",

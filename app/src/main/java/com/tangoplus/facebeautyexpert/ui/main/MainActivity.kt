@@ -75,15 +75,13 @@ class MainActivity : AppCompatActivity() {
 	}
 
 	fun requestAllFilesAccess(context: Context) {
-		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-			if (!Environment.isExternalStorageManager()) {
-				try {
-					val intent = Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION)
-					intent.data = Uri.parse("package:${context.packageName}")
-					context.startActivity(intent)
-				} catch (e: Exception) {
-					Log.e("PERMISSION", "설정 화면 열기 실패", e)
-				}
+		if (!Environment.isExternalStorageManager()) {
+			try {
+				val intent = Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION)
+				intent.data = Uri.parse("package:${context.packageName}")
+				context.startActivity(intent)
+			} catch (e: Exception) {
+				Log.e("PERMISSION", "설정 화면 열기 실패", e)
 			}
 		}
 	}
@@ -631,5 +629,12 @@ class MainActivity : AppCompatActivity() {
 			addToBackStack(null)
 			commit()
 		}
+	}
+
+	// activity의 flMain 크기 가져오기 (포스터 비율 대응 목적)
+	fun getFlMainSize() : Pair<Int, Int>? {
+		return if (::bd.isInitialized) {
+			Pair(bd.flMain.width, bd.flMain.height)
+		} else null
 	}
 }

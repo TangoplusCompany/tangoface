@@ -6,7 +6,6 @@ import android.annotation.SuppressLint
 import android.content.Intent
 import android.content.pm.ActivityInfo
 import android.content.res.Configuration
-import android.graphics.Bitmap
 import android.net.Uri
 import android.os.Bundle
 import android.os.CountDownTimer
@@ -61,7 +60,6 @@ import com.tangoplus.facebeautyexpert.domain.util.MeasureUtility.getGuideText
 import com.tangoplus.facebeautyexpert.domain.util.MeasureUtility.hasPermissions
 import com.tangoplus.facebeautyexpert.domain.util.MeasureUtility.showGoMainDialog
 import com.tangoplus.facebeautyexpert.domain.util.MeasureUtility.showPreviousDialog
-import com.tangoplus.facebeautyexpert.domain.util.MeasureUtility.showReStartDialog
 import com.tangoplus.facebeautyexpert.domain.util.PermissionUtility.getRequiredPermissions
 import com.tangoplus.facebeautyexpert.domain.util.PreferenceUtility
 import com.tangoplus.facebeautyexpert.domain.util.SecurityUtility.generateCustomUUID
@@ -374,10 +372,6 @@ class NormalCameraActivity : AppCompatActivity(), FaceLandmarkerHelper.Landmarke
 			finishAffinity()
 		}
 
-		bd.tvNCRetry.setOnSingleClickListener {
-			showReStartDialog(this@NormalCameraActivity, { initSettings() })
-		}
-
 		bd.tvNCCameraDirection.setOnSingleClickListener {
 			switchCamera()
 		}
@@ -493,10 +487,7 @@ class NormalCameraActivity : AppCompatActivity(), FaceLandmarkerHelper.Landmarke
 		bd.btnNCShooting.apply {
 			isEnabled = true
 		}
-		bd.tvNCRetry.apply {
-			visibility = View.VISIBLE
-			isEnabled = true
-		}
+
 		Handler(Looper.getMainLooper()).postDelayed({
 			viewModel.setSeqFinishedFlag(false)
 		}, 1500)
