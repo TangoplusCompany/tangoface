@@ -9,6 +9,7 @@ import com.tangoplus.facebeautyexpert.domain.vision.face.FaceLandmarkResult
 import kotlin.math.abs
 import kotlin.math.atan2
 import kotlin.math.hypot
+import kotlin.math.roundToInt
 
 object ClassifyUtility {
 	fun getIntFromFaceType(faceType: FaceShape?): Int {
@@ -348,55 +349,59 @@ object ClassifyUtility {
 		faceLandmarks: MutableList<Pair<Float, Float>>,
 		hairLine3DCoordinates: MutableList<Triple<Float, Float, Float>>
 	): String {
-		val hairlineY = hairLine3DCoordinates[3].second
-		val eyesY = (faceLandmarks[55].second + faceLandmarks[285].second) / 2f
-		val noseY = faceLandmarks[2].second
-		val chinY = faceLandmarks[152].second
+		if (faceLandmarks.isNotEmpty() && hairLine3DCoordinates.size > 3) {
+			val hairlineY = hairLine3DCoordinates[3].second
+			val eyesY = (faceLandmarks[55].second + faceLandmarks[285].second) / 2f
+			val noseY = faceLandmarks[2].second
+			val chinY = faceLandmarks[152].second
 
-		val upper = eyesY - hairlineY
-		val mid = noseY - eyesY
-		val lower = chinY - noseY
+			val upper = eyesY - hairlineY
+			val mid = noseY - eyesY
+			val lower = chinY - noseY
 
-		val total = upper + mid + lower
-		if (total == 0f) return "0:0:0"
+			val total = upper + mid + lower
+			if (total <= 0f) return "0:0:0"
 
-		// 전체 중 차지하는 비율 * 3
-		val rUpper = (upper / total) * 3f
-		val rMid = (mid / total) * 3f
-		val rLower = (lower / total) * 3f
+			// 반올림하여 자연수(정수)로 변환
+			val pUpper = (upper / total * 100).roundToInt()
+			val pMid = (mid / total * 100).roundToInt()
+			val pLower = (lower / total * 100).roundToInt()
 
-		return "%.2f:%.2f:%.2f".format(rUpper, rMid, rLower)
+			return "$pUpper:$pMid:$pLower"
+		}
+		return "0:0:0"
 	}
 
-	// 세로 비율 (5구간 총합 5)
 	fun calculateVerticalRatio(
 		faceLandmarks: MutableList<Pair<Float, Float>>
 	): String {
-		val leftEarX = faceLandmarks[234].first
-		val leftEyeOutX = faceLandmarks[33].first
-		val leftEyeInX = faceLandmarks[133].first
-		val rightEyeInX = faceLandmarks[362].first
-		val rightEyeOutX = faceLandmarks[263].first
-		val rightEarX = faceLandmarks[454].first
+		if (faceLandmarks.isNotEmpty()) {
+			val leftEarX = faceLandmarks[234].first
+			val leftEyeOutX = faceLandmarks[33].first
+			val leftEyeInX = faceLandmarks[133].first
+			val rightEyeInX = faceLandmarks[362].first
+			val rightEyeOutX = faceLandmarks[263].first
+			val rightEarX = faceLandmarks[454].first
 
-		val m1 = leftEyeOutX - leftEarX
-		val m2 = leftEyeInX - leftEyeOutX
-		val m3 = rightEyeInX - leftEyeInX
-		val m4 = rightEyeOutX - rightEyeInX
-		val m5 = rightEarX - rightEyeOutX
+			val m1 = leftEyeOutX - leftEarX
+			val m2 = leftEyeInX - leftEyeOutX
+			val m3 = rightEyeInX - leftEyeInX
+			val m4 = rightEyeOutX - rightEyeInX
+			val m5 = rightEarX - rightEyeOutX
 
-		val total = m1 + m2 + m3 + m4 + m5
-		if (total == 0f) return "0:0:0:0:0"
+			val total = m1 + m2 + m3 + m4 + m5
+			if (total <= 0f) return "0:0:0:0:0"
 
-		// 전체 중 차지하는 비율 * 5
-		val r1 = (m1 / total) * 5f
-		val r2 = (m2 / total) * 5f
-		val r3 = (m3 / total) * 5f
-		val r4 = (m4 / total) * 5f
-		val r5 = (m5 / total) * 5f
+			// 100% 기준 자연수(정수)로 변환
+			val p1 = (m1 / total * 100).roundToInt()
+			val p2 = (m2 / total * 100).roundToInt()
+			val p3 = (m3 / total * 100).roundToInt()
+			val p4 = (m4 / total * 100).roundToInt()
+			val p5 = (m5 / total * 100).roundToInt()
 
-		return "%.2f:%.2f:%.2f:%.2f:%.2f".format(r1, r2, r3, r4, r5)
+			return "$p1:$p2:$p3:$p4:$p5"
+		}
+		return "0:0:0:0:0"
 	}
-
 
 }

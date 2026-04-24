@@ -72,7 +72,6 @@ object BitmapUtility {
 		try {
 			val seqs = faceResult.seqs
 			val seqIndex = seqs.indexOf(seq)
-			Log.v("getCombindBitmap", "$seqs, ${seqIndex}, ${faceResult.mediaUri.getOrNull(seqIndex)}")
 
 			if (seqIndex == -1) {
 				return@withContext Triple(createInfoBitmap(fragment.context, 0), listOf(), null)
@@ -82,7 +81,6 @@ object BitmapUtility {
 
 
 			val path = getPathFromContentUri(fragment.requireContext(), imageUri)
-			Log.v("imageUri", "$path")
 
 			val bitmap = BitmapFactory.decodeStream(
 				fragment.requireContext().contentResolver.openInputStream(imageUri)

@@ -198,7 +198,6 @@ class NormalCameraActivity : AppCompatActivity(), FaceLandmarkerHelper.Landmarke
 		ActivityResultContracts.RequestMultiplePermissions()
 	) { permissions ->
 		if (permissions.all { it.value }) {
-
 			backgroundExecutor.execute {
 				if (flh.isClose()) {
 					flh.setupFaceLandmarker()
@@ -235,16 +234,16 @@ class NormalCameraActivity : AppCompatActivity(), FaceLandmarkerHelper.Landmarke
 		Runtime.getRuntime().gc()
 	}
 
-	override fun onCreate(savedInstanceState: Bundle?, persistentState: PersistableBundle?) {
-		super.onCreate(savedInstanceState, persistentState)
+	override fun onCreate(savedInstanceState: Bundle?) {
+		super.onCreate(savedInstanceState)
 		enableEdgeToEdge()
 		bd = ActivityNormalCameraBinding.inflate(layoutInflater)
 		WindowCompat.setDecorFitsSystemWindows(window, false)
 
 		setContentView(bd.root)
-		setTitle("Stream-Color")
+		title = "normalCamera"
 		window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-
+		Log.v("노말init", "onCreate 시작")
 		initFace()
 		initPose()
 
@@ -254,9 +253,9 @@ class NormalCameraActivity : AppCompatActivity(), FaceLandmarkerHelper.Landmarke
 			systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
 		}
 
-
 		mvm.initMeasure.observe(this) {
 			if (it) {
+				Log.v("이닛measure","${mvm.initMeasure}")
 				initSettings()
 				mvm.initMeasure.value = false
 			}
@@ -264,6 +263,7 @@ class NormalCameraActivity : AppCompatActivity(), FaceLandmarkerHelper.Landmarke
 
 		ivm.isFinishInput.observe(this) {
 			Log.v("인풋", "2: ${ivm.nameValue.value}, ${ivm.mobileValue.value}, ${ivm.genderValue.value}, ${ivm.birthdayValue.value}, ${ivm.nationalityValue.value}")
+			initCamera()
 		}
 
 		prefsUtil = PreferenceUtility(this@NormalCameraActivity)
@@ -367,9 +367,7 @@ class NormalCameraActivity : AppCompatActivity(), FaceLandmarkerHelper.Landmarke
 		}
 
 		bd.tvNCGoGallery.setOnSingleClickListener {
-			val intent = Intent(this@NormalCameraActivity, MainActivity::class.java)
-			startActivity(intent)
-			finishAffinity()
+			showGoMainDialog(this)
 		}
 
 		bd.tvNCCameraDirection.setOnSingleClickListener {
@@ -379,8 +377,8 @@ class NormalCameraActivity : AppCompatActivity(), FaceLandmarkerHelper.Landmarke
 			val gyro = GyroDialogFragment()
 			gyro.show(supportFragmentManager, "gyroDialogFragment")
 		}
-
 	}
+
 	private fun switchCamera() {
 		cameraProvider?.unbindAll()
 
@@ -496,7 +494,6 @@ class NormalCameraActivity : AppCompatActivity(), FaceLandmarkerHelper.Landmarke
 		Log.v("업데이트UI", "${mvm.plrJA.length()}")
 	}
 
-
 	override fun onError(error: String, errorCode: Int) {
 		runOnUiThread {
 			Log.e("faceError", "$errorCode, $error")
@@ -515,19 +512,20 @@ class NormalCameraActivity : AppCompatActivity(), FaceLandmarkerHelper.Landmarke
 			mvm.face2DResult = FaceLandmarkAdapter.toCustomFaceLandmarkResult(resultBundle.result)
 			if (mvm.face2DResult != null) {
 				// depthCamera Stream 좌우반전 대응 - 얼굴 랜드마크 좌우 반전
-				val flippedLandmarks = mvm.face2DResult!!.landmarks.map { landmark ->
-					landmark.copy(x = 1.0f - landmark.x)
-				}
-				val overlayResult = mvm.face2DResult!!.copy(landmarks = flippedLandmarks)
+//				val flippedLandmarks = mvm.face2DResult!!.landmarks.map { landmark ->
+//					landmark.copy(x = 1.0f - landmark.x)
+//				}
+//				val overlayResult = mvm.face2DResult!!.copy(landmarks = flippedLandmarks)
 
 				bd.overlay.setResults(
-					overlayResult,
+					mvm.face2DResult!!,
 					resultBundle.inputImageWidth,
 					resultBundle.inputImageHeight,
 					OverlayView.RunningMode.LIVE_STREAM,
 					true
 				)
 			}
+
 			// 처음 faceLanmdark가 init할 때 전부 선언
 			mvm.initWidthHeight(resultBundle)
 			mvm.initOverlaySize(bd.overlay)
@@ -605,7 +603,6 @@ class NormalCameraActivity : AppCompatActivity(), FaceLandmarkerHelper.Landmarke
 
 //            Log.v("인풋이미지", "${resultBundle.inputImageHeight}, ${resultBundle.inputImageWidth}")
 //            Log.v("results", "${resultBundle.result.faceLandmarks().map { it.size }}")
-			// Force a redraw
 			bd.overlay.invalidate()
 
 			if (ivm.isFinishInput.value == true && resultBundle.result.faceLandmarks()
@@ -660,9 +657,9 @@ class NormalCameraActivity : AppCompatActivity(), FaceLandmarkerHelper.Landmarke
 				).show()
 			}
 		}
-
 		override fun onResults(resultBundle: PoseLandmarkerHelper.ResultBundle) {}
 	}
+
 	private fun initFace() {
 		try {
 			Log.d("이닛", "initializing FaceLandmarker resources...")
@@ -717,10 +714,9 @@ class NormalCameraActivity : AppCompatActivity(), FaceLandmarkerHelper.Landmarke
 		}
 	}
 
-
 	private fun initCamera() {
 		try {
-			requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+			requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
 
 			if (!::backgroundExecutor.isInitialized || backgroundExecutor.isShutdown) {
 				backgroundExecutor = Executors.newSingleThreadExecutor()
@@ -894,7 +890,6 @@ class NormalCameraActivity : AppCompatActivity(), FaceLandmarkerHelper.Landmarke
 		mvm.allSeqs = prefsUtil.getLastMeasureSeqs().sortedBy { it.ordinal }.toMutableList()
 		mvm.currentSeq = Sequence.COMFORT
 
-
 		val seqCount = "${mvm.getSeqIndex() + 1} / ${mvm.allSeqs.size}"
 
 		bd.tvNCSeqCount.text = seqCount
@@ -917,17 +912,12 @@ class NormalCameraActivity : AppCompatActivity(), FaceLandmarkerHelper.Landmarke
 			mvm.currentUserSn = currentUserItem.tempServerSn
 		}
 		val key = getString(R.string.kekeke)
-		mvm.currentUUID = generateCustomUUID(ivm.nameValue.value, ivm.mobileValue.value, key)
+		mvm.currentUUID = generateCustomUUID(ivm.nameValue.value, ivm.mobileValue.value, ivm.birthdayValue.value,ivm.genderValue.value,key)
 
 
 		Log.v("가져온게 있나요", "Out: ${ivm.mobileValue.value}, ${ivm.nameValue.value}, ${mvm.currentUserSn}")
-		if (ivm.nameValue.value?.isNotEmpty() == true && ivm.mobileValue.value?.isNotEmpty() == true && mvm.currentUserSn != -1) {
-			val onBoardingDialog = OnBoardingDialogFragment()
-			onBoardingDialog.show(supportFragmentManager, "")
-		} else {
-			val userDialog = UserSetupDialogFragment()
-			userDialog.show(supportFragmentManager, "")
-		}
+		val userDialog = UserSetupDialogFragment.newInstance(0)
+		userDialog.show(supportFragmentManager, "")
 
 		mvm.currentSeq = Sequence.COMFORT
 

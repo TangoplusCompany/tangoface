@@ -239,7 +239,7 @@
             android:gravity="center"
             android:text="아래로 슬라이드 해서 AI 인사이트를 확인해 보세요 ✨"
             android:textColor="@color/accent"
-            android:textSize="16sp"
+            android:textSize="12sp"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent" />

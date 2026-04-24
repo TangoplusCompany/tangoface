@@ -191,7 +191,7 @@ class InformationFragment : Fragment(), OnFacialPartClickListener {
 		val name = mvm.currentResult.value?.userName ?: "GUEST"
 		val mobile = mvm.currentResult.value?.userMobile ?: ""
 		val transformMobile = if (mobile.length == 11 && mobile.startsWith("010")) {
-			"${mobile.substring(0, 3)}-${mobile.substring(3, 7)}-${mobile.substring(7)}"
+			"${mobile.substring(0, 3)}-****-${mobile.substring(7)}"
 		} else {
 			""
 		}

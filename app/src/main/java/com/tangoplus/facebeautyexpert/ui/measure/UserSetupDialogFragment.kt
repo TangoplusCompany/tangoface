@@ -108,14 +108,14 @@ class UserSetupDialogFragment : DialogFragment() {
 	override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
 		super.onViewCreated(view, savedInstanceState)
 		val parentCase = arguments?.getInt(ARG_PARENT) ?: 0
-		bd.btnUSDProgres.text = when (parentCase) {
+		bd.btnUSDProgress.text = when (parentCase) {
 			0 -> "사전 체크리스트 시작"
 			else -> "입력 완료"
 		}
 
 		// 초기 설정: 이름 입력창이 나오고, 키보드가 올라옴
 		bd.etUSDMobile.visibility = View.INVISIBLE
-//		bd.btnUSDProgres.visibility = View.INVISIBLE
+//		bd.btnUSDProgress.visibility = View.INVISIBLE
 		bd.clUSDGender.visibility = View.INVISIBLE
 		bd.clUSDAgeRange.visibility = View.INVISIBLE
 		setGuideAnimation(bd.etUSDName)
@@ -124,7 +124,7 @@ class UserSetupDialogFragment : DialogFragment() {
 		}
 
 		// 버튼 클릭 위치 감지
-		bd.btnUSDProgres.setOnTouchListener { _, event ->
+		bd.btnUSDProgress.setOnTouchListener { _, event ->
 			if (event.action == MotionEvent.ACTION_DOWN) {
 				touchX = event.x
 				touchY = event.y
@@ -236,18 +236,18 @@ class UserSetupDialogFragment : DialogFragment() {
 		ivm.inputCondition.observe(viewLifecycleOwner) { allTrue ->
 			if (allTrue) {
 				if (!ivm.isShownBtn) {
-					setGuideAnimation(bd.btnUSDProgres, 1)
+					setGuideAnimation(bd.btnUSDProgress, 1)
 					ivm.isShownBtn = true
 				}
-				bd.btnUSDProgres.isEnabled = true
+				bd.btnUSDProgress.isEnabled = true
 			} else {
-				bd.btnUSDProgres.isEnabled = false
+				bd.btnUSDProgress.isEnabled = false
 			}
 		}
 
-		bd.btnUSDProgres.setOnSingleClickListener {
+		bd.btnUSDProgress.setOnSingleClickListener {
 			val key = getString(R.string.kekeke)
-			val uuid = generateCustomUUID(ivm.nameValue.value, ivm.mobileValue.value, key)
+			val uuid = generateCustomUUID(ivm.nameValue.value, ivm.mobileValue.value, ivm.birthdayValue.value,ivm.genderValue.value,key)
 			Log.v("createdUUID", uuid)
 			mvm.currentUUID = uuid
 
@@ -310,7 +310,7 @@ class UserSetupDialogFragment : DialogFragment() {
 				ivm.mobileValue.value =
 					(PreferenceUtility(requireContext()).getLastTempServerSn() + 1).toString() // 측정 결과 저장 전이니 일단 +1 한 temp_server_sn을 mobile로 uuid생성
 
-				val uuid = generateCustomUUID(ivm.nameValue.value, ivm.mobileValue.value, key)
+				val uuid = generateCustomUUID(ivm.nameValue.value, ivm.mobileValue.value, ivm.birthdayValue.value,ivm.genderValue.value,key)
 				Log.v("createdUUID", uuid)
 				mvm.currentUUID = uuid
 				ivm.isFinishInput.value = true

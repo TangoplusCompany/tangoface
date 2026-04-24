@@ -32,6 +32,7 @@ import com.tangoplus.facebeautyexpert.ui.adapter.AdVPAdapter
 import com.tangoplus.facebeautyexpert.ui.info.InformationFragment
 import com.tangoplus.facebeautyexpert.ui.measure.DepthCameraActivity
 import com.tangoplus.facebeautyexpert.ui.main.vm.MainViewModel
+import com.tangoplus.facebeautyexpert.ui.measure.NormalCameraActivity
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -47,7 +48,7 @@ class MainFragment : Fragment() {
 	) { result ->
 		if (result.resultCode == Activity.RESULT_OK) {
 			val serverSn = result.data?.getIntExtra("EXTRA_MEASURE_SN", -1) ?: -1
-
+			// TODO NormalCameraActivity 안되는 이유 찾아서 넣기
 			if (serverSn != -1) {
 				// DB 작업 실행
 				lifecycleScope.launch(Dispatchers.IO) {
@@ -103,7 +104,7 @@ class MainFragment : Fragment() {
 		}
 
 		if (allGranted) {
-			navigateToDepthCamera()
+			navigateToCamera()
 		} else {
 			storagePermissionLauncher.launch(permissions)
 		}
@@ -116,16 +117,20 @@ class MainFragment : Fragment() {
 
 		if (allGranted) {
 			Log.d("MainFragment", "저장소 권한 허용됨")
-			navigateToDepthCamera()
+			navigateToCamera()
 		} else {
 			Log.e("MainFragment", "저장소 권한 거부됨")
 			showPermissionDeniedDialog()
 		}
 	}
 
-	private fun navigateToDepthCamera() {
+	private fun navigateToCamera() {
 		val isTablet = resources.configuration.smallestScreenWidthDp >= 600
-		val intent = Intent(requireContext(), DepthCameraActivity::class.java)
+		val intent = if (isTablet) {
+			Intent(requireContext(), DepthCameraActivity::class.java)
+		} else {
+			Intent(requireContext(), NormalCameraActivity::class.java)
+		}
 		cameraResultLauncher.launch(intent)
 		requireActivity().finishAffinity()
 	}

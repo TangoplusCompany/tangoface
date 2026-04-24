@@ -299,7 +299,7 @@ class DepthCameraActivity : BaseActivity(), FaceLandmarkerHelper.LandmarkerListe
 						val success = captureImage(mvm.currentSeq)  // 여기서 saveMediaStorage까지 전부 완료
 						if (success) {
 							// hairline, pose 전부 끝난 시점
-							mvm.resultBundleToJson( mvm.currentSeq)
+							mvm.resultBundleToJson(mvm.currentSeq)
 							if (mvm.currentHairLine3DCoordinate.size == 7) {
 								val absoluteLandmarkPairs = mvm.face2DResult?.landmarks?.map {
 									Pair(calculateScreenX( it.x), calculateScreenY( it.y))
@@ -415,8 +415,7 @@ class DepthCameraActivity : BaseActivity(), FaceLandmarkerHelper.LandmarkerListe
 
 			if (mIsDeviceDetached) break
 
-			val pipeline = mPipeline
-			if (pipeline == null) break
+			val pipeline = mPipeline ?: break
 			try {
 				mPipeline!!.waitForFrameSet(1000).use { frameSet ->
 					if (frameSet == null) {
@@ -615,6 +614,7 @@ class DepthCameraActivity : BaseActivity(), FaceLandmarkerHelper.LandmarkerListe
 
 		mvm.initMeasure.observe(this) {
 			if (it) {
+
 				initSettings()
 				mvm.initMeasure.value = false
 			}
@@ -723,9 +723,7 @@ class DepthCameraActivity : BaseActivity(), FaceLandmarkerHelper.LandmarkerListe
 		}
 
 		bd.tvGoGallery.setOnSingleClickListener {
-			val intent = Intent(this@DepthCameraActivity, MainActivity::class.java)
-			startActivity(intent)
-			finishAffinity()
+			showGoMainDialog(this)
 		}
 
 		bd.tvGyro.setOnSingleClickListener {
@@ -1213,7 +1211,6 @@ class DepthCameraActivity : BaseActivity(), FaceLandmarkerHelper.LandmarkerListe
 	}
 
 	override fun finish() {
-
 		requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
 		super.finish()
 	}
@@ -1246,8 +1243,7 @@ class DepthCameraActivity : BaseActivity(), FaceLandmarkerHelper.LandmarkerListe
 //			ivm.genderValue.value = currentUserItem.gender
 //		}
 		val key = getString(R.string.kekeke)
-		mvm.currentUUID = generateCustomUUID(ivm.nameValue.value, ivm.mobileValue.value, key)
-
+		mvm.currentUUID = generateCustomUUID(ivm.nameValue.value, ivm.mobileValue.value, ivm.birthdayValue.value,ivm.genderValue.value,key)
 
 		Log.v("가져온게 있나요", "Out: ${ivm.mobileValue.value}, ${ivm.nameValue.value}, ${mvm.currentUserSn}")
 		if (ivm.nameValue.value?.isNotEmpty() == true && ivm.mobileValue.value?.isNotEmpty() == true && mvm.currentUserSn != -1) {

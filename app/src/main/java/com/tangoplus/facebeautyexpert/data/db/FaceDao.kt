@@ -45,21 +45,20 @@ interface FaceDao {
 	@Query(
 		"""
         SELECT 
-		        MAX(S.temp_server_sn) AS tempServerSn, 
-		        S.name AS name,
-		        S.mobile AS mobile,
-		        S.birthday AS birthday,
-		        S.nationality AS nationality,
-		        S.gender AS gender,
-		        MAX(S.reg_date) AS regDate, -- 날짜도 문자열이므로 가장 최근 날짜 하나만
-		        IFNULL(I.insight, '') AS insight,
-		        S.uuid,
-		        1 AS activated
-		    FROM t_face_static S
-		    LEFT JOIN t_face_insight I ON S.temp_server_sn = I.server_sn
-		    WHERE S.activated = 1
-		    GROUP BY S.uuid
-		    ORDER BY regDate DESC
+			    S.temp_server_sn AS tempServerSn, 
+			    S.name AS name,
+			    S.mobile AS mobile,
+			    S.birthday AS birthday,
+			    S.nationality AS nationality,
+			    S.gender AS gender,
+			    S.reg_date AS regDate, 
+			    IFNULL(I.insight, '') AS insight,
+			    S.uuid,
+			    1 AS activated
+			FROM t_face_static S
+			LEFT JOIN t_face_insight I ON S.temp_server_sn = I.server_sn
+			WHERE S.activated = 1
+			ORDER BY regDate DESC
     """
 	)
 	suspend fun getAllUserItem(): List<UserItem>

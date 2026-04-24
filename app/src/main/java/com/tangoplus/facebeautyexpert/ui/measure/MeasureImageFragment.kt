@@ -106,14 +106,19 @@ class MeasureImageFragment : Fragment() {
 
 							if (success) {
 								mvm.resultBundleToJson(mvm.currentSeq)
-
-								if (mvm.currentHairLine3DCoordinate.size == 7) {
+								Log.v("2d얼굴", "${mvm.face2DResult?.landmarks}")
+								if (mvm.currentHairLine2DCoordinate.size == 7) {
 									val absoluteLandmarkPairs = mvm.face2DResult?.landmarks?.map {
 										Pair(calculateScreenX(it.x), calculateScreenY(it.y))
 									}?.toMutableList()
 
 									absoluteLandmarkPairs?.let { pairs ->
-										val horizontalRatio = calculateHorizontalRatio(pairs, mvm.currentHairLine3DCoordinate)
+										val currentHairLine3DCoordinate = mvm.currentHairLine2DCoordinate.map {
+											Triple(it.first, it.second, 0f)
+										}.toMutableList()
+										val horizontalRatio = calculateHorizontalRatio(pairs, currentHairLine3DCoordinate)
+										Log.v("2d얼굴", "${mvm.currentSeq}: ${horizontalRatio}")
+										// TODO 여기서 얼굴 비율 제대로 도출 됨 근데  편한 상태: 31:35:33 인데 소숫점이었던 부분 수정하기
 										if (mvm.staticJA.length() > 0) {
 											mvm.staticJA.getJSONObject(0).put("horizontal_ratio", horizontalRatio)
 										} else {
@@ -433,7 +438,6 @@ class MeasureImageFragment : Fragment() {
 		viewModel.setTextAnimationFlag(false)
 		mvm.currentSeq = Sequence.COMFORT
 		mvm.face3DResult = listOf()
-		mvm.face2DResult = null
 
 		mvm.staticJA.clearAll()
 		mvm.coordinatesJA.clearAll()

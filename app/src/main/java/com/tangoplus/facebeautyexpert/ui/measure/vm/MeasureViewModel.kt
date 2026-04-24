@@ -150,8 +150,7 @@ class MeasureViewModel : ViewModel() {
 	val currentPlrCoordinate = mutableListOf<Pair<Float, Float>>()
 	val current3DPlrCoordinate = mutableListOf<Triple<Float, Float, Float>>() // 절대 좌표
 	val currentHairLine3DCoordinate = mutableListOf<Triple<Float, Float, Float>>()
-	fun getCurrentDateTime(): String = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))
-
+	val currentHairLine2DCoordinate = mutableListOf<Pair<Float, Float>>()
 	// ----------------# 헤어라인 #---------------
 	var latestDepthData: ShortArray? = null
 	var latestDepthWidth: Int = 0
@@ -456,23 +455,22 @@ class MeasureViewModel : ViewModel() {
 				val midShoulder3D =
 					Triple((plr3D[11].first + plr3D[12].first) / 2, (plr3D[11].second + plr3D[12].second) / 2, (plr3D[11].third + plr3D[12].third) / 2)
 				val neckHeight = get3DDistance(midShoulder3D, flr3D[152])
-				val faceHeight = get3DFloorDistance(flr3D[152], currentHairLine3DCoordinate[3])
+				val faceHeight = if (isDepthCameraMeasure) get3DFloorDistance(flr3D[152], currentHairLine3DCoordinate[3]) else 0f
 //					val neckWidth = get3DDistance(midShoulder3D, flr3D[152])
-				Log.v("faceHeight", "${flr3D[152]}, ${currentHairLine3DCoordinate[3]}")
 
 				val leftIndices = listOf(162, 127, 234, 93, 132, 58)
 				val rightIndices = listOf(389, 356, 454, 323, 401, 435)
 
-// 각 쌍의 수평 거리(dx)만 계산하여 리스트에 담습니다.
 				val widths = leftIndices.indices.map { i ->
-					val leftX = flr3D[leftIndices[i]].first
-					val rightX = flr3D[rightIndices[i]].first
-					abs(rightX - leftX) // 순수 수평 거리
+					val left = flr3D[leftIndices[i]]
+					val right = flr3D[rightIndices[i]]
+					get3DFloorDistance(left, right)
 				}
 
 				// 그중 가장 넓은 지점의 거리를 faceWidth로 결정합니다.
 				val maxHorizontalWidth = widths.maxOrNull() ?: 0f
 				val faceWidth = maxHorizontalWidth
+
 				val fs = classifyFaceShape(currentCoordinate, currentHairLine3DCoordinate)
 				val faceShape = fs.primaryShape
 				val faceShapeSub = fs.secondaryShape
@@ -739,6 +737,7 @@ class MeasureViewModel : ViewModel() {
 				if (!isDepthCameraMeasure) {
 					val flResultBundle = flh.detectImage(bitmap)
 					face2DResult = flResultBundle?.result?.let { FaceLandmarkAdapter.toCustomFaceLandmarkResult(it) }
+					Log.v("2d얼굴들어감", "$face2DResult")
 				}
 
 				if (currentSeq == Sequence.COMFORT) {
@@ -783,7 +782,7 @@ class MeasureViewModel : ViewModel() {
 							currentHairLine3DCoordinate.add(Triple(hp.point3D.x, hp.point3D.y, hp.point3D.z))
 						}
 					} else {
-						// 깊이 데이터가 없을 경우 0f로 채우는 기존 로직
+						// 깊이 데이터가 없을 경우 z값을 0f로 채우는 기존 로직
 						hairResult.hairlinePoints.forEachIndexed { index, hp2d ->
 							val pointJA = JSONArray().apply {
 								put(index)
@@ -794,7 +793,7 @@ class MeasureViewModel : ViewModel() {
 								put(0f.toBigDecimal().setScale(4, RoundingMode.HALF_UP))
 							}
 							tempHairLineJA.put(pointJA)
-							currentHairLine3DCoordinate.add(Triple(0f, 0f, 0f))
+							currentHairLine2DCoordinate.add(Pair(hp2d.point.x, hp2d.point.y))
 						}
 					}
 
