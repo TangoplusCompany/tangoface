@@ -118,14 +118,16 @@ class MeasureImageFragment : Fragment() {
 										}.toMutableList()
 										val horizontalRatio = calculateHorizontalRatio(pairs, currentHairLine3DCoordinate)
 										Log.v("2d얼굴", "${mvm.currentSeq}: ${horizontalRatio}")
-										// TODO 여기서 얼굴 비율 제대로 도출 됨 근데  편한 상태: 31:35:33 인데 소숫점이었던 부분 수정하기
-										if (mvm.staticJA.length() > 0) {
-											mvm.staticJA.getJSONObject(0).put("horizontal_ratio", horizontalRatio)
-										} else {
-											mvm.staticJA.put(JSONObject().apply {
-												put("horizontal_ratio", horizontalRatio)
-											})
+										val index = mvm.currentSeq.ordinal
+										while (mvm.staticJA.length() <= index) {
+											mvm.staticJA.put(JSONObject().apply { put("horizontal_ratio", "0:0:0") })
 										}
+										if (mvm.currentSeq == Sequence.COMFORT) {
+											mvm.staticJA.getJSONObject(index).put("horizontal_ratio", horizontalRatio)
+										} else {
+											mvm.staticJA.getJSONObject(index).put("horizontal_ratio", "0:0:0")
+										}
+
 									}
 								}
 								mvm.currentHairLine3DCoordinate.clear()
@@ -156,7 +158,7 @@ class MeasureImageFragment : Fragment() {
 							val staticJos = mutableListOf<JSONObject>()
 
 							allSeqs.forEachIndexed { index, sequence ->
-								Log.v("staticJA", "${mvm.staticJA}")
+								Log.v("staticJA", "${mvm.staticJA.getJSONObject(0).getString("horizontal_ratio")}")
 								val staticJSON = mvm.setJo(mvm.staticJA.getJSONObject(index), sequence, ivm, prefsUtil, false)
 								Log.v("staticJSON", "${mvm.staticJA.getJSONObject(index)}")
 								staticJos.add(staticJSON)

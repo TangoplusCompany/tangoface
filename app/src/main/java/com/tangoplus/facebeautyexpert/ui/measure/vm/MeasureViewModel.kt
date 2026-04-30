@@ -454,7 +454,7 @@ class MeasureViewModel : ViewModel() {
 					calculateSlope(vmFlr[152].first, vmFlr[152].second, vmFlr[10].first, vmFlr[10].second)
 				val midShoulder3D =
 					Triple((plr3D[11].first + plr3D[12].first) / 2, (plr3D[11].second + plr3D[12].second) / 2, (plr3D[11].third + plr3D[12].third) / 2)
-				val neckHeight = get3DDistance(midShoulder3D, flr3D[152])
+				val neckHeight = get3DFloorDistance(midShoulder3D, flr3D[152])
 				val faceHeight = if (isDepthCameraMeasure) get3DFloorDistance(flr3D[152], currentHairLine3DCoordinate[3]) else 0f
 //					val neckWidth = get3DDistance(midShoulder3D, flr3D[152])
 
@@ -470,7 +470,7 @@ class MeasureViewModel : ViewModel() {
 				// 그중 가장 넓은 지점의 거리를 faceWidth로 결정합니다.
 				val maxHorizontalWidth = widths.maxOrNull() ?: 0f
 				val faceWidth = maxHorizontalWidth
-
+				Log.v("너비들", "face: $faceWidth, $faceHeight | ${neckHeight}")
 				val fs = classifyFaceShape(currentCoordinate, currentHairLine3DCoordinate)
 				val faceShape = fs.primaryShape
 				val faceShapeSub = fs.secondaryShape

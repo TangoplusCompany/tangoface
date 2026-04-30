@@ -17,7 +17,7 @@ val obSignatureProp = Properties().apply {
 
 android {
     namespace = "com.tangoplus.facebeautyexpert"
-    compileSdk = 35
+    compileSdk = 36
 
     buildFeatures {
         buildConfig = true
@@ -26,7 +26,7 @@ android {
     defaultConfig {
         applicationId = "com.tangoplus.facebeautyexpert"
         minSdk = 30
-        targetSdk = 35
+        targetSdk = 36
         versionCode = 1
         versionName = "1.00"
 

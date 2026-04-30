@@ -465,6 +465,16 @@ class DepthCameraActivity : BaseActivity(), FaceLandmarkerHelper.LandmarkerListe
 							}
 							buffer?.clear()
 							frame.getData(buffer)
+							bd.obglvC.setCenterCrop(true)
+							bd.obglvC.setRotation(0)
+							bd.obglvC.update(
+								frame.getWidth(),
+								frame.getHeight(),
+								StreamType.COLOR,
+								frame.getFormat(),
+								buffer,
+								1.0f
+							)
 
 							// ✅ Bitmap 생성 (한 번만!)
 							if (scaledIntrinsic != null && colorDistortion != null) {

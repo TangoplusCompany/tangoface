@@ -431,7 +431,7 @@ class InformationFragment : Fragment(), OnFacialPartClickListener {
 					// 2. 동시에 API 호출 및 DB 저장을 시작합니다.
 					val apiTask = async(Dispatchers.IO) {
 						val apiResponse = getGeminiInsight(currentResults) // API 호출
-
+						Log.v("gemini", "gemini insight: $apiResponse")
 						if (!apiResponse.isNullOrBlank()) {
 							val geminiInsight = FaceInsight(
 								server_sn = serverSn,

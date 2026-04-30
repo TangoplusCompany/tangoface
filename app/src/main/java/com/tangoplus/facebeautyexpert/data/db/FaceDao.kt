@@ -58,6 +58,7 @@ interface FaceDao {
 			FROM t_face_static S
 			LEFT JOIN t_face_insight I ON S.temp_server_sn = I.server_sn
 			WHERE S.activated = 1
+			GROUP BY S.temp_server_sn
 			ORDER BY regDate DESC
     """
 	)

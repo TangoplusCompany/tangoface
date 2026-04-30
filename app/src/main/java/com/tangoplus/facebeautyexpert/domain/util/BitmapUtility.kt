@@ -2030,35 +2030,35 @@ object BitmapUtility {
 						anchorX = 0f, anchorY = 0f,
 						targetGridIndex = 30, // 하단 중앙
 						info = TextDrawInfo("", listOf(
-							TextItem("", verticalRatio[0]),
+							TextItem("", "${verticalRatio[0]}"),
 						))
 					))
 					textBoxes.add(TextBoxData(
 						anchorX = 0f, anchorY = 0f,
 						targetGridIndex = 31, // 하단 중앙
 						info = TextDrawInfo("", listOf(
-							TextItem("", verticalRatio[1]),
+							TextItem("", "${verticalRatio[1]}%"),
 						))
 					))
 					textBoxes.add(TextBoxData(
 						anchorX = 0f, anchorY = 0f,
 						targetGridIndex = 32, // 하단 중앙
 						info = TextDrawInfo("", listOf(
-							TextItem("", verticalRatio[2]),
+							TextItem("", "${verticalRatio[2]}%"),
 						))
 					))
 					textBoxes.add(TextBoxData(
 						anchorX = 0f, anchorY = 0f,
 						targetGridIndex = 33, // 하단 중앙
 						info = TextDrawInfo("", listOf(
-							TextItem("", verticalRatio[3]),
+							TextItem("", "${verticalRatio[3]}%"),
 						))
 					))
 					textBoxes.add(TextBoxData(
 						anchorX = 0f, anchorY = 0f,
 						targetGridIndex = 34, // 하단 중앙
 						info = TextDrawInfo("", listOf(
-							TextItem("", verticalRatio[4]),
+							TextItem("", "${verticalRatio[4]}%"),
 						))
 					))
 				}
@@ -2071,21 +2071,21 @@ object BitmapUtility {
 						anchorX = 0f, anchorY = 0f,
 						targetGridIndex = 9, // 하단 중앙
 						info = TextDrawInfo("", listOf(
-							TextItem("", "${verticalRatio[0]}"),
+							TextItem("", "${verticalRatio[0]}%"),
 						))
 					))
 					textBoxes.add(TextBoxData(
 						anchorX = 0f, anchorY = 0f,
 						targetGridIndex = 19, // 하단 중앙
 						info = TextDrawInfo("", listOf(
-							TextItem("", "${verticalRatio[1]}"),
+							TextItem("", "${verticalRatio[1]}%"),
 						))
 					))
 					textBoxes.add(TextBoxData(
 						anchorX = 0f, anchorY = 0f,
 						targetGridIndex = 29, // 하단 중앙
 						info = TextDrawInfo("", listOf(
-							TextItem("", "${verticalRatio[2]}"),
+							TextItem("", "${verticalRatio[2]}%"),
 						))
 					))
 				}
