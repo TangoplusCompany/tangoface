@@ -3,14 +3,17 @@ package com.tangoplus.facebeautyexpert.ui.measure
 import android.animation.AnimatorSet
 import android.animation.ValueAnimator
 import android.annotation.SuppressLint
+import android.content.ContentValues
 import android.content.Intent
 import android.content.pm.ActivityInfo
 import android.graphics.Bitmap
+import android.graphics.Color
 import android.net.Uri
 import android.os.Bundle
 import android.os.CountDownTimer
 import android.os.Handler
 import android.os.Looper
+import android.provider.MediaStore
 import android.util.Log
 import android.view.View
 import android.view.WindowManager
@@ -91,12 +94,29 @@ import java.nio.ByteBuffer
 import kotlin.lazy
 import kotlin.math.abs
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import com.orbbec.obsensor.VideoStreamProfile
+import com.orbbec.obsensor.property.PropertyType
+import com.orbbec.obsensor.types.CameraIntrinsic
+import com.orbbec.obsensor.types.Extrinsic
+import com.tangoplus.facebeautyexpert.domain.util.BitmapUtility.faceOutLineIndexes
 import com.tangoplus.facebeautyexpert.domain.util.ClassifyUtility.calculateHorizontalRatio
+import com.tangoplus.facebeautyexpert.domain.util.FileUtility.getMoireFileName
+import com.tangoplus.facebeautyexpert.domain.util.LandmarkUtility.buildFaceMaskPath
+import com.tangoplus.facebeautyexpert.domain.util.LandmarkUtility.buildFaceMaskPathFromPoints
 import com.tangoplus.facebeautyexpert.domain.util.LandmarkUtility.calculateScreenX
 import com.tangoplus.facebeautyexpert.domain.util.LandmarkUtility.calculateScreenY
 import com.tangoplus.facebeautyexpert.domain.util.LandmarkUtility.colorFrameToBitmapSafe
 import com.tangoplus.facebeautyexpert.domain.util.LandmarkUtility.convertFaceLandmarksTo3D
+import com.tangoplus.facebeautyexpert.domain.util.LandmarkUtility.k1
+import com.tangoplus.facebeautyexpert.domain.util.LandmarkUtility.k2
+import com.tangoplus.facebeautyexpert.domain.util.LandmarkUtility.k3
+import com.tangoplus.facebeautyexpert.domain.util.LandmarkUtility.p1
+import com.tangoplus.facebeautyexpert.domain.util.LandmarkUtility.p2
+import com.tangoplus.facebeautyexpert.domain.util.LandmarkUtility.rotArray
 import com.tangoplus.facebeautyexpert.domain.util.LandmarkUtility.scaleAndCropIntrinsicCenterCrop
+import com.tangoplus.facebeautyexpert.domain.util.LandmarkUtility.toScaledIntrinsic
+import com.tangoplus.facebeautyexpert.domain.util.LandmarkUtility.transArray
+import com.tangoplus.facebeautyexpert.domain.util.LandmarkUtility.undistortLandmarks
 import com.tangoplus.facebeautyexpert.domain.util.UXUtility.startLongVibrate
 import com.tangoplus.facebeautyexpert.domain.util.clearAll
 import com.tangoplus.facebeautyexpert.ui.main.vm.MainViewModel
@@ -137,7 +157,7 @@ class DepthCameraActivity : BaseActivity(), FaceLandmarkerHelper.LandmarkerListe
 	private lateinit var prefsUtil: PreferenceUtility
 	private var bounceAnimator: AnimatorSet? = null
 	private var mHoleFillingFilter: HoleFillingFilter? = null
-
+	private var isInit = false
 	override fun getDeviceChangedCallback(): DeviceChangedCallback {
 		return mDeviceChangedCallback
 	}
@@ -159,11 +179,9 @@ class DepthCameraActivity : BaseActivity(), FaceLandmarkerHelper.LandmarkerListe
 	override fun onStop() {
 		try {
 			stopAndJoinFrameLoop(500)
-
 			if (null != mPipeline) {
 				mPipeline!!.close()
 			}
-
 			if (mDevice != null) {
 				mDevice!!.close()
 			}
@@ -197,23 +215,36 @@ class DepthCameraActivity : BaseActivity(), FaceLandmarkerHelper.LandmarkerListe
 					// 3. Create Device and initialize Pipeline through Device
 					mPipeline = Pipeline(mDevice)
 
-					// 4.Create Pipeline configuration
-					val config = Config()
+					Log.v("리스트", "${mDevice?.getSupportedPropertyList()?.map { "${it.propertyName}, ${it.property.value()}, ${it.propertyType}" }}")
 
+					val config = Config()
+//					mDevice?.setPropertyValueB(DeviceProperty.OB_PROP_DEPTH_ALIGN_HARDWARE_BOOL, true)
 					mPipeline!!.getStreamProfileList(SensorType.COLOR).use { colorProfileList ->
-						val colorProfile =
-							colorProfileList.getVideoStreamProfile(1920, 1080, Format.RGB, 30)
+						for (i in 0 until colorProfileList.count) {
+							val p = colorProfileList.getProfile(i)
+							Log.v("Profiles", "type=${p.type}")
+							val vp = p.`as`(StreamType.COLOR) as? VideoStreamProfile
+							Log.v("Profiles", "${vp?.width}x${vp?.height}")
+							Log.v("ColorProfiles", "color: ${vp?.width}x${vp?.height} fmt=${vp?.format} fps=${vp?.fps}")
+						}
+						val colorProfile = colorProfileList.getVideoStreamProfile(1920, 1080, Format.RGB, 30)
 						config.enableStream(colorProfile)
 						colorProfile.close()
 					}
+
 					mPipeline!!.getStreamProfileList(SensorType.DEPTH).use { depthProfileList ->
-						// 컬러 프로파일과 해상도가 맞는 뎁스 프로파일 선택
-						val depthProfile =
-							depthProfileList.getVideoStreamProfile(1280, 720, Format.Y16, 30)
+						for (i in 0 until depthProfileList.count) {
+							val p = depthProfileList.getProfile(i)
+							Log.v("Profiles", "type=${p.type}")
+							val vp = p.`as`(StreamType.DEPTH) as? VideoStreamProfile
+							Log.v("Profiles", "${vp?.width}x${vp?.height}")
+							Log.v("DepthProfiles", "depth: ${vp?.width}x${vp?.height} fmt=${vp?.format} fps=${vp?.fps}")
+						}
+						val depthProfile = depthProfileList.getVideoStreamProfile(1280, 720, Format.Y16, 30)
 						config.enableStream(depthProfile)
 						depthProfile.close()
 					}
-					config.setAlignMode(AlignMode.ALIGN_D2C_SW_MODE)
+//					config.setAlignMode(AlignMode.ALIGN_D2C_HW_MODE)
 
 					mPipeline!!.start(config)
 
@@ -287,8 +318,8 @@ class DepthCameraActivity : BaseActivity(), FaceLandmarkerHelper.LandmarkerListe
 			}
 
 			override fun onFinish() {
-				Log.v("카운트 끝", "${mvm.face3DResult}, 현재 seq: ${mvm.currentSeq}")
-				if (mvm.face3DResult.isNotEmpty()) {
+				Log.v("카운트 끝", "${mvm.face2DResult}, 현재 seq: ${mvm.currentSeq}")
+				if (mvm.face2DResult?.landmarks?.isNotEmpty() == true) {
 					timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"))
 					hideViews()
 					playSound(R.raw.camera_shutter)
@@ -352,7 +383,6 @@ class DepthCameraActivity : BaseActivity(), FaceLandmarkerHelper.LandmarkerListe
 
 	override fun onDestroy() {
 		super.onDestroy()
-		MeasureUtility.dismissSafely()
 		requestCleanup("ACTIVITY_DESTROY")
 		releaseSDK()
 		releasePose()
@@ -407,6 +437,7 @@ class DepthCameraActivity : BaseActivity(), FaceLandmarkerHelper.LandmarkerListe
 
 	private var scaledIntrinsic: ScaledIntrinsic? = null
 	private var colorDistortion: CameraDistortion? = null
+	private var depthDistortion: CameraDistortion? = null
 	private var isIntrinsicInitialized = false
 	private val mainHandler = Handler(Looper.getMainLooper())
 	private val mStreamRunnable = Runnable {
@@ -429,9 +460,10 @@ class DepthCameraActivity : BaseActivity(), FaceLandmarkerHelper.LandmarkerListe
 						val params = mDevice?.calibrationCameraParamList
 						if (params != null) {
 							val paramsUnit = params.getCameraParam(0) // 캘리브 원해상도 기준
+
 							val base = paramsUnit.colorIntrinsic
 							colorDistortion = paramsUnit.colorDistortion
-
+							depthDistortion = paramsUnit.depthDistortion
 							val targetW = 1920
 							val targetH = 1080
 
@@ -506,7 +538,7 @@ class DepthCameraActivity : BaseActivity(), FaceLandmarkerHelper.LandmarkerListe
 							try {
 								val filtered = mHoleFillingFilter?.process(originalDepthFrame)
 								val filteredDepth = filtered?.`as`(FrameType.DEPTH) as DepthFrame
-								originalDepthFrame.close()  // ✅ 원본 해제
+								originalDepthFrame.close()
 								filteredDepth
 							} catch (e: Exception) {
 								Log.e(TAG, "Filter failed: ${e.message}")
@@ -517,48 +549,24 @@ class DepthCameraActivity : BaseActivity(), FaceLandmarkerHelper.LandmarkerListe
 						}
 
 						depthFrame?.let { frame ->
-							val w = frame.width
-							val h = frame.height
-							val depthByteData = ByteArray(w * h * 2)
-							frame.getData(depthByteData)
+							if (isInit) return@let
 
-							val depthData = ShortArray(w * h)
-							for (i in 0 until w * h) {
-								val lowByte = depthByteData[i * 2].toInt() and 0xFF
-								val highByte = depthByteData[i * 2 + 1].toInt() and 0xFF
-								depthData[i] = (highByte shl 8 or lowByte).toShort()
-							}
-							mvm.latestDepthData = depthData
-							mvm.latestDepthWidth = w
-							mvm.latestDepthHeight = h
-
-							// 3D 좌표 계산
-							val params = mDevice?.calibrationCameraParamList
-							val currentTime = System.currentTimeMillis()
-							if (currentTime - last3DCalculateTime >= calculationInterval
-								&& mvm.face2DResult != null
-								&& params != null
-							) {
-								val paramsUnit = params.getCameraParam(0) // 캘리브 원해상도 기준
-								val base = paramsUnit.depthIntrinsic
-								mvm.latestIntrinsic = base
-								last3DCalculateTime = currentTime
-								val landmarks3D = convertFaceLandmarksTo3D(
-									mvm.face2DResult!!,
-									depthData,
-									w,
-									h,
-									base
-								)
-								mvm.face3DResult = landmarks3D
-								runOnUiThread {
-									bd.overlay.setResults(landmarks3D)
-									bd.overlay.invalidate()
-								}
-							}
+							// TODO 실시간 STREAM에서는 사용하지는 않음.
+//							val w = frame.width
+//							val h = frame.height
+//							val depthByteData = ByteArray(w * h * 2)
+//							frame.getData(depthByteData)
+//
+//							val depthData = ShortArray(w * h)
+//							for (i in 0 until w * h) {
+//								val lowByte = depthByteData[i * 2].toInt() and 0xFF
+//								val highByte = depthByteData[i * 2 + 1].toInt() and 0xFF
+//								depthData[i] = (highByte shl 8 or lowByte).toShort()
+//							}
+							// -> captureImage() 시점에만 계산
 						}
 					} finally {
-						depthFrame?.close()  // ✅ Depth Frame 해제
+						depthFrame?.close()
 					}
 				}
 			} catch (e: com.orbbec.obsensor.OBException) {
@@ -1074,11 +1082,12 @@ class DepthCameraActivity : BaseActivity(), FaceLandmarkerHelper.LandmarkerListe
 
 	private suspend fun captureImage(seq: Sequence): Boolean {
 		val name = getFileName(seq)
+		val moireName = getMoireFileName(seq)
 		return withContext(Dispatchers.IO) {
 			try {
 				mPipeline?.waitForFrameSet(1000)?.use { frameSet ->
 					val colorFrame = frameSet.getColorFrame() ?: return@use false
-
+					val originalDepthFrame = frameSet.getDepthFrame()
 					val dataSize = colorFrame.getDataSize()
 					Log.d("captureImage", "✅ 데이터 읽을 크기: $dataSize bytes")
 
@@ -1101,17 +1110,176 @@ class DepthCameraActivity : BaseActivity(), FaceLandmarkerHelper.LandmarkerListe
 							pixels[i] = (0xFF shl 24) or (r shl 16) or (g shl 8) or b
 						}
 					}
+					colorFrame.close()
+
+					// depth 프레임 가져오기
+					var depthData: ShortArray? = null
+					var depthW = 0
+					var depthH = 0
+					val face2D = mvm.face2DResult
+					val params = mDevice?.calibrationCameraParamList
+
+
+					if (originalDepthFrame != null) {
+						val filteredFrame = try {
+							val filtered = mHoleFillingFilter?.process(originalDepthFrame)
+							val f = filtered?.`as`(FrameType.DEPTH) as? DepthFrame
+							originalDepthFrame.close()
+							f ?: originalDepthFrame
+						} catch (e: Exception) {
+							Log.e("captureImage", "HoleFilling failed: ${e.message}")
+							originalDepthFrame
+						}
+
+						filteredFrame.use { df ->
+							depthW = df.width
+							depthH = df.height
+							val byteData = ByteArray(depthW * depthH * 2)
+							df.getData(byteData)
+							depthData = ShortArray(depthW * depthH) { i ->
+								val lo = byteData[i * 2].toInt() and 0xFF
+								val hi = byteData[i * 2 + 1].toInt() and 0xFF
+								(hi shl 8 or lo).toShort()
+							}
+							mvm.latestDepthData = depthData      // ✅ 추가
+							mvm.latestDepthWidth = depthW        // ✅ 추가
+							mvm.latestDepthHeight = depthH       // ✅ 추가
+						}
+					}
+//          🖤🖤🖤🖤🖤🖤🖤 depth원본데이터 저장하기
+//					val rawDepthVis = Bitmap.createBitmap(depthW, depthH, Bitmap.Config.ARGB_8888)
+//					val pixels2 = IntArray(depthW * depthH)
+//					Log.v("크기차이", "${depthData?.size}, ${depthW * depthH}")
+//					for (i in pixels2.indices) {
+//						val d = (depthData!![i].toInt() and 0xFFFF)
+//						val v = (d.coerceIn(0, 2000) * 255 / 2000)
+//						pixels2[i] = Color.argb(255, v, v, v)
+//					}
+//					rawDepthVis.setPixels(pixels2, 0, depthW, 0, 0, depthW, depthH)
+//					val rawDepthName = name.replaceFirst("0-", "0-rawdepth-")
+//					val contentValues = ContentValues().apply {
+//						put(MediaStore.MediaColumns.DISPLAY_NAME, "$rawDepthName.webp")
+//						put(MediaStore.MediaColumns.MIME_TYPE, "image/webp")
+//						put(MediaStore.Images.Media.RELATIVE_PATH, "Pictures/TangoPlus")
+//					}
+//					val imageUri = contentResolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, contentValues)
+//					imageUri?.let { uri ->
+//						contentResolver.openOutputStream(uri)?.use { os ->
+//							rawDepthVis.compress(Bitmap.CompressFormat.WEBP_LOSSY, 100, os)
+//							os.flush()
+//						}
+//						Log.d("RawDepthVis", "저장 완료: $rawDepthName.webp")
+//					}
+//          depth원본데이터 저장하기 끝 🖤🖤🖤🖤🖤🖤🖤
+
+//					val alignedDepth = if (depthData != null && params != null) {
+//						val paramsUnit = params.getCameraParam(0)
+//						Log.v("ExtrinsicRaw", "${paramsUnit.transform}")
+//						Log.d("RawCheck", "depthW=$depthW depthH=$depthH")
+//						buildColorAlignedDepth(
+//							rawDepth = depthData,
+//							rawW = depthW,
+//							rawH = depthH,
+//							colorW = width,   // color bitmap 해상도 (1920)
+//							colorH = height,  // color bitmap 해상도 (1080)
+//							depthIntrinsic = paramsUnit.depthIntrinsic,
+//							colorIntrinsic = paramsUnit.colorIntrinsic,
+//							extrinsic = paramsUnit.transform
+//						)
+//					} else null
+//
+//					var minVal = Int.MAX_VALUE
+//					var minX = -1; var minY = -1
+//					for (y in 0 until depthH) {
+//						for (x in 0 until depthW) {
+//							val d = depthData!![y * depthW + x].toInt() and 0xFFFF
+//							if (d in 1 until minVal) { minVal = d; minX = x; minY = y }
+//						}
+//					}
+//					Log.d("NoseCheck", "실제 depth 최솟값=$minVal at ($minX,$minY)")
+//					Log.d("NoseCheck", "실제 depth (${depthW} x ${depthH})")
+//					val lm4 = face2D!!.landmarks[4]
+//					Log.d("NoseCheck", "landmark[4] 위치=(${lm4.x * depthW}, ${lm4.y * depthH})")
+//					val cx = 743; val cy = 714
+//					for (dy in -3..3) {
+//						val row = (cy + dy).coerceIn(0, depthH - 1) * depthW
+//						val vals = (-3..3).map { dx ->
+//							val xx = (cx + dx).coerceIn(0, depthW - 1)
+//							depthData!![row + xx].toInt() and 0xFFFF
+//						}
+//						Log.d("CheckMinArea", "y=${cy+dy}: $vals")
+//					}
+
+
+					val undistortedPoints: List<Pair<Float, Float>>? = if (face2D != null && params != null) {
+						val paramsUnit = params.getCameraParam(0)
+						val rawPoints = face2D.landmarks.map { Pair(it.x * depthW, it.y * depthH) }
+						val depthIntrc = paramsUnit.depthIntrinsic.toScaledIntrinsic()
+						undistortLandmarks(rawPoints, depthIntrc, depthDistortion!!)
+					} else null
+					if (face2D != null && params != null && depthData != null) {
+						val paramsUnit = params.getCameraParam(0)
+						val base = paramsUnit.depthIntrinsic
+						mvm.latestIntrinsic = base
+						Log.d("Distortion", "k1=${depthDistortion?.k1()} k2=${depthDistortion?.k2()} k3=${depthDistortion?.k3()} p1=${depthDistortion?.p1()} p2=${depthDistortion?.p2()}")// ✅ VM에 저장
+						val landmarks3D = convertFaceLandmarksTo3D(
+							face2D,
+							depthData,
+							depthW,
+							depthH,
+							base,
+							depthDistortion!!
+						)
+
+						mvm.face3DResult = landmarks3D
+						Log.d("captureImage", "✅ 3D landmark 계산 완료: ${landmarks3D.size}개")
+					} else {
+						Log.w("captureImage", "⚠️ face2D 또는 params 없음, 3D 계산 스킵")
+					}
+
+					// D2C align 확인용 로그 (한 번 찍어보세요)
+					Log.d("captureImage", "color=${width}x${height}  depth=${depthW}x${depthH}")
 
 					val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
 					bitmap.setPixels(pixels, 0, width, 0, 0, width, height)
 
-					// 임시 파일 저장
+					face2D?.let { result ->
+						val noseIndexes = listOf(1, 4, 5)
+						noseIndexes.forEach { idx ->
+							val lm = result.landmarks[idx]
+							val px = (lm.x * depthW).toInt().coerceIn(0, depthW - 1)
+							val py = (lm.y * depthH).toInt().coerceIn(0, depthH - 1)
+
+							val sb = StringBuilder()
+							for (dy in -2..2) {
+								for (dx in -2..2) {
+									val xx = (px + dx).coerceIn(0, depthW - 1)
+									val yy = (py + dy).coerceIn(0, depthH - 1)
+									val d = depthData?.get(yy * depthW + xx)?.toInt()?.and(0xFFFF) ?: -1
+									sb.append("$d ")
+								}
+								sb.append("| ")
+							}
+							Log.d("NoseDepth", "landmark[$idx] at ($px,$py): $sb")
+						}
+					}
+					val faceMaskPath = undistortedPoints?.let { pts ->
+						Log.v("포인트들", "$pts")
+						buildFaceMaskPathFromPoints(pts, faceOutLineIndexes)
+					}
+
+
+					val (minDepth, maxDepth) = mvm.computeFaceDepthRange(depthData!!, depthW, depthH, faceMaskPath!!)
+					Log.d("Moire", "minDepth=$minDepth maxDepth=$maxDepth")
+					val tempMoireBitmap = mvm.generateMoireBitmap(depthData, depthW, depthH, faceMaskPath, minDepth, maxDepth)
 					val tempFile = File.createTempFile("color_capture", ".webp", cacheDir)
 					FileOutputStream(tempFile).use { fos ->
 						bitmap.compress(Bitmap.CompressFormat.WEBP_LOSSY, 100, fos)
 					}
 					val tempUri = Uri.fromFile(tempFile)
+
 					mvm.saveMediaToStorage(this@DepthCameraActivity, tempUri, name, flh, plh)
+					if (seq == Sequence.COMFORT) mvm.saveMoireToStorage(this@DepthCameraActivity, tempMoireBitmap, moireName)
 					return@withContext true
 				} ?: false
 			} catch (e: Exception) {
@@ -1224,6 +1392,54 @@ class DepthCameraActivity : BaseActivity(), FaceLandmarkerHelper.LandmarkerListe
 		requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
 		super.finish()
 	}
+
+//	fun buildColorAlignedDepth(
+//		rawDepth: ShortArray, rawW: Int, rawH: Int,
+//		colorW: Int, colorH: Int,
+//		depthIntrinsic: CameraIntrinsic, colorIntrinsic: CameraIntrinsic, extrinsic: Extrinsic
+//	): ShortArray {
+//		val aligned = ShortArray(colorW * colorH)  // 기본값 0 (invalid)
+//		for (y in 0 until rawH) {
+//			for (x in 0 until rawW) {
+//				val d = rawDepth[y * rawW + x].toInt() and 0xFFFF
+//				if (d <= 0) continue
+//				val (cx, cy) = reprojectDepthPixelToColor(x, y, d, depthIntrinsic, colorIntrinsic, extrinsic)
+//				val ix = cx.toInt(); val iy = cy.toInt()
+//				if (ix in 0 until colorW && iy in 0 until colorH) {
+//					aligned[iy * colorW + ix] = d.toShort()
+//				}
+//			}
+//		}
+//		return aligned
+//	}
+//	fun reprojectDepthPixelToColor(
+//		depthX: Int, depthY: Int, depthMm: Int,
+//		depthIntrinsic: CameraIntrinsic,
+//		colorIntrinsic: CameraIntrinsic,
+//		extrinsic: Extrinsic
+//	): Pair<Float, Float> {
+//		// 1) depth 픽셀 → depth 카메라 3D 좌표 (mm 단위)
+//		val z = depthMm.toFloat()
+//		val x3d = (depthX - depthIntrinsic.cx) / depthIntrinsic.fx * z
+//		val y3d = (depthY - depthIntrinsic.cy) / depthIntrinsic.fy * z
+//
+//		// 2) extrinsic 적용: depth 3D -> color 3D
+//		// rot: 3x3 행렬 (row-major 가정), trans: [tx,ty,tz] (mm 단위)
+//		val rot = extrinsic.rotArray()
+//		val trans = extrinsic.transArray()
+//
+//
+//		val xc = rot[0]*x3d + rot[1]*y3d + rot[2]*z + trans[0]
+//		val yc = rot[3]*x3d + rot[4]*y3d + rot[5]*z + trans[1]
+//		val zc = rot[6]*x3d + rot[7]*y3d + rot[8]*z + trans[2]
+//		Log.v("로트", "\n${rot[0]} ${rot[1]} ${rot[2]}\n${rot[3]} ${rot[4]} ${rot[5]}\n ${rot[6]} ${rot[7]} ${rot[8]}")
+//		// 3) color 3D -> color 픽셀 projection
+//		if (zc <= 0f) return Pair(-1f, -1f)  // 카메라 뒤쪽이면 무효
+//		val colorX = (xc / zc) * colorIntrinsic.fx + colorIntrinsic.cx
+//		val colorY = (yc / zc) * colorIntrinsic.fy + colorIntrinsic.cy
+//
+//		return Pair(colorX, colorY)
+//	}
 
 	private fun initSettings() {
 

@@ -169,7 +169,7 @@ class OverlayView(context: Context?, attrs: AttributeSet?) :
 		val offsetY = (height - scaledImageHeight) / 2f
 
 		results?.let { faceLandmarkerResult ->
-			drawFaceLandmarks(canvas, faceLandmarkerResult.landmarks, point3dResult, offsetX, offsetY)
+			drawFaceLandmarks(canvas, faceLandmarkerResult.landmarks, offsetX, offsetY) // point3dResult,
 		}
 
 		drawColorTrack(
@@ -214,12 +214,12 @@ class OverlayView(context: Context?, attrs: AttributeSet?) :
 	private fun drawFaceLandmarks(
 		canvas: Canvas,
 		faceLandmarks: List<FaceLandmarkResult.FaceLandmark>,
-		point3dResults: List<Point3D?>?,
+//		point3dResults: List<Point3D?>?,
 		offsetX: Float,
 		offsetY: Float
 	) {
-		if (faceLandmarks.isEmpty() && point3dResults == null) return
-		if (faceLandmarks.isNotEmpty() && point3dResults == null) {
+//		if (faceLandmarks.isEmpty() ) return
+		if (faceLandmarks.isNotEmpty()) {
 			when (currentRunningMode) {
 				RunningMode.LIVE_STREAM -> {
 // --------------------------# 10 - 1 - 152 양귓볼 - 코 #------------------------------

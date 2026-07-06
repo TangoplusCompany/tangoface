@@ -152,7 +152,8 @@ class MainViewModel : ViewModel() {
 	//-------------------------------# info로 들어가는 dataClass 변환 #-------------------------------
 	fun convertToFaceResult(context: Context, faceStatics: List<FaceStatic>, faceInsight: FaceInsight?): FaceResult {
 
-		val mediaUri = mutableListOf<Uri?>()
+		val mediaUris = mutableListOf<Uri?>()
+		val moireUris = mutableListOf<Uri?>()
 		val jsonArray = JSONArray()
 		val seqs = mutableSetOf<Sequence>()
 		faceStatics.filter { it.local_sn != 0 }.forEachIndexed { indexx, faceStatic ->
@@ -161,10 +162,14 @@ class MainViewModel : ViewModel() {
 			try {
 
 				val imageUri = FileUtility.getImageUriFromFileName(context, faceStatic.media_file_name)
-				mediaUri.add(imageUri)
+				val baseStr = faceStatic.media_file_name.replaceFirst("-", "-moire-")
+				val moireUri = FileUtility.getImageUriFromFileName(context, baseStr)
+				mediaUris.add(imageUri)
+				moireUris.add(moireUri)
+
 				Log.v("이미지URI", "1: $indexx ${faceStatic.media_file_name}")
 			} catch (e: Exception) {
-				mediaUri.add(null)
+				mediaUris.add(null)
 				Log.e("FaceResultConverter", "이미지 URI 파싱 실패: ${faceStatic.media_file_name}", e)
 			}
 
@@ -200,7 +205,8 @@ class MainViewModel : ViewModel() {
 			tempServerSn = validData.temp_server_sn,
 			userName = validData.name,
 			userMobile = validData.mobile,
-			mediaUri = mediaUri,
+			mediaUri = mediaUris,
+			moireUri = moireUris,
 			results = jsonArray,
 			depthResult = validData.depth_result,
 			seqs = seqs.toSet(),

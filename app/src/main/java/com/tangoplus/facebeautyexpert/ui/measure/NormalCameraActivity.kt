@@ -65,6 +65,7 @@ import com.tangoplus.facebeautyexpert.domain.util.PreferenceUtility
 import com.tangoplus.facebeautyexpert.domain.util.SecurityUtility.generateCustomUUID
 import com.tangoplus.facebeautyexpert.domain.util.UXUtility.playSound
 import com.tangoplus.facebeautyexpert.domain.util.UXUtility.startLongVibrate
+import com.tangoplus.facebeautyexpert.domain.util.clearAll
 import com.tangoplus.facebeautyexpert.domain.vision.face.FaceBlendshapesResultAdapter
 import com.tangoplus.facebeautyexpert.domain.vision.face.FaceLandmarkAdapter
 import com.tangoplus.facebeautyexpert.domain.vision.face.FaceLandmarkerHelper
@@ -75,6 +76,7 @@ import com.tangoplus.facebeautyexpert.ui.main.vm.MainViewModel
 import com.tangoplus.facebeautyexpert.ui.main.vo.UserItem
 import com.tangoplus.facebeautyexpert.ui.measure.vm.InputViewModel
 import com.tangoplus.facebeautyexpert.ui.measure.vm.MeasureViewModel
+import com.tangoplus.facebeautyexpert.ui.measure.vm.NormalDepthViewModel
 import com.tangoplus.facebeautyexpert.ui.statistics.GyroDialogFragment
 import com.tangoplus.facebeautyexpert.ui.view.OverlayView
 import kotlinx.coroutines.Dispatchers
@@ -102,7 +104,7 @@ class NormalCameraActivity : AppCompatActivity(), FaceLandmarkerHelper.Landmarke
 	private lateinit var flh: FaceLandmarkerHelper
 	private lateinit var plh : PoseLandmarkerHelper
 	private val viewModel: MainViewModel by viewModels()
-	private val mvm: MeasureViewModel by viewModels()
+	private val mvm: NormalDepthViewModel by viewModels()
 	private val ivm: InputViewModel by viewModels()
 	private val faceBlendshapesResultAdapter by lazy {
 		FaceBlendshapesResultAdapter()
@@ -139,8 +141,8 @@ class NormalCameraActivity : AppCompatActivity(), FaceLandmarkerHelper.Landmarke
 			}
 
 			override fun onFinish() {
-				Log.v("카운트 끝", "${mvm.face3DResult}, 현재 seq: ${mvm.currentSeq}")
-				if (mvm.face3DResult.isNotEmpty()) {
+				Log.v("카운트 끝", "${mvm.face2DResult}, 현재 seq: ${mvm.currentSeq}")
+				if (mvm.face2DResult?.landmarks?.isNotEmpty() == true) {
 					timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"))
 					hideViews()
 					playSound(R.raw.camera_shutter)
@@ -229,9 +231,6 @@ class NormalCameraActivity : AppCompatActivity(), FaceLandmarkerHelper.Landmarke
 		releaseCamera()
 		releasePose()
 		releaseFace()
-		// ---------# 메모리 정리 #---------
-		System.gc()
-		Runtime.getRuntime().gc()
 	}
 
 	override fun onCreate(savedInstanceState: Bundle?) {
@@ -239,7 +238,7 @@ class NormalCameraActivity : AppCompatActivity(), FaceLandmarkerHelper.Landmarke
 		enableEdgeToEdge()
 		bd = ActivityNormalCameraBinding.inflate(layoutInflater)
 		WindowCompat.setDecorFitsSystemWindows(window, false)
-
+		requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
 		setContentView(bd.root)
 		title = "normalCamera"
 		window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
@@ -887,9 +886,12 @@ class NormalCameraActivity : AppCompatActivity(), FaceLandmarkerHelper.Landmarke
 
 	private fun initSettings() {
 
-		mvm.allSeqs = prefsUtil.getLastMeasureSeqs().sortedBy { it.ordinal }.toMutableList()
-		mvm.currentSeq = Sequence.COMFORT
-
+//		mvm.allSeqs = prefsUtil.getLastMeasureSeqs().sortedBy { it.ordinal }.toMutableList()
+		mvm.currentSeq = mvm.allSeqs[0]
+		mvm.isDepthCameraMeasure = false
+		bd.tvNCPrevious.apply {
+			visibility = View.INVISIBLE
+		}
 		val seqCount = "${mvm.getSeqIndex() + 1} / ${mvm.allSeqs.size}"
 
 		bd.tvNCSeqCount.text = seqCount
@@ -900,32 +902,47 @@ class NormalCameraActivity : AppCompatActivity(), FaceLandmarkerHelper.Landmarke
 		ivm.isShownBtn = false
 		viewModel.comparisonDoubleItem = null
 
-		// userFragment에서 왔을 경우 이름과 휴대폰 번호 넣고, 설문지만 넣기
-		val currentUserItem = intent.getParcelableExtra<UserItem>("currentUserItem")
-		Log.v("currentUserItem", "is init? = $currentUserItem, ${currentUserItem == null}")
-		if (currentUserItem != null) {
-			ivm.mobileValue.value = currentUserItem.mobile
-			ivm.nameValue.value = currentUserItem.name
-			ivm.nationalityValue.value = currentUserItem.nationality
-			ivm.birthdayValue.value = currentUserItem.birthday
-			ivm.genderValue.value = currentUserItem.gender
-			mvm.currentUserSn = currentUserItem.tempServerSn
-		}
+//		val currentUserItem = intent.getParcelableExtra<UserItem>("currentUserItem")
+//		Log.v("currentUserItem", "is init? = $currentUserItem, ${currentUserItem == null}")
+//		if (currentUserItem != null) {
+//			ivm.mobileValue.value = currentUserItem.mobile
+//			ivm.nameValue.value = currentUserItem.name
+//			ivm.nationalityValue.value = currentUserItem.nationality
+//			ivm.birthdayValue.value = currentUserItem.birthday
+//			ivm.genderValue.value = currentUserItem.gender
+//		}
 		val key = getString(R.string.kekeke)
 		mvm.currentUUID = generateCustomUUID(ivm.nameValue.value, ivm.mobileValue.value, ivm.birthdayValue.value,ivm.genderValue.value,key)
 
-
 		Log.v("가져온게 있나요", "Out: ${ivm.mobileValue.value}, ${ivm.nameValue.value}, ${mvm.currentUserSn}")
-		val userDialog = UserSetupDialogFragment.newInstance(0)
-		userDialog.show(supportFragmentManager, "")
-
-		mvm.currentSeq = Sequence.COMFORT
-
+		if (ivm.nameValue.value?.isNotEmpty() == true && ivm.mobileValue.value?.isNotEmpty() == true && mvm.currentUserSn != -1) {
+			val onBoardingDialog = OnBoardingDialogFragment()
+			onBoardingDialog.show(supportFragmentManager, "")
+		} else {
+			val userDialog = UserSetupDialogFragment.newInstance(0)
+			userDialog.show(supportFragmentManager, "")
+		}
 		// flat 초기화
 		viewModel.setSeqFinishedFlag(false)
 		viewModel.setGuideTextFlag(false)
 		viewModel.setCountDownFlag(false)
 		viewModel.setTextAnimationFlag(false)
+		mvm.staticJA.clearAll()
+		mvm.coordinatesJA.clearAll()
+		mvm.mediaFileNames.clear()
+		mvm.plrJA.clearAll()
+		mvm.hairLineJA.clearAll()
+		mvm.inputWidth = 0
+		mvm.inputHeight = 0
+		mvm.overlayW = 0f
+		mvm.overlayH = 0f
+		// 화면 인물 프레임 init
+		bd.ivNCFrame.setImageDrawable(
+			ContextCompat.getDrawable(
+				this@NormalCameraActivity,
+				R.drawable.drawable_seq_0
+			)
+		)
 	}
 
 	private fun hideViews() {

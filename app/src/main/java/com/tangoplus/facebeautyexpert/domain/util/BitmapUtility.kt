@@ -8,6 +8,7 @@ import android.graphics.BitmapFactory
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.DashPathEffect
+import android.graphics.ImageDecoder
 import android.graphics.Matrix
 import android.graphics.Paint
 import android.graphics.Path
@@ -15,9 +16,12 @@ import android.graphics.PointF
 import android.graphics.Rect
 import android.hardware.display.DisplayManager
 import android.icu.text.DecimalFormat
+import android.os.Build
+import android.provider.MediaStore
 import android.util.Log
 import android.view.Display
 import android.view.Surface
+import androidx.core.content.ContentProviderCompat.requireContext
 import androidx.core.content.ContextCompat
 import androidx.core.graphics.toColorInt
 import androidx.fragment.app.Fragment
@@ -55,6 +59,7 @@ import kotlinx.coroutines.withContext
 
 object BitmapUtility {
 	data class DrawImageUiModel(
+		val fragment: Fragment,
 		val originalBitmap: Bitmap,
 		val faceResult: FaceResult,
 		val setedLine: MutableSet<DrawLine>,
@@ -129,12 +134,15 @@ object BitmapUtility {
 			)
 			val isLineOn = ivm.getLineOn()
 			val isGridLineOn = ivm.getGridLineOn()
+			val isMoireOn = ivm.getMoireOn()
 			val flags = BitmapFlag(
 				isLineOn = isLineOn,
-				isGridLineOn = isGridLineOn
+				isGridLineOn = isGridLineOn,
+				isMoireOn = isMoireOn
 			)
 			val (combinedBitmap, textBoxes, faceRect) = combineImageAndOverlay(
 				DrawImageUiModel(
+					fragment,
 					processedBitmap,
 					faceResult,
 					setedLine = ivm.currentCheckedLines,
@@ -1174,6 +1182,42 @@ object BitmapUtility {
 				drawExtendedLine(canvas, x1, y0, x1 + 1, y0, 300f, 300f, redPaint)
 				drawExtendedLine(canvas, x1, y1, x1 + 1, y1, 300f, 300f, redPaint)
 				drawExtendedLine(canvas, x1, y4, x1 + 1, y4, 300f, 300f, redPaint)
+			}
+		}
+
+		if (dim.flags.isMoireOn && dim.faceResult.moireUri.isNotEmpty()) {
+			val originalMoireBitmap = BitmapFactory.decodeStream(
+				dim.fragment.requireContext().contentResolver.openInputStream(dim.faceResult.moireUri.first()!!)
+			)
+
+			if (originalMoireBitmap != null) {
+				Log.d("BitmapSize", "Original moire size: ${originalMoireBitmap.width}x${originalMoireBitmap.height}")
+
+				val targetWidth = 1920
+				val targetHeight = 1080
+				val matrix = Matrix().apply {
+					// x축을 -1로 설정하여 좌우를 뒤집고, 1920x1080 비율에 맞게 스케일을 계산합니다.
+					postScale(1f * (targetWidth.toFloat() / originalMoireBitmap.width), // -1f
+						targetHeight.toFloat() / originalMoireBitmap.height)
+
+					// 뒤집힌 이미지가 화면 밖으로 나가지 않도록 가로 크기만큼 보정 이동해 줍니다.
+					postTranslate(targetWidth.toFloat(), 0f)
+				}
+				val scaledMoire = Bitmap.createBitmap(
+					originalMoireBitmap,
+					0, 0,
+					originalMoireBitmap.width,
+					originalMoireBitmap.height,
+					matrix,
+					true
+				)
+				canvas.drawBitmap(scaledMoire, 0f, 0f, null)
+				if (scaledMoire != originalMoireBitmap) {
+					originalMoireBitmap.recycle()
+				}
+				scaledMoire.recycle()
+			} else {
+				Log.e("BitmapSize", "모아레 이미지를 로드하지 못했습니다.")
 			}
 		}
 // ------------------------------# 선택에 따라 바로 그리기 #----------------------------------

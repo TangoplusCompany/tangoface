@@ -34,7 +34,6 @@ class MeasureHistoryFragment : Fragment(), OnUserClickListener {
 	private lateinit var bd: FragmentMeasureHistoryBinding
 	private val mvm: MainViewModel by activityViewModels()
 	private lateinit var fDao: FaceDao
-	private lateinit var loadingDialog: LoadingDialogFragment
 
 	override fun onCreateView(
 		inflater: LayoutInflater, container: ViewGroup?,
@@ -60,7 +59,6 @@ class MeasureHistoryFragment : Fragment(), OnUserClickListener {
 			fDao = fd.faceDao()
 			initUserUI()
 			setAdapter(mvm.currentUserItems)
-			loadingDialog = LoadingDialogFragment()
 
 			bd.btnMHImage.setOnSingleClickListener {
 				(requireActivity() as MainActivity).navigateToSubFragment(MeasureImageFragment())
@@ -87,9 +85,6 @@ class MeasureHistoryFragment : Fragment(), OnUserClickListener {
 	}
 
 	override fun onUserClick(tempServerSn: Int) {
-		if (!loadingDialog.isAdded && !loadingDialog.isVisible) {
-			loadingDialog.show(requireActivity().supportFragmentManager, "loading_tag")
-		}
 
 		lifecycleScope.launch(Dispatchers.IO) {
 			val statics = fDao.getStatic(tempServerSn)
@@ -98,9 +93,6 @@ class MeasureHistoryFragment : Fragment(), OnUserClickListener {
 //        scrollToView(bd.ibtnMBack, bd.nsvM)
 			withContext(Dispatchers.Main) {
 				mvm.currentResult.value = result
-				if (loadingDialog.isAdded) {
-					loadingDialog.dismiss()
-				}
 				activity?.let { fa -> fa.supportFragmentManager.beginTransaction().apply {
 					replace(R.id.flMain, InformationFragment())
 					addToBackStack("information")

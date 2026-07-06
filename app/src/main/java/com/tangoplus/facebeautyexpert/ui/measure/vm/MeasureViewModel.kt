@@ -4,8 +4,15 @@ import android.content.ContentValues
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.graphics.BlurMaskFilter
+import android.graphics.Canvas
+import android.graphics.Color
 import android.graphics.ImageDecoder
 import android.graphics.Matrix
+import android.graphics.Paint
+import android.graphics.Path
+import android.graphics.RectF
+import android.graphics.Region
 import android.media.ExifInterface
 import android.net.Uri
 import android.os.Build
@@ -58,10 +65,12 @@ import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import kotlin.use
 import androidx.core.net.toUri
+import com.tangoplus.facebeautyexpert.domain.util.LandmarkUtility.generateGradientLayer
 import com.tangoplus.facebeautyexpert.domain.util.MathHelpers.getScaleFactor
 import com.tangoplus.facebeautyexpert.domain.util.PreferenceUtility
 import com.tangoplus.facebeautyexpert.domain.vision.face.FaceLandmarkAdapter
 import kotlin.math.abs
+import kotlin.math.min
 import kotlin.text.replace
 
 class MeasureViewModel : ViewModel() {
@@ -620,7 +629,6 @@ class MeasureViewModel : ViewModel() {
 	// 🔶🔶🔶🔶🔶🔶🔶🔶🔶🔶🔶🔶🔶 json, media 파일 저장 🔶🔶🔶🔶🔶🔶🔶🔶🔶🔶🔶🔶🔶
 	fun saveJsonToStorage(activity: AppCompatActivity, inputJson: JSONObject, fileName: String): String? {
 
-		MeasureUtility.show(activity)
 		val resolver = activity.contentResolver
 		val contentValues = ContentValues().apply {
 			put(MediaStore.MediaColumns.DISPLAY_NAME, "$fileName.json")
@@ -650,7 +658,6 @@ class MeasureViewModel : ViewModel() {
 			}
 
 			Log.d("JSON_SAVE", "saved(JsonWriter): $fileName.json, uri=$uri")
-			MeasureUtility.dismiss(activity)
 			"$fileName.json"
 		} catch (e: Exception) {
 			Log.e("JSON_SAVE", "save failed(JsonWriter)", e)
@@ -894,7 +901,242 @@ class MeasureViewModel : ViewModel() {
 			}
 		}
 	}
+	fun inpaintDepth(depth: FloatArray, width: Int, height: Int, iterations: Int = 15): FloatArray {
+		var current = depth.copyOf()
 
+		repeat(iterations) {
+			val next = current.copyOf()
+			for (y in 1 until height - 1) {
+				for (x in 1 until width - 1) {
+					val idx = y * width + x
+					if (current[idx] > 0f) continue
+
+					var sum = 0f
+					var count = 0
+					for (dy in -1..1) {
+						for (dx in -1..1) {
+							val v = current[(y + dy) * width + (x + dx)]
+							if (v > 0f) { sum += v; count++ }
+						}
+					}
+					if (count > 0) {
+						next[idx] = sum / count
+					}
+				}
+			}
+			current = next
+		}
+		return current
+	}
+
+	fun smoothDepthByResample(
+		depthData: ShortArray, width: Int, height: Int,
+		downscaleFactor: Int = 3
+	): FloatArray {
+		val smallW = (width / downscaleFactor).coerceAtLeast(1)
+		val smallH = (height / downscaleFactor).coerceAtLeast(1)
+
+		val small = FloatArray(smallW * smallH)
+		for (sy in 0 until smallH) {
+			for (sx in 0 until smallW) {
+				var sum = 0f
+				var count = 0
+				val startX = sx * downscaleFactor
+				val startY = sy * downscaleFactor
+				for (yy in startY until minOf(startY + downscaleFactor, height)) {
+					for (xx in startX until minOf(startX + downscaleFactor, width)) {
+						val d = depthData[yy * width + xx].toInt() and 0xFFFF
+						if (d > 0) { sum += d; count++ }
+					}
+				}
+				small[sy * smallW + sx] = if (count > 0) sum / count else 0f
+			}
+		}
+
+		val result = FloatArray(width * height)
+		for (y in 0 until height) {
+			for (x in 0 until width) {
+				val fx = (x.toFloat() / downscaleFactor).coerceIn(0f, (smallW - 1).toFloat())
+				val fy = (y.toFloat() / downscaleFactor).coerceIn(0f, (smallH - 1).toFloat())
+				val x0 = fx.toInt(); val x1 = (x0 + 1).coerceAtMost(smallW - 1)
+				val y0 = fy.toInt(); val y1 = (y0 + 1).coerceAtMost(smallH - 1)
+				val tx = fx - x0; val ty = fy - y0
+
+				val v00 = small[y0 * smallW + x0]
+				val v10 = small[y0 * smallW + x1]
+				val v01 = small[y1 * smallW + x0]
+				val v11 = small[y1 * smallW + x1]
+
+				val top = v00 + (v10 - v00) * tx
+				val bottom = v01 + (v11 - v01) * tx
+				result[y * width + x] = top + (bottom - top) * ty
+			}
+		}
+		return result
+	}
+
+
+	data class LinePoint(val x: Float, val y: Float)
+
+	fun interpolate(x1: Float, y1: Float, v1: Float, x2: Float, y2: Float, v2: Float, level: Float): LinePoint {
+		val t = if (v2 != v1) (level - v1) / (v2 - v1) else 0.5f
+		return LinePoint(x1 + t * (x2 - x1), y1 + t * (y2 - y1))
+	}
+
+	fun marchingSquares(
+		depth: FloatArray, width: Int, height: Int, level: Float
+	): List<Pair<LinePoint, LinePoint>> {
+		val segments = mutableListOf<Pair<LinePoint, LinePoint>>()
+
+		for (y in 0 until height - 1) {
+			for (x in 0 until width - 1) {
+				val tl = depth[y * width + x]
+				val tr = depth[y * width + x + 1]
+				val bl = depth[(y + 1) * width + x]
+				val br = depth[(y + 1) * width + x + 1]
+
+				if (tl <= 0f || tr <= 0f || bl <= 0f || br <= 0f) continue
+
+				var caseIdx = 0
+				if (tl > level) caseIdx = caseIdx or 8
+				if (tr > level) caseIdx = caseIdx or 4
+				if (br > level) caseIdx = caseIdx or 2
+				if (bl > level) caseIdx = caseIdx or 1
+
+				val xf = x.toFloat(); val yf = y.toFloat()
+				val top = interpolate(xf, yf, tl, xf + 1, yf, tr, level)
+				val right = interpolate(xf + 1, yf, tr, xf + 1, yf + 1, br, level)
+				val bottom = interpolate(xf, yf + 1, bl, xf + 1, yf + 1, br, level)
+				val left = interpolate(xf, yf, tl, xf, yf + 1, bl, level)
+
+				when (caseIdx) {
+					1, 14 -> segments.add(left to bottom)
+					2, 13 -> segments.add(bottom to right)
+					3, 12 -> segments.add(left to right)
+					4, 11 -> segments.add(top to right)
+					6, 9 -> segments.add(top to bottom)
+					7, 8 -> segments.add(left to top)
+					5 -> { segments.add(left to top); segments.add(bottom to right) }
+					10 -> { segments.add(top to right); segments.add(left to bottom) }
+				}
+			}
+		}
+		return segments
+	}
+
+
+	fun drawContourLevel(
+		canvas: Canvas, segments: List<Pair<LinePoint, LinePoint>>, color: Int, strokeWidth: Float = 2f
+	) {
+		val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+			this.color = color
+			style = Paint.Style.STROKE
+			this.strokeWidth = strokeWidth
+			strokeCap = Paint.Cap.ROUND
+		}
+		for ((p1, p2) in segments) {
+			canvas.drawLine(p1.x, p1.y, p2.x, p2.y, paint)
+		}
+	}
+	fun computeFaceDepthRange(
+		depthData: ShortArray, depthW: Int, depthH: Int, faceMaskPath: Path
+	): Pair<Int, Int> {
+		val bounds = RectF()
+		faceMaskPath.computeBounds(bounds, true)
+
+		val region = Region()
+		region.setPath(
+			faceMaskPath,
+			Region(0, 0, depthW, depthH)
+		)
+
+		val depths = mutableListOf<Int>()
+		for (y in bounds.top.toInt().coerceIn(0, depthH - 1)..bounds.bottom.toInt().coerceIn(0, depthH - 1)) {
+			for (x in bounds.left.toInt().coerceIn(0, depthW - 1)..bounds.right.toInt().coerceIn(0, depthW - 1)) {
+				if (!region.contains(x, y)) continue   // ✅ 폴리곤 내부만
+				val d = depthData[y * depthW + x].toInt() and 0xFFFF
+				if (d > 0) depths.add(d)
+			}
+		}
+
+		if (depths.isEmpty()) return Pair(0, 0)
+
+		// ✅ 퍼센타일 기반으로 outlier 방어까지 같이 적용
+		depths.sort()
+//		val minDepth = depths[(depths.size * 0.05).toInt().coerceIn(0, depths.size - 1)]
+		val minDepth = depths[(depths.size * 0.01).toInt().coerceIn(0, depths.size - 1)]
+		val maxDepth = depths[(depths.size * 0.95).toInt().coerceIn(0, depths.size - 1)]
+
+		return Pair(minDepth, maxDepth)
+	}
+
+	// ===== 3) 무아레 등고선 생성 (band 비교 방식) =====
+	fun generateMoireBitmap(
+		rawDepthData: ShortArray,
+		depthW: Int,
+		depthH: Int,
+		faceMaskPath: Path?,
+		minDepth: Int,
+		maxDepth: Int,
+		intervalMm: Float = 2.5f,
+		strokeWidth: Float = 2f
+	): Bitmap {
+		val smoothed = smoothDepthByResample(rawDepthData, depthW, depthH, downscaleFactor = 2)
+		val filled = inpaintDepth(smoothed, depthW, depthH, iterations = 15)
+
+		val bitmap = Bitmap.createBitmap(depthW, depthH, Bitmap.Config.ARGB_8888)
+		val canvas = Canvas(bitmap)
+		if (faceMaskPath != null) {
+			canvas.clipPath(faceMaskPath)
+		}
+		val gradientLayer = generateGradientLayer(filled, depthW, depthH, minDepth, maxDepth)
+		canvas.drawBitmap(gradientLayer, 0f, 0f, null)
+		var level = minDepth.toFloat()
+		while (level <= maxDepth) {
+			val segments = marchingSquares(filled, depthW, depthH, level)
+
+			val normalized = ((level - minDepth) / (maxDepth - minDepth)).coerceIn(0f, 1f)
+			val hue = normalized * 270f
+			val color = Color.HSVToColor(floatArrayOf(hue, 1f, 0.9f))
+
+			val lineColor = Color.argb(100, 255, 255, 255)  // 흰색, 반투명, alpha 조절 가능
+			drawContourLevel(canvas, segments, lineColor, strokeWidth = 0.5f)
+			level += intervalMm
+		}
+
+		return bitmap
+	}
+  // TODO 여기서 이미 찍힌 moire를 좌우 반전하고, 보라색 부분을 잘라서 사용하면 그나마 쓸만함
+	suspend fun saveMoireToStorage (
+		context: Context,
+		moireBitmap: Bitmap,
+		fileName: String
+	) {
+		return withContext(Dispatchers.IO) {
+			try {
+				val contentValues = ContentValues().apply {
+					put(MediaStore.MediaColumns.DISPLAY_NAME, "$fileName.webp")
+					put(MediaStore.MediaColumns.MIME_TYPE, "image/webp")
+					put(MediaStore.Images.Media.RELATIVE_PATH, "Pictures/TangoPlus")
+				}
+				val imageUri = context.contentResolver.insert(
+					MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
+					contentValues
+				)
+				imageUri?.let { uri ->
+					context.contentResolver.openOutputStream(uri)?.use { os ->
+						moireBitmap.compress(Bitmap.CompressFormat.WEBP_LOSSLESS, 100, os)
+						os.flush()
+					}
+					Log.d("SaveMoire", "무아레 저장 완료: $fileName.webp")
+					true
+				} ?: false
+			} catch (e: Exception) {
+				Log.e("SaveMoire", "무아레 저장 실패: ${e.message}")
+				false
+			}
+		}
+	}
 	suspend fun scannedImage(
 		activity: AppCompatActivity,
 		imagePaths : List<String?>,

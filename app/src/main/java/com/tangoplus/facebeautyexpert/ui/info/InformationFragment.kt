@@ -146,6 +146,11 @@ class InformationFragment : Fragment(), OnFacialPartClickListener {
 			bd.btnIDGrid.text = if (ivm.getGridLineOn()) "ꖛ 그리드 끄기" else "ꖛ 그리드 켜기 "
 			setImage()
 		}
+		bd.btnIDMoire.setOnSingleClickListener {
+			ivm.switchedMoireOn()
+			bd.btnIDMoire.text = if (ivm.getMoireOn()) "🏳️‍🌈 Moire 끄기" else "🏳️‍🌈 Moire 보기"
+			setImage()
+		}
 	}
 
 	private fun setResult() {

@@ -95,7 +95,6 @@ class MeasureImageFragment : Fragment() {
 
 			if (it) {
 				mvm.isDepthCameraMeasure = false
-				showLoading()
 
 				lifecycleScope.launch {
 					val paths = mivm.imagePaths.value ?: emptyList()
@@ -107,6 +106,7 @@ class MeasureImageFragment : Fragment() {
 							if (success) {
 								mvm.resultBundleToJson(mvm.currentSeq)
 								Log.v("2d얼굴", "${mvm.face2DResult?.landmarks}")
+								Log.v("헤어라인", "${mvm.currentHairLine2DCoordinate}")
 								if (mvm.currentHairLine2DCoordinate.size == 7) {
 									val absoluteLandmarkPairs = mvm.face2DResult?.landmarks?.map {
 										Pair(calculateScreenX(it.x), calculateScreenY(it.y))
@@ -117,7 +117,7 @@ class MeasureImageFragment : Fragment() {
 											Triple(it.first, it.second, 0f)
 										}.toMutableList()
 										val horizontalRatio = calculateHorizontalRatio(pairs, currentHairLine3DCoordinate)
-										Log.v("2d얼굴", "${mvm.currentSeq}: ${horizontalRatio}")
+										Log.v("횡비", "${horizontalRatio}: ${currentHairLine3DCoordinate}")
 										val index = mvm.currentSeq.ordinal
 										while (mvm.staticJA.length() <= index) {
 											mvm.staticJA.put(JSONObject().apply { put("horizontal_ratio", "0:0:0") })
@@ -132,11 +132,11 @@ class MeasureImageFragment : Fragment() {
 								}
 								mvm.currentHairLine3DCoordinate.clear()
 								mvm.moveToNextSeq()
+								isAllSuccessful = true
 							} else {
 								isAllSuccessful = false
 
 								withContext(Dispatchers.Main) {
-									dismissLoading()
 									Toast.makeText(context, "분석 결과를 도출할 수 없습니다. 얼굴이 잘 나온 사진으로 다시 시도해주세요!", Toast.LENGTH_LONG).show()
 								}
 								// 더 이상 남은 path를 스캔하지 않고 반복문 즉시 탈출
@@ -229,22 +229,17 @@ class MeasureImageFragment : Fragment() {
 										}
 										startLongVibrate(requireContext())
 										mainVm.currentResult.value = result
-										dismissLoading()
 
 										(activity as MainActivity).navigateToMeasureHistoryInformation()
 										initSettings()
 										ivm.isFinishInput.value = false
 									} else {
-										dismissLoading()
-
 										ivm.isFinishInput.value = false
 									}
 								} catch (e: Exception) {
 									Log.e("LoadingError", "Error: ${e.message}", e)
 									startLongVibrate(requireContext())
 									ivm.isFinishInput.value = false
-									dismissLoading()
-
 								}
 							}
 						}
@@ -450,7 +445,7 @@ class MeasureImageFragment : Fragment() {
 		mvm.currentPlrCoordinate.clear()
 		mvm.current3DPlrCoordinate.clear()
 		mvm.currentHairLine3DCoordinate.clear()
-
+		mvm.currentHairLine2DCoordinate.clear()
 		mvm.inputWidth = 0
 		mvm.inputHeight = 0
 		mvm.overlayW = 0f
@@ -464,19 +459,5 @@ class MeasureImageFragment : Fragment() {
 		ivm.genderValue.value = -1
 		ivm.birthdayValue.value = "날짜 선택"
 		ivm.nationalityValue.value = ""
-	}
-
-	fun showLoading() {
-		val fm = requireActivity().supportFragmentManager
-		// "loading"이라는 태그로 이미 떠 있는지 확인
-		if (fm.findFragmentByTag("loading_tag") == null) {
-			LoadingDialogFragment().show(fm, "loading_tag")
-		}
-	}
-
-	fun dismissLoading() {
-		val fm = requireActivity().supportFragmentManager
-		// 태그로 찾아서 해당 다이얼로그만 정확히 제거
-		(fm.findFragmentByTag("loading_tag") as? LoadingDialogFragment)?.dismiss()
 	}
 }

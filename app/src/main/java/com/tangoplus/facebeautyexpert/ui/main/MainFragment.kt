@@ -2,9 +2,11 @@ package com.tangoplus.facebeautyexpert.ui.main
 
 import android.Manifest
 import android.app.Activity
+import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.content.res.ColorStateList
+import android.hardware.usb.UsbManager
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -75,10 +77,29 @@ class MainFragment : Fragment() {
 		bd = FragmentMainBinding.inflate(layoutInflater)
 		return bd.root
 	}
+	private fun checkAndLogUsbDevices() {
+		val usbManager = requireContext().getSystemService(Context.USB_SERVICE) as UsbManager
+		val deviceList = usbManager.deviceList
 
+		if (deviceList.isEmpty()) {
+			Log.d("USB_CHECK", "연결된 USB 장치가 없습니다.")
+			return
+		}
+
+		Log.d("USB_CHECK", "--- 연결된 USB 장치 목록 (${deviceList.size}개) ---")
+		for ((key, device) in deviceList) {
+			Log.d("USB_CHECK", "Device Key: $key")
+			Log.d("USB_CHECK", "Device Name (경로): ${device.deviceName}")
+			Log.d("USB_CHECK", "Vendor ID: ${device.vendorId} (Hex: 0x${Integer.toHexString(device.vendorId)})")
+			Log.d("USB_CHECK", "Product ID: ${device.productId} (Hex: 0x${Integer.toHexString(device.productId)})")
+			Log.d("USB_CHECK", "Manufacturer Name: ${device.manufacturerName}")
+			Log.d("USB_CHECK", "Product Name: ${device.productName}")
+			Log.d("USB_CHECK", "-----------------------------------------")
+		}
+	}
 	override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
 		super.onViewCreated(view, savedInstanceState)
-
+		checkAndLogUsbDevices()
 		// seq Select를 위한
 		bd.btnMainStart.setOnSingleClickListener {
 			checkStoragePermission()
@@ -125,12 +146,16 @@ class MainFragment : Fragment() {
 	}
 
 	private fun navigateToCamera() {
-		val isTablet = resources.configuration.smallestScreenWidthDp >= 600
-		val intent = if (isTablet) {
-			Intent(requireContext(), DepthCameraActivity::class.java)
-		} else {
-			Intent(requireContext(), NormalCameraActivity::class.java)
-		}
+		val intent = Intent(requireContext(), DepthCameraActivity::class.java)
+//		val usbManager = requireContext().getSystemService(Context.USB_SERVICE) as UsbManager
+//		val deviceList = usbManager.deviceList
+//
+//		val isGeminiCameraConnected = deviceList.values.any { it.productName?.contains("Gemini 336") == true }
+//		val intent = if (isGeminiCameraConnected) {
+//			Intent(requireContext(), DepthCameraActivity::class.java)
+//		} else {
+//			Intent(requireContext(), NormalCameraActivity::class.java)
+//		}
 		cameraResultLauncher.launch(intent)
 		requireActivity().finishAffinity()
 	}

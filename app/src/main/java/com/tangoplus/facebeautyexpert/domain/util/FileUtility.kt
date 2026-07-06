@@ -44,6 +44,22 @@ object FileUtility {
 
 		}
 	}
+	fun getMoireFileName(seq: Sequence): String {
+		val timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"))
+		return when (seq) {
+			Sequence.COMFORT -> "0-moire-$timestamp"
+//			Sequence.RESTING -> "2-$timestamp"
+//			Sequence.OCCLUSAL -> "3-$timestamp"
+//			Sequence.JAW_LEFT_TILT -> "4-$timestamp"
+//			Sequence.JAW_RIGHT_TILT -> "5-$timestamp"
+//			Sequence.JAW_OPENING -> "6-$timestamp"
+			Sequence.NECK_EXTENTION -> "1-moire-$timestamp"
+//			Sequence.SIDE_LEFT -> "8-$timestamp"
+//			Sequence.SIDE_RIGHT -> "9-$timestamp"
+//			Sequence.BOW -> "10-$timestamp"
+
+		}
+	}
 
 	fun View.setOnSingleClickListener(action: (v: View) -> Unit) {
 		val listener = View.OnClickListener { action(it) }

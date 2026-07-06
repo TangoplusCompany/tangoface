@@ -1,10 +1,14 @@
 package com.tangoplus.facebeautyexpert.domain.util
 
 import android.graphics.Bitmap
+import android.graphics.Color
 import android.graphics.Matrix
+import android.graphics.Path
 import android.util.Log
 import com.orbbec.obsensor.ColorFrame
+import com.orbbec.obsensor.types.CameraDistortion
 import com.orbbec.obsensor.types.CameraIntrinsic
+import com.orbbec.obsensor.types.Extrinsic
 import com.orbbec.obsensor.types.Format
 import com.tangoplus.facebeautyexpert.domain.vision.face.FaceLandmarkResult
 import com.tangoplus.facebeautyexpert.domain.vision.pose.PoseLandmarkResult
@@ -16,7 +20,176 @@ import kotlin.math.atan
 import kotlin.math.cos
 
 object LandmarkUtility {
+	fun flipDepthHorizontally(depthData: ShortArray, width: Int, height: Int): ShortArray {
+		val flipped = ShortArray(depthData.size)
+		for (y in 0 until height) {
+			for (x in 0 until width) {
+				flipped[y * width + x] = depthData[y * width + (width - 1 - x)]
+			}
+		}
+		return flipped
+	}
 
+	fun generateGradientLayer(
+		filledDepth: FloatArray,
+		depthW: Int,
+		depthH: Int,
+		minDepth: Int,
+		maxDepth: Int,
+		alpha: Int = 160   // 배경 투명도, 0~255
+	): Bitmap {
+		val pixels = IntArray(depthW * depthH)
+		for (i in pixels.indices) {
+			val d = filledDepth[i]
+			if (d <= 0f) {
+				pixels[i] = Color.argb(0, 0, 0, 0)
+			} else {
+				val normalized = ((d - minDepth) / (maxDepth - minDepth)).coerceIn(0f, 1f)
+				val hue = normalized * 270f
+				val rgb = Color.HSVToColor(floatArrayOf(hue, 1f, 0.9f))
+				pixels[i] = Color.argb(alpha, Color.red(rgb), Color.green(rgb), Color.blue(rgb))
+			}
+		}
+		val bmp = Bitmap.createBitmap(depthW, depthH, Bitmap.Config.ARGB_8888)
+		bmp.setPixels(pixels, 0, depthW, 0, 0, depthW, depthH)
+		return bmp
+	}
+
+
+	fun CameraIntrinsic.toScaledIntrinsic(): ScaledIntrinsic {
+		return ScaledIntrinsic(
+			fx = this.fx,
+			fy = this.fy,
+			cx = this.cx,
+			cy = this.cy,
+			width = this.width.toInt(),
+			height = this.height.toInt()
+		)
+	}
+
+
+	fun buildFaceMaskPathFromPoints(points: List<Pair<Float, Float>>, outlineIndexes: List<Int>): Path {
+		val path = Path()
+		outlineIndexes.forEachIndexed { i, idx ->
+			val (x, y) = points[idx]
+			if (i == 0) path.moveTo(x, y) else path.lineTo(x, y)
+		}
+		path.close()
+		return path
+	}
+
+	fun Extrinsic.rotArray(): FloatArray {
+		val field = this.javaClass.getDeclaredField("mRot")
+		field.isAccessible = true
+		return field.get(this) as FloatArray
+	}
+
+	fun Extrinsic.transArray(): FloatArray {
+		val field = this.javaClass.getDeclaredField("mTrans")
+		field.isAccessible = true
+		return field.get(this) as FloatArray
+	}
+	fun CameraDistortion.k1(): Float = getPrivateFloat("mK1")
+	fun CameraDistortion.k2(): Float = getPrivateFloat("mK2")
+	fun CameraDistortion.k3(): Float = getPrivateFloat("mK3")
+	fun CameraDistortion.k4(): Float = getPrivateFloat("mK4")
+	fun CameraDistortion.k5(): Float = getPrivateFloat("mK5")
+	fun CameraDistortion.k6(): Float = getPrivateFloat("mK6")
+	fun CameraDistortion.p1(): Float = getPrivateFloat("mP1")
+	fun CameraDistortion.p2(): Float = getPrivateFloat("mP2")
+
+	fun Any.getPrivateFloat(fieldName: String): Float {
+		val field = this.javaClass.getDeclaredField(fieldName)
+		field.isAccessible = true
+		return field.get(this) as Float
+	}
+	fun undistortLandmarks(
+		points: List<Pair<Float, Float>>,   // (px, py) 픽셀 좌표 리스트
+		intrinsic: ScaledIntrinsic,
+		distortion: CameraDistortion
+	): List<Pair<Float, Float>> {
+		val cameraMatrix = org.opencv.core.Mat(3, 3, org.opencv.core.CvType.CV_64F)
+		cameraMatrix.put(0, 0, intrinsic.fx.toDouble())
+		cameraMatrix.put(0, 1, 0.0)
+		cameraMatrix.put(0, 2, intrinsic.cx.toDouble())
+		cameraMatrix.put(1, 0, 0.0)
+		cameraMatrix.put(1, 1, intrinsic.fy.toDouble())
+		cameraMatrix.put(1, 2, intrinsic.cy.toDouble())
+		cameraMatrix.put(2, 0, 0.0)
+		cameraMatrix.put(2, 1, 0.0)
+		cameraMatrix.put(2, 2, 1.0)
+
+		val distCoeffs = org.opencv.core.MatOfDouble(
+			distortion.k1().toDouble(), distortion.k2().toDouble(),
+			distortion.p1().toDouble(), distortion.p2().toDouble(),
+			distortion.k3().toDouble(), distortion.k4().toDouble(),
+			distortion.k5().toDouble(), distortion.k6().toDouble()
+		)
+
+		val srcMat = org.opencv.core.MatOfPoint2f()
+		srcMat.fromList(points.map { org.opencv.core.Point(it.first.toDouble(), it.second.toDouble()) })
+
+		val dstMat = org.opencv.core.MatOfPoint2f()
+		// P(새 카메라 행렬)를 cameraMatrix와 동일하게 넘기면 결과가 다시 픽셀 좌표계로 나옴
+		org.opencv.calib3d.Calib3d.undistortPoints(srcMat, dstMat, cameraMatrix, distCoeffs, org.opencv.core.Mat(), cameraMatrix)
+
+		val result = dstMat.toList().map { Pair(it.x.toFloat(), it.y.toFloat()) }
+
+		cameraMatrix.release(); distCoeffs.release(); srcMat.release(); dstMat.release()
+		return result
+	}
+
+	fun undistortSinglePoint(
+		x: Float, y: Float,
+		intrinsic: CameraIntrinsic,
+		distortion: CameraDistortion
+	): Pair<Float, Float> {
+		val cameraMatrix = org.opencv.core.Mat(3, 3, org.opencv.core.CvType.CV_64F)
+		cameraMatrix.put(0, 0, intrinsic.fx.toDouble())
+		cameraMatrix.put(0, 1, 0.0)
+		cameraMatrix.put(0, 2, intrinsic.cx.toDouble())
+		cameraMatrix.put(1, 0, 0.0)
+		cameraMatrix.put(1, 1, intrinsic.fy.toDouble())
+		cameraMatrix.put(1, 2, intrinsic.cy.toDouble())
+		cameraMatrix.put(2, 0, 0.0)
+		cameraMatrix.put(2, 1, 0.0)
+		cameraMatrix.put(2, 2, 1.0)
+
+		val distCoeffs = org.opencv.core.MatOfDouble(
+			distortion.k1().toDouble(), distortion.k2().toDouble(),
+			distortion.p1().toDouble(), distortion.p2().toDouble(),
+			distortion.k3().toDouble(), distortion.k4().toDouble(),
+			distortion.k5().toDouble(), distortion.k6().toDouble()
+		)
+
+		val srcMat = org.opencv.core.MatOfPoint2f(org.opencv.core.Point(x.toDouble(), y.toDouble()))
+		val dstMat = org.opencv.core.MatOfPoint2f()
+		org.opencv.calib3d.Calib3d.undistortPoints(srcMat, dstMat, cameraMatrix, distCoeffs, org.opencv.core.Mat(), cameraMatrix)
+
+		val result = dstMat.toArray()[0]
+		cameraMatrix.release(); distCoeffs.release(); srcMat.release(); dstMat.release()
+		return Pair(result.x.toFloat(), result.y.toFloat())
+	}
+
+
+
+	fun buildFaceMaskPath(
+		landmarks: List<FaceLandmarkResult.FaceLandmark>,   // mvm.face2DResult.landmarks
+		outlineIndexes: List<Int>,
+		width: Int,
+		height: Int,
+		flipX: Boolean = false
+	): Path {
+		val path = Path()
+		outlineIndexes.forEachIndexed { i, idx ->
+			val lm = landmarks[idx]
+			val x = if (flipX) (1.0f - lm.x) * width else lm.x * width
+			val y = lm.y * height
+			if (i == 0) path.moveTo(x, y) else path.lineTo(x, y)
+		}
+		path.close()
+		return path
+	}
 	fun scaleLandmarksToFHD(
 		faceLandmarks: FaceLandmarkResult?,
 		poseLandmarks: PoseLandmarkResult?,
@@ -309,7 +482,8 @@ object LandmarkUtility {
 		depthData: ShortArray,
 		depthWidth: Int,
 		depthHeight: Int,
-		intrinsic: CameraIntrinsic
+		intrinsic: CameraIntrinsic,
+		distortion: CameraDistortion
 	): List<Point3D> {
 		val landmarks3D = mutableListOf<Point3D>()
 
@@ -327,7 +501,11 @@ object LandmarkUtility {
 			// 2. 3D 투영을 위한 Intrinsic(640x360) 스케일링 좌표 (X, Y 계산용)
 			val calcX = landmark.x * intrinsicWidth
 			val calcY = landmark.y * intrinsicHeight
+			val undistorted = undistortSinglePoint(calcX, calcY, intrinsic, distortion)
+			val ucalcX = undistorted.first
+			val ucalcY = undistorted.second
 
+			Log.d("Undistort", "raw=($calcX,$calcY) -> undist=($ucalcX,$ucalcY)")
 			if (depthX in 0 until depthWidth && depthY in 0 until depthHeight) {
 				val idx = depthY * depthWidth + depthX
 				val depthMm = depthData[idx].toInt() and 0xFFFF
@@ -336,8 +514,8 @@ object LandmarkUtility {
 				if (depthM > 0) {
 					val point3D = convertDepthPixelTo3D(
 						intrinsic,
-						calcX,  // ★ 1280 좌표가 아닌 640 스케일 좌표 사용
-						calcY,  // ★ 720 좌표가 아닌 360 스케일 좌표 사용
+						ucalcX,  // ★ 1280 좌표가 아닌 640 스케일 좌표 사용
+						ucalcY,  // ★ 720 좌표가 아닌 360 스케일 좌표 사용
 						depthM,
 					)
 					landmarks3D.add(point3D)
@@ -347,8 +525,8 @@ object LandmarkUtility {
 					if (nearbyDepth > 0) {
 						val point3D = convertDepthPixelTo3D(
 							intrinsic,
-							calcX,  // ★ 여기도 동일하게 적용
-							calcY,
+							ucalcX,  // ★ 여기도 동일하게 적용
+							ucalcY,
 							nearbyDepth / 1000f,
 						)
 						landmarks3D.add(point3D)
@@ -429,5 +607,4 @@ object LandmarkUtility {
 			height = targetHeight
 		)
 	}
-
 }

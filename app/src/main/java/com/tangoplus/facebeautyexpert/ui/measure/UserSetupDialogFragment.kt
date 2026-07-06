@@ -183,6 +183,7 @@ class UserSetupDialogFragment : DialogFragment() {
 					bd.etUSDMobile.setText(formatted) // setText를 사용하여 확실하게 변경
 					bd.etUSDMobile.setSelection(formatted.length) // 커서를 마지막 위치로 이동
 				}
+				if (s.toString().length > 1) bd.tvUSDMobileGuide.visibility  =  View.VISIBLE
 
 				isFormatting = false
 				ivm.mobileCondition.value =
@@ -190,6 +191,10 @@ class UserSetupDialogFragment : DialogFragment() {
 				if (ivm.mobileCondition.value == true) {
 					bd.etUSDMobile.backgroundTintList =
 						ContextCompat.getColorStateList(requireContext(), R.color.black)
+					bd.tvUSDMobileGuide.apply {
+						text = "올바른 전화번호 형식입니다"
+						setTextColor(ContextCompat.getColorStateList(requireContext(), R.color.accentContrast))
+					}
 					ivm.mobileValue.value = bd.etUSDMobile.text.toString().replace("-", "")
 
 					// 키보드 내리고 버튼 보이기
@@ -208,6 +213,10 @@ class UserSetupDialogFragment : DialogFragment() {
 				} else {
 					bd.etUSDMobile.backgroundTintList =
 						ContextCompat.getColorStateList(requireContext(), R.color.red)
+					bd.tvUSDMobileGuide.apply {
+						setTextColor(ContextCompat.getColorStateList(requireContext(), R.color.accent))
+						text = "휴대전화번호: 010으로 시작하는 휴대폰 번호를 정확히 입력해주세요"
+					}
 				}
 			}
 		})
@@ -280,6 +289,7 @@ class UserSetupDialogFragment : DialogFragment() {
 			override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
 			override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
 			override fun afterTextChanged(s: Editable?) {
+				if (s.toString().length > 1) bd.tvUSDNameGuide.visibility  =  View.VISIBLE
 				ivm.nameCondition.value = namePatternCheck.matcher(input.text.toString()).find()
 //                Log.v("이름컨디션", "${ivm.nameCondition.value}, ${input.text}")
 //                Log.v("보스", "${ivm.inputCondition.value}, ${ivm.nameCondition.value}, ${ivm.mobileCondition.value}")
@@ -287,9 +297,18 @@ class UserSetupDialogFragment : DialogFragment() {
 					input.backgroundTintList =
 						ContextCompat.getColorStateList(requireContext(), R.color.black)
 					ivm.nameValue.value = input.text.toString().trim()
+					bd.tvUSDNameGuide.apply {
+						text = "사용가능한 이름 형식입니다"
+						setTextColor(ContextCompat.getColorStateList(requireContext(), R.color.accentContrast))
+					}
+
 				} else {
 					input.backgroundTintList =
 						ContextCompat.getColorStateList(requireContext(), R.color.red)
+					bd.tvUSDNameGuide.apply {
+						text = "이름: 한국어(2-5자), 영어(2-20자)만 사용가능합니다."
+						setTextColor(ContextCompat.getColorStateList(requireContext(), R.color.accent))
+					}
 				}
 			}
 		}
