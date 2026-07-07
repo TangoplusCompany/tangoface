@@ -42,12 +42,14 @@ import kotlin.math.sqrt
 import androidx.core.graphics.scale
 import androidx.core.graphics.createBitmap
 import com.tangoplus.facebeautyexpert.R
+import com.tangoplus.facebeautyexpert.domain.util.LandmarkUtility.extractBowCoordinates
 import com.tangoplus.facebeautyexpert.domain.util.LandmarkUtility.extractFace3DCoordinates
 import com.tangoplus.facebeautyexpert.domain.util.LandmarkUtility.extractFaceCoordinates
 import com.tangoplus.facebeautyexpert.domain.util.LandmarkUtility.extractHairLine3DCoordinate
 import com.tangoplus.facebeautyexpert.domain.util.LandmarkUtility.extractHairLineCoordinate
 import com.tangoplus.facebeautyexpert.domain.util.LandmarkUtility.extractPose3DCoordinates
 import com.tangoplus.facebeautyexpert.domain.util.LandmarkUtility.extractPoseCoordinates
+import com.tangoplus.facebeautyexpert.domain.util.LandmarkUtility.scaleHsvToFHD
 import com.tangoplus.facebeautyexpert.domain.util.LandmarkUtility.scaleLandmarksToFHD
 import com.tangoplus.facebeautyexpert.domain.vision.face.FaceLandmarkResult
 import com.tangoplus.facebeautyexpert.domain.vo.BitmapFlag
@@ -112,6 +114,7 @@ object BitmapUtility {
 			val face3DCoordinates = extractFace3DCoordinates(jsonData)
 			val poseCoordinates = extractPoseCoordinates(jsonData)
 			val pose3DCoordinates = extractPose3DCoordinates(jsonData)
+			val bowCoordinates = extractBowCoordinates(jsonData)
 			val hairLineCoordinate = extractHairLineCoordinate(jsonData)
 			val hairLine3DCoordinate = extractHairLine3DCoordinate(jsonData)
 			val faceLandmarkResult = fromFaceCoordinates(faceCoordinates)
@@ -129,6 +132,7 @@ object BitmapUtility {
 				face3DCoordinates,
 				scaledPLs!!,
 				pose3DCoordinates,
+				scaleHsvToFHD(bowCoordinates),
 				scaledHairline,
 				hairLine3DCoordinate
 			)

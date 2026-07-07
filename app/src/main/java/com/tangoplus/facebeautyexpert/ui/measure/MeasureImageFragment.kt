@@ -429,7 +429,7 @@ class MeasureImageFragment : Fragment() {
 	private fun initSettings() {
 		Log.v("초기화!", "초기화")
 
-		viewModel.setSeqFinishedFlag(false)
+		viewModel.finishSequence()
 		viewModel.setGuideTextFlag(false)
 		viewModel.setCountDownFlag(false)
 		viewModel.setTextAnimationFlag(false)

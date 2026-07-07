@@ -4,6 +4,7 @@ import android.graphics.Bitmap
 import android.graphics.Color
 import android.graphics.Matrix
 import android.graphics.Path
+import android.graphics.PointF
 import android.util.Log
 import com.orbbec.obsensor.ColorFrame
 import com.orbbec.obsensor.types.CameraDistortion
@@ -190,6 +191,26 @@ object LandmarkUtility {
 		path.close()
 		return path
 	}
+
+
+	fun scaleHsvToFHD(
+		originalHsv: List<Pair<Float, Float>>?,
+		originalWidth: Int = 1280,
+		originalHeight: Int = 720,
+		targetWidth: Int = 1920,
+		targetHeight: Int = 1080
+	): List<Pair<Float, Float>> {
+		val scaleX = targetWidth.toFloat() / originalWidth
+		val scaleY = targetHeight.toFloat() / originalHeight
+
+		return originalHsv?.map { hsv ->
+			Pair(
+				hsv.first * scaleX,
+				hsv.second * scaleY
+			)
+		} ?: emptyList()
+	}
+
 	fun scaleLandmarksToFHD(
 		faceLandmarks: FaceLandmarkResult?,
 		poseLandmarks: PoseLandmarkResult?,
@@ -287,6 +308,19 @@ object LandmarkUtility {
 			}
 		} else null
 	}
+	fun extractBowCoordinates(jsonData: JSONObject?): List<Pair<Float, Float>>? {
+		val data = jsonData?.optJSONArray("bow_landmark")
+		return if (data != null) {
+			List(data.length()) { i ->
+				val landmark = data.getJSONObject(i)
+				Pair(
+					landmark.optDouble("cx").toFloat(),
+					landmark.optDouble("cy").toFloat()
+				)
+			}
+		} else null
+	}
+
 	fun extractHairLineCoordinate(jsonData: JSONObject?): List<Pair<Float, Float>>? {
 		val data = jsonData?.optJSONArray("hairline_landmark")
 		return if (data != null) {
@@ -607,4 +641,43 @@ object LandmarkUtility {
 			height = targetHeight
 		)
 	}
+
+	fun detectJawKeyPoints(
+		points: List<PointF>,
+		isLeft: Boolean,
+		seq: Int, // 0: 좌측(x값 감소), 1: 우측(x값 증가)
+		trimPercent: Float = 0.10f,      // 전후 15% 제거
+
+	): List<Int> {
+		if (points.size < 10) return emptyList()
+
+		// 1. 전후 15% 제거
+		val trimCount = (points.size * trimPercent).toInt()
+		val workingPoints = points.subList(trimCount, points.size - trimCount)
+		val startOffset = trimCount
+
+		val keyPoints = mutableListOf<Int>()
+
+
+		val extremeXIndex = when (seq) {
+			2 -> {
+				if (isLeft) workingPoints.indices.minByOrNull { workingPoints[it].x }
+				else workingPoints.indices.maxByOrNull { workingPoints[it].x }
+			}
+
+			3 -> workingPoints.indices.minByOrNull { workingPoints[it].x }
+			4 -> workingPoints.indices.maxByOrNull { workingPoints[it].x }
+			else -> workingPoints.indices.maxByOrNull { workingPoints[it].x }
+		}
+
+		if (extremeXIndex != null) keyPoints.add(extremeXIndex + startOffset)
+
+		val maxYIndex = workingPoints.indices.maxByOrNull { workingPoints[it].y }
+		if (maxYIndex != null) {
+			keyPoints.add(maxYIndex + startOffset)
+		}
+
+		return keyPoints.sorted()
+	}
+
 }

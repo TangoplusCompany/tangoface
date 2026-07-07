@@ -1,6 +1,7 @@
 package com.tangoplus.facebeautyexpert.ui.main
 
 import android.Manifest
+import android.annotation.SuppressLint
 import android.app.Activity
 import android.content.Context
 import android.content.Intent
@@ -16,12 +17,14 @@ import android.provider.Settings
 import android.util.Log
 import androidx.fragment.app.Fragment
 import android.view.LayoutInflater
+import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.lifecycleScope
+import androidx.recyclerview.widget.RecyclerView
 import androidx.viewpager2.widget.ViewPager2
 import com.tangoplus.facebeautyexpert.databinding.FragmentMainBinding
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
@@ -30,6 +33,7 @@ import com.tangoplus.facebeautyexpert.data.db.FaceDao
 import com.tangoplus.facebeautyexpert.data.db.FaceDatabase
 import com.tangoplus.facebeautyexpert.domain.util.FileUtility.setOnSingleClickListener
 import com.tangoplus.facebeautyexpert.domain.util.PreferenceUtility
+import com.tangoplus.facebeautyexpert.domain.vo.MeasureType
 import com.tangoplus.facebeautyexpert.ui.adapter.AdVPAdapter
 import com.tangoplus.facebeautyexpert.ui.info.InformationFragment
 import com.tangoplus.facebeautyexpert.ui.measure.DepthCameraActivity
@@ -44,7 +48,7 @@ import kotlin.math.abs
 class MainFragment : Fragment() {
 	private lateinit var bd: FragmentMainBinding
 	private val mvm: MainViewModel by activityViewModels()
-
+	private var selectedMeasureType : MeasureType = MeasureType.NORMAL
 	private val cameraResultLauncher = registerForActivityResult(
 		ActivityResultContracts.StartActivityForResult()
 	) { result ->
@@ -147,6 +151,7 @@ class MainFragment : Fragment() {
 
 	private fun navigateToCamera() {
 		val intent = Intent(requireContext(), DepthCameraActivity::class.java)
+		intent.putExtra("selectedMeasureType", selectedMeasureType)
 //		val usbManager = requireContext().getSystemService(Context.USB_SERVICE) as UsbManager
 //		val deviceList = usbManager.deviceList
 //
@@ -179,12 +184,34 @@ class MainFragment : Fragment() {
 	private val promoImages = listOf(
 		R.drawable.poster_main_0,
 		R.drawable.poster_main_1,
+		R.drawable.poster_main_2,
 	)
 	private val autoScrollHandler = Handler(Looper.getMainLooper())
 	private var autoScrollRunnable: Runnable? = null
-
-	private fun setupViewPager() {
-
+	var startX = 0f
+	var startY = 0f
+	@SuppressLint("ClickableViewAccessibility")
+  private fun setupViewPager() {
+		bd.clM.post {
+			bd.vpM.layoutParams = bd.vpM.layoutParams.apply {
+				height = bd.clM.height
+			}
+		}
+		val viewPagerChild = bd.vpM.getChildAt(0) as? RecyclerView
+		viewPagerChild?.setOnTouchListener { v, event ->
+			when (event.action) {
+				MotionEvent.ACTION_DOWN -> {
+					startX = event.x
+					startY = event.y
+				}
+				MotionEvent.ACTION_MOVE -> {
+					val dx = abs(event.x - startX)
+					val dy = abs(event.y - startY)
+					v.parent.requestDisallowInterceptTouchEvent(dx > dy)
+				}
+			}
+			false
+		}
 		val pPrefs = PreferenceUtility(requireContext())
 		var savedPosters = pPrefs.getPosters()
 
@@ -228,16 +255,19 @@ class MainFragment : Fragment() {
 	private fun updateButtonState(position: Int) {
 		when (position) {
 			0 -> {
-				bd.btnMainStart.text = "얼굴 부위 분석 시작 →"
+				bd.btnMainStart.text = "내 얼굴 분석"
+				selectedMeasureType = MeasureType.NORMAL
 //				bd.btnMainStart.backgroundTintList = ColorStateList.valueOf(
 //					ContextCompat.getColor(requireContext(), R.color.bg15)
 //				)
 			}
 			1 -> {
-				bd.btnMainStart.text = "얼굴 밸런스 스캔 하기 →"
-//				bd.btnMainStart.backgroundTintList = ColorStateList.valueOf(
-//					ContextCompat.getColor(requireContext(), R.color.bg30)
-//				)
+				bd.btnMainStart.text = "비대칭 및 안면 근육 진단"
+				selectedMeasureType = MeasureType.EXPERT
+			}
+			2 -> {
+				bd.btnMainStart.text = "페이스 보우 측정"
+				selectedMeasureType = MeasureType.BOW
 			}
 		}
 	}

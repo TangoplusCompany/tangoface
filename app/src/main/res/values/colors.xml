@@ -12,6 +12,7 @@
     <color name="bg15">#26121212</color>
 
     <color name="accent">#FF0055</color>
+    <color name="accent100">#FFF8F8</color>
     <color name="accent300">#FF8C98</color>
     <color name="accent500">#D00043</color>
     <color name="accent10">#19FF0055</color>

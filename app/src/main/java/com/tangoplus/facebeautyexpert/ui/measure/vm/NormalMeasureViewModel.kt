@@ -4,14 +4,7 @@ import android.content.ContentValues
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
-import android.graphics.Canvas
-import android.graphics.Color
-import android.graphics.ImageDecoder
 import android.graphics.Matrix
-import android.graphics.Paint
-import android.graphics.Path
-import android.graphics.RectF
-import android.graphics.Region
 import android.media.ExifInterface
 import android.net.Uri
 import android.provider.MediaStore
@@ -28,7 +21,6 @@ import com.tangoplus.facebeautyexpert.domain.util.ClassifyUtility.classifyFaceSh
 import com.tangoplus.facebeautyexpert.domain.util.ClassifyUtility.classifyFacialAsymmetry
 import com.tangoplus.facebeautyexpert.domain.util.ClassifyUtility.classifyFacialAxis
 import com.tangoplus.facebeautyexpert.domain.util.ClassifyUtility.classifySaggingDepth
-import com.tangoplus.facebeautyexpert.domain.util.FileUtility.getFileName
 import com.tangoplus.facebeautyexpert.domain.util.FileUtility.writeJsonValue
 import com.tangoplus.facebeautyexpert.domain.util.HairLineUtility.convertHairlineTo3D
 import com.tangoplus.facebeautyexpert.domain.util.HairLineUtility.findHairline
@@ -45,7 +37,6 @@ import com.tangoplus.facebeautyexpert.domain.util.MathHelpers.get3DDistance
 import com.tangoplus.facebeautyexpert.domain.util.MathHelpers.get3DFloorDistance
 import com.tangoplus.facebeautyexpert.domain.util.MathHelpers.getScaleFactor
 import com.tangoplus.facebeautyexpert.domain.util.PreferenceUtility
-import com.tangoplus.facebeautyexpert.domain.vision.face.FaceLandmarkAdapter
 import com.tangoplus.facebeautyexpert.domain.vision.face.FaceLandmarkResult
 import com.tangoplus.facebeautyexpert.domain.vision.face.FaceLandmarkerHelper
 import com.tangoplus.facebeautyexpert.domain.vision.pose.PoseLandmarkerHelper
@@ -57,12 +48,11 @@ import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
-import java.io.FileOutputStream
 import java.io.OutputStreamWriter
 import java.math.RoundingMode
 import kotlin.use
 
-class NormalDepthViewModel  : ViewModel() {
+class NormalMeasureViewModel  : ViewModel() {
 
   // 측정할 것들만 가져오기
   var allSeqs = Sequence.entries.toMutableList()
@@ -902,6 +892,11 @@ class NormalDepthViewModel  : ViewModel() {
     val seqInt = when (seq) {
       Sequence.COMFORT -> 0
       Sequence.NECK_EXTENTION -> 6
+      Sequence.OCCLUSAL -> 1
+      Sequence.JAW_LEFT_TILT -> 2
+      Sequence.JAW_RIGHT_TILT -> 3
+      Sequence.JAW_OPENING -> 4
+      Sequence.BOW -> 5
     }
     val seqIndex = allSeqs.indexOf(seq)
     val mediaFileName = mediaFileNames[seqIndex]

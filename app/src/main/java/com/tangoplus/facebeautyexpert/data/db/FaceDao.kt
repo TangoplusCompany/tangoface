@@ -23,14 +23,14 @@ interface FaceDao {
 	@Query("SELECT * FROM t_face_static WHERE activated = 1")
 	suspend fun getAllData(): List<FaceStatic>
 
-//	@Query(
-//		"""
-//        UPDATE t_face_static
-//        SET activated = :activated
-//        WHERE temp_server_sn = :tempServerSn
-//    """
-//	)
-//	suspend fun activatingStatics(tempServerSn: Int, activated: Int)
+	@Query(
+		"""
+        UPDATE t_face_static
+        SET activated = :activated
+        WHERE temp_server_sn = :tempServerSn
+    """
+	)
+	suspend fun activatingStatics(tempServerSn: Int, activated: Int)
 
 	@Query(
 		"""

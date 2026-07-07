@@ -11,7 +11,6 @@ import android.os.Bundle
 import android.os.CountDownTimer
 import android.os.Handler
 import android.os.Looper
-import android.os.PersistableBundle
 import android.util.Log
 import android.util.Size
 import android.view.View
@@ -73,10 +72,8 @@ import com.tangoplus.facebeautyexpert.domain.vision.pose.PoseLandmarkerHelper
 import com.tangoplus.facebeautyexpert.domain.vo.Sequence
 import com.tangoplus.facebeautyexpert.ui.main.MainActivity
 import com.tangoplus.facebeautyexpert.ui.main.vm.MainViewModel
-import com.tangoplus.facebeautyexpert.ui.main.vo.UserItem
 import com.tangoplus.facebeautyexpert.ui.measure.vm.InputViewModel
-import com.tangoplus.facebeautyexpert.ui.measure.vm.MeasureViewModel
-import com.tangoplus.facebeautyexpert.ui.measure.vm.NormalDepthViewModel
+import com.tangoplus.facebeautyexpert.ui.measure.vm.NormalMeasureViewModel
 import com.tangoplus.facebeautyexpert.ui.statistics.GyroDialogFragment
 import com.tangoplus.facebeautyexpert.ui.view.OverlayView
 import kotlinx.coroutines.Dispatchers
@@ -85,8 +82,6 @@ import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import java.io.File
-import java.io.FileOutputStream
-import java.nio.ByteBuffer
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import java.util.concurrent.ExecutorService
@@ -97,14 +92,13 @@ import kotlin.getValue
 import kotlin.math.abs
 import kotlin.math.roundToInt
 import kotlin.math.sqrt
-import kotlin.use
 
 class NormalCameraActivity : AppCompatActivity(), FaceLandmarkerHelper.LandmarkerListener {
 	private lateinit var bd: ActivityNormalCameraBinding
 	private lateinit var flh: FaceLandmarkerHelper
 	private lateinit var plh : PoseLandmarkerHelper
 	private val viewModel: MainViewModel by viewModels()
-	private val mvm: NormalDepthViewModel by viewModels()
+	private val mvm: NormalMeasureViewModel by viewModels()
 	private val ivm: InputViewModel by viewModels()
 	private val faceBlendshapesResultAdapter by lazy {
 		FaceBlendshapesResultAdapter()
@@ -178,7 +172,7 @@ class NormalCameraActivity : AppCompatActivity(), FaceLandmarkerHelper.Landmarke
 							bd.overlay.setOnScanFinishedListener {
 								startLongVibrate(this@NormalCameraActivity)
 								// 이 블록 안의 코드는 애니메이션이 왕복을 마치고 완전히 멈췄을 때 실행됩니다.
-								viewModel.setSeqFinishedFlag(true)
+								viewModel.finishSequence()
 								updateUI()
 
 								// 리스너 재사용을 방지하고 싶다면 여기서 초기화
@@ -486,7 +480,7 @@ class NormalCameraActivity : AppCompatActivity(), FaceLandmarkerHelper.Landmarke
 		}
 
 		Handler(Looper.getMainLooper()).postDelayed({
-			viewModel.setSeqFinishedFlag(false)
+			viewModel.finishSequence()
 		}, 1500)
 		isCountDown = false
 		bd.tvNCGoGallery.isEnabled = true
@@ -605,7 +599,7 @@ class NormalCameraActivity : AppCompatActivity(), FaceLandmarkerHelper.Landmarke
 			bd.overlay.invalidate()
 
 			if (ivm.isFinishInput.value == true && resultBundle.result.faceLandmarks()
-					.isNotEmpty() && !viewModel.getSeqFinishedFlag()
+					.isNotEmpty() && viewModel.isScanning.value == false
 			) { // && isFaceCenter
 				// 애니메이션 제거 flag
 				if (!viewModel.getGuideTextFlag()) {
@@ -923,7 +917,7 @@ class NormalCameraActivity : AppCompatActivity(), FaceLandmarkerHelper.Landmarke
 			userDialog.show(supportFragmentManager, "")
 		}
 		// flat 초기화
-		viewModel.setSeqFinishedFlag(false)
+		viewModel.finishSequence()
 		viewModel.setGuideTextFlag(false)
 		viewModel.setCountDownFlag(false)
 		viewModel.setTextAnimationFlag(false)

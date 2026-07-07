@@ -56,7 +56,7 @@ class MainViewModel : ViewModel() {
 
 	private var isGuideTextChanged = false
 
-	private var isSeqFinished = false
+
 
 	private var isContourSave = false
 	fun setContourSave(contourSave: Boolean) {
@@ -110,12 +110,17 @@ class MainViewModel : ViewModel() {
 		return isGuideTextChanged
 	}
 
-	fun setSeqFinishedFlag(isStart: Boolean) {
-		isSeqFinished = isStart
+	private val _isScanning = MutableLiveData(false)
+	val isScanning: LiveData<Boolean> get() = _isScanning
+	// 외부(Fragment)에서는 읽기만 가능한 LiveData로 노출
+	fun finishSequence() {
+		// 백엔드 전송 완료 등의 로직 수행 후
+		_isScanning.value = false
 	}
 
-	fun getSeqFinishedFlag(): Boolean {
-		return isSeqFinished
+	// 상태 초기화가 필요할 때
+	fun startSequence() {
+		_isScanning.value = true
 	}
 
 	// ------------------------------------# 유저 목록 가져오기 #-------------------------------------
