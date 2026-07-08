@@ -69,4 +69,8 @@ class InformationViewModel : ViewModel() {
 		}
 	}
 	fun getCropRatio() : Pair<Float, Float> = cropRatio
+
+
+	var videoCoordinates: List<List<Pair<Float, Float>>>? = null
+	var videoTrajectory: List<Pair<Float, Float>>? = null
 }

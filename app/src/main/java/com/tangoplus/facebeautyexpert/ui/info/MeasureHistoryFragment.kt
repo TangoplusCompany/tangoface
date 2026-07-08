@@ -85,21 +85,17 @@ class MeasureHistoryFragment : Fragment(), OnUserClickListener {
 	}
 
 	override fun onUserClick(tempServerSn: Int) {
-
-		lifecycleScope.launch(Dispatchers.IO) {
-			val statics = fDao.getStatic(tempServerSn)
-			val insight = fDao.getInsight(tempServerSn)
-			val result = mvm.convertToFaceResult(requireContext(), statics, insight)
-//        scrollToView(bd.ibtnMBack, bd.nsvM)
-			withContext(Dispatchers.Main) {
-				mvm.currentResult.value = result
-				activity?.let { fa -> fa.supportFragmentManager.beginTransaction().apply {
-					replace(R.id.flMain, InformationFragment())
-					addToBackStack("information")
-					commit()
-				} }
+			lifecycleScope.launch(Dispatchers.IO) {
+				val result = mvm.convertToFaceResult(requireContext(), fDao, tempServerSn)
+				withContext(Dispatchers.Main) {
+					mvm.currentResult.value = result
+					activity?.let { fa -> fa.supportFragmentManager.beginTransaction().apply {
+						replace(R.id.flMain, InfoContainerFragment.newInstance(result.measureType))
+						addToBackStack("information")
+						commit()
+					} }
+				}
 			}
-		}
 	}
 
 	private fun setSearchText() {

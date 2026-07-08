@@ -6,7 +6,6 @@ import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.content.res.ColorStateList
 import android.hardware.usb.UsbManager
 import android.net.Uri
 import android.os.Build
@@ -24,28 +23,28 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.lifecycleScope
+import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import androidx.viewpager2.widget.ViewPager2
 import com.tangoplus.facebeautyexpert.databinding.FragmentMainBinding
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.tangoplus.facebeautyexpert.R
-import com.tangoplus.facebeautyexpert.data.db.FaceDao
 import com.tangoplus.facebeautyexpert.data.db.FaceDatabase
 import com.tangoplus.facebeautyexpert.domain.util.FileUtility.setOnSingleClickListener
 import com.tangoplus.facebeautyexpert.domain.util.PreferenceUtility
 import com.tangoplus.facebeautyexpert.domain.vo.MeasureType
 import com.tangoplus.facebeautyexpert.ui.adapter.AdVPAdapter
-import com.tangoplus.facebeautyexpert.ui.info.InformationFragment
+import com.tangoplus.facebeautyexpert.ui.adapter.MainTabRVAdapter
+import com.tangoplus.facebeautyexpert.ui.listener.OnMainTabClickListener
 import com.tangoplus.facebeautyexpert.ui.measure.DepthCameraActivity
 import com.tangoplus.facebeautyexpert.ui.main.vm.MainViewModel
-import com.tangoplus.facebeautyexpert.ui.measure.NormalCameraActivity
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlin.math.abs
 
 
-class MainFragment : Fragment() {
+class MainFragment : Fragment(), OnMainTabClickListener {
 	private lateinit var bd: FragmentMainBinding
 	private val mvm: MainViewModel by activityViewModels()
 	private var selectedMeasureType : MeasureType = MeasureType.NORMAL
@@ -54,20 +53,16 @@ class MainFragment : Fragment() {
 	) { result ->
 		if (result.resultCode == Activity.RESULT_OK) {
 			val serverSn = result.data?.getIntExtra("EXTRA_MEASURE_SN", -1) ?: -1
-			// TODO NormalCameraActivity 안되는 이유 찾아서 넣기
 			if (serverSn != -1) {
 				// DB 작업 실행
 				lifecycleScope.launch(Dispatchers.IO) {
 					val fd = FaceDatabase.getDatabase(requireContext())
-					val statics = fd.faceDao().getStatic(serverSn)
-					val insight = fd.faceDao().getInsight(serverSn)
-
-					val faceResult = mvm.convertToFaceResult(requireContext(), statics, insight)
+					val result = mvm.convertToFaceResult(requireContext(), fd.faceDao(), serverSn)
 
 					withContext(Dispatchers.Main) {
-						mvm.currentResult.value = faceResult
+						mvm.currentResult.value = result
 						// 2. 작업이 끝나면 MainActivity의 함수를 호출해서 화면/탭 전환!
-						(requireActivity() as MainActivity).navigateToMeasureHistoryInformation()
+						(requireActivity() as MainActivity).navigateToMeasureHistoryInformation(result.measureType)
 					}
 				}
 			}
@@ -105,6 +100,8 @@ class MainFragment : Fragment() {
 		super.onViewCreated(view, savedInstanceState)
 		checkAndLogUsbDevices()
 		// seq Select를 위한
+		setAdapter()
+
 		bd.btnMainStart.setOnSingleClickListener {
 			checkStoragePermission()
 		}
@@ -253,22 +250,26 @@ class MainFragment : Fragment() {
 	}
 
 	private fun updateButtonState(position: Int) {
+		bd.btnMainStart.text = tabs[position]
 		when (position) {
-			0 -> {
-				bd.btnMainStart.text = "내 얼굴 분석"
-				selectedMeasureType = MeasureType.NORMAL
+			0 -> { selectedMeasureType = MeasureType.NORMAL
 //				bd.btnMainStart.backgroundTintList = ColorStateList.valueOf(
 //					ContextCompat.getColor(requireContext(), R.color.bg15)
 //				)
 			}
-			1 -> {
-				bd.btnMainStart.text = "비대칭 및 안면 근육 진단"
-				selectedMeasureType = MeasureType.EXPERT
-			}
-			2 -> {
-				bd.btnMainStart.text = "페이스 보우 측정"
-				selectedMeasureType = MeasureType.BOW
-			}
+			1 -> { selectedMeasureType = MeasureType.EXPERT }
+			2 -> { selectedMeasureType = MeasureType.BOW }
+		}
+	}
+	private val tabs = listOf("내 얼굴 분석", "비대칭 진단", "페이스 보우")
+	private fun setAdapter() {
+
+		val mAdapter = MainTabRVAdapter(tabs)
+		mAdapter.onMainTabClickListener = this@MainFragment
+		val vLayoutManager = LinearLayoutManager(requireContext(), LinearLayoutManager.HORIZONTAL , false)
+		bd.rvM.apply {
+			adapter= mAdapter
+			layoutManager = vLayoutManager
 		}
 	}
 	private fun startAutoScroll() {
@@ -304,6 +305,10 @@ class MainFragment : Fragment() {
 	override fun onDestroyView() {
 		super.onDestroyView()
 		stopAutoScroll()
+	}
+
+	override fun onMainTabClick(tab: String) {
+
 	}
 
 }

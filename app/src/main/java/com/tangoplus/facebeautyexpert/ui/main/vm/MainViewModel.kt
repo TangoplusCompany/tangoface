@@ -8,6 +8,7 @@ import androidx.lifecycle.MediatorLiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.tangoplus.facebeautyexpert.data.db.FaceDao
 import com.tangoplus.facebeautyexpert.data.db.FaceDatabase
 import com.tangoplus.facebeautyexpert.data.db.FaceInsight
 import com.tangoplus.facebeautyexpert.data.db.FaceShape
@@ -155,57 +156,62 @@ class MainViewModel : ViewModel() {
 	}
 
 	//-------------------------------# info로 들어가는 dataClass 변환 #-------------------------------
-	fun convertToFaceResult(context: Context, faceStatics: List<FaceStatic>, faceInsight: FaceInsight?): FaceResult {
+	suspend fun convertToFaceResult(context: Context, fDao: FaceDao, serverSn: Int): FaceResult {
+
+		// 1. 함수 내부에서 DB 데이터 직접 조회
+		val faceStatics = fDao.getStatic(serverSn)
+		val faceInsight = fDao.getInsight(serverSn)
 
 		val mediaUris = mutableListOf<Uri?>()
 		val moireUris = mutableListOf<Uri?>()
 		val jsonArray = JSONArray()
 		val seqs = mutableSetOf<Sequence>()
-		faceStatics.filter { it.local_sn != 0 }.forEachIndexed { indexx, faceStatic ->
-			// 1. mediaFileUri를 Uri로 변환해서 추가
-			Log.v("result확인", "0: ${faceStatic.media_file_name}")
-			try {
 
+		faceStatics.filter { it.local_sn != 0 }.forEachIndexed { indexx, faceStatic ->
+			// 이미지 URI 변환
+			try {
 				val imageUri = FileUtility.getImageUriFromFileName(context, faceStatic.media_file_name)
 				val baseStr = faceStatic.media_file_name.replaceFirst("-", "-moire-")
 				val moireUri = FileUtility.getImageUriFromFileName(context, baseStr)
 				mediaUris.add(imageUri)
 				moireUris.add(moireUri)
-
-				Log.v("이미지URI", "1: $indexx ${faceStatic.media_file_name}")
 			} catch (e: Exception) {
 				mediaUris.add(null)
 				Log.e("FaceResultConverter", "이미지 URI 파싱 실패: ${faceStatic.media_file_name}", e)
 			}
 
-			// 2. jsonFileUri에서 JSON 파일 읽어서 JSONObject로 변환
+			// JSON 읽기
 			try {
 				val jsonObject = FileUtility.readJsonFromFile(faceStatic.json_file_name) ?: JSONObject()
-				Log.v("jsonObject있나요?", "$jsonObject")
 				jsonArray.put(jsonObject)
 			} catch (e: Exception) {
 				Log.e("FaceResultConverter", "JSON 파일 읽기 실패", e)
 				jsonArray.put(JSONObject())
 			}
 
-			// ---------# seqs #---------
-
+			// 시퀀스 처리
 			val targetSequence = Sequence.fromId(faceStatic.seq)
-			// 2. 현재 활성화된 리스트(entries) 안에서 그 객체의 인덱스(1)를 구함
 			val seqIndex = targetSequence?.let { Sequence.entries.indexOf(it) } ?: 0
-
-			val ordinal = Sequence.Companion.fromIndex(seqIndex)
+			val ordinal = Sequence.fromIndex(seqIndex)
 			ordinal?.let { seqs.add(it) }
-			Log.v("시퀀스", "$seqIndex, ordinal: ${ordinal}")
 		}
-		val validData = faceStatics.find { it.media_file_name.isNotBlank() } ?: faceStatics[0]
+
+		// 예외 방지를 위해 데이터가 비어있지 않은지 체크
+		val validData = faceStatics.find { it.media_file_name.isNotBlank() } ?: faceStatics.getOrNull(0) ?: FaceStatic()
+		val measureType = faceStatics.getOrNull(0)?.measure_type ?: 0
+
+		// BOW 처리 (기존 작성중이시던 로직 유지 가능)
+		val bowSns = if (measureType == 1) {
+			fDao.getBowSns(faceStatics.getOrNull(0)?.uuid ?: "")
+		} else { listOf() }
+
 		val factors = Factor(
 			facialAxis = validData.comfort_facial_axis_shape,
 			primaryFaceShape = validData.comfort_face_shape,
 			secondaryFaceShape = if (validData.comfort_face_shape_sub == FaceShape.DEFAULT) null else validData.comfort_face_shape_sub,
 			saggingScale = Pair(validData.comfort_left_sagging_scale, validData.comfort_right_sagging_scale)
 		)
-		Log.v("목폄확인", "$seqs")
+
 		return FaceResult(
 			tempServerSn = validData.temp_server_sn,
 			userName = validData.name,
@@ -218,7 +224,8 @@ class MainViewModel : ViewModel() {
 			factors = factors,
 			insight = faceInsight?.insight ?: "",
 			regDate = validData.reg_date,
-
+			measureType = measureType,
+			bowSns = bowSns
 		)
 	}
 

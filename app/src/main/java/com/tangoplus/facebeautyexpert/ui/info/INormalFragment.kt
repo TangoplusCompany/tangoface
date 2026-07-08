@@ -21,7 +21,6 @@ import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.LinearLayoutManager
-import com.davemorrissey.labs.subscaleview.SubsamplingScaleImageView
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.tangoplus.facebeautyexpert.R
 import com.tangoplus.facebeautyexpert.data.db.FaceDao
@@ -29,12 +28,10 @@ import com.tangoplus.facebeautyexpert.data.db.FaceDatabase
 import com.tangoplus.facebeautyexpert.data.db.FaceInsight
 import com.tangoplus.facebeautyexpert.data.db.FaceShape
 import com.tangoplus.facebeautyexpert.data.db.FacialAxisShape
-import com.tangoplus.facebeautyexpert.databinding.FragmentInformationBinding
+import com.tangoplus.facebeautyexpert.databinding.FragmentINormalBinding
 import com.tangoplus.facebeautyexpert.domain.util.AnimationUtility.startTypingAnimation
 import com.tangoplus.facebeautyexpert.domain.util.BitmapUtility
 import com.tangoplus.facebeautyexpert.domain.util.BitmapUtility.getCombineBitmap
-import com.tangoplus.facebeautyexpert.domain.util.FaceStaticUtility.addCommentInFCI
-import com.tangoplus.facebeautyexpert.domain.util.FaceStaticUtility.buildFaceStaticItemList
 import com.tangoplus.facebeautyexpert.domain.util.FileUtility.setOnSingleClickListener
 import com.tangoplus.facebeautyexpert.domain.vo.Sequence
 import com.tangoplus.facebeautyexpert.ui.main.vm.MainViewModel
@@ -43,7 +40,7 @@ import com.tangoplus.facebeautyexpert.domain.util.BitmapUtility.setSSIV
 import com.tangoplus.facebeautyexpert.domain.util.LLMUtility.getGeminiInsight
 import com.tangoplus.facebeautyexpert.orbbec.application.MyApplication
 import com.tangoplus.facebeautyexpert.ui.adapter.FactorRVAdapter
-import com.tangoplus.facebeautyexpert.ui.adapter.SelectRVAdapter
+import com.tangoplus.facebeautyexpert.ui.adapter.PartSelectRVAdapter
 import com.tangoplus.facebeautyexpert.ui.info.vm.InformationViewModel
 import com.tangoplus.facebeautyexpert.ui.info.vm.SelectViewModel
 import com.tangoplus.facebeautyexpert.ui.info.vo.DrawLine
@@ -57,11 +54,9 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
-import kotlinx.coroutines.withContext
-import org.json.JSONArray
 
-class InformationFragment : Fragment(), OnFacialPartClickListener {
-	private lateinit var bd: FragmentInformationBinding
+class INormalFragment : Fragment(), OnFacialPartClickListener {
+	private lateinit var bd: FragmentINormalBinding
 	private val svm: SelectViewModel by activityViewModels()
 	private val ivm: InformationViewModel by activityViewModels()
 	private val mvm: MainViewModel by activityViewModels()
@@ -71,28 +66,14 @@ class InformationFragment : Fragment(), OnFacialPartClickListener {
 		inflater: LayoutInflater, container: ViewGroup?,
 		savedInstanceState: Bundle?
 	): View {
-		bd = FragmentInformationBinding.inflate(inflater)
+		bd = FragmentINormalBinding.inflate(inflater)
 		return bd.root
 	}
 
-	override fun onDestroy() {
-		super.onDestroy()
-		mvm.currentResult.value = null
-	}
 
 	override fun onDestroyView() {
 		super.onDestroyView()
-
-		bd.ssiv.recycle()
-		mvm.comparisonDoubleItem = null
-		ivm.currentCheckedLines.clear()
-		svm.updateFacialPart(FacialPart.DERIVE)
-		svm.updateSequence(Sequence.COMFORT)
-		if (ivm.isAngleModeActive.value) ivm.toggleAngleMode()
-
-		ivm.setSeq(Sequence.COMFORT)
-		ivm.releaseUnitIdx()
-		if (!ivm.getLineOn()) ivm.switchedLineOn()
+		bd.ssivIN.recycle()
 	}
 
 	override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
@@ -108,8 +89,8 @@ class InformationFragment : Fragment(), OnFacialPartClickListener {
 		initAngleTool()
 		observeViewModel()
 
-		bd.tvIClose?.setOnSingleClickListener {
-			val behavior = BottomSheetBehavior.from(bd.bottomSheet)
+		bd.tvINClose.setOnSingleClickListener {
+			val behavior = BottomSheetBehavior.from(bd.bsIN)
 			behavior.state = BottomSheetBehavior.STATE_HIDDEN
 		}
 	}
@@ -117,17 +98,17 @@ class InformationFragment : Fragment(), OnFacialPartClickListener {
 	private fun setAdapter() {
 		val selectCase = if (ivm.getSeq() == Sequence.COMFORT) 0 else 1
 		val vLayoutManager = GridLayoutManager(context, 5)
-		val sAdapter = SelectRVAdapter(svm, selectCase)
-		sAdapter.onFacialPartClickListener = this@InformationFragment
-		bd.rvGD1.apply {
+		val sAdapter = PartSelectRVAdapter(svm, selectCase)
+		sAdapter.onFacialPartClickListener = this@INormalFragment
+		bd.rvIN1.apply {
 			adapter = sAdapter
 			layoutManager = vLayoutManager
 		}
 
-		val fAdapter = FactorRVAdapter(this@InformationFragment, mvm.currentResult.value?.factors ?: Factor(
+		val fAdapter = FactorRVAdapter(this@INormalFragment, mvm.currentResult.value?.factors ?: Factor(
 			FacialAxisShape.DEFAULT, FaceShape.DEFAULT, null,Pair(0f, 0f)))
 		val fLayoutManager = LinearLayoutManager(requireContext(), LinearLayoutManager.VERTICAL, false)
-		bd.rvGD2.apply {
+		bd.rvIN2.apply {
 			adapter = fAdapter
 			layoutManager = fLayoutManager
 		}
@@ -135,35 +116,33 @@ class InformationFragment : Fragment(), OnFacialPartClickListener {
 	}
 
 	private fun setRatioBtn() {
-		bd.btnIDClean.setOnSingleClickListener {
+		bd.btnINClean.setOnSingleClickListener {
 			ivm.switchedLineOn()
-			bd.btnIDClean.text = if (ivm.getLineOn()) "🔍 가이드라인 끄기" else "🔍 가이드라인 켜기"
+			bd.btnINClean.text = if (ivm.getLineOn()) "🔍 가이드라인 끄기" else "🔍 가이드라인 켜기"
 			setImage()
 		}
 
-		bd.btnIDGrid.setOnSingleClickListener {
+		bd.btnINGrid.setOnSingleClickListener {
 			ivm.switchedGridLineOn()
-			bd.btnIDGrid.text = if (ivm.getGridLineOn()) "ꖛ 그리드 끄기" else "ꖛ 그리드 켜기 "
+			bd.btnINGrid.text = if (ivm.getGridLineOn()) "ꖛ 그리드 끄기" else "ꖛ 그리드 켜기 "
 			setImage()
 		}
-		bd.btnIDMoire.setOnSingleClickListener {
+		bd.btnINMoire.setOnSingleClickListener {
 			ivm.switchedMoireOn()
-			bd.btnIDMoire.text = if (ivm.getMoireOn()) "🏳️‍🌈 Moire 끄기" else "🏳️‍🌈 Moire 보기"
+			bd.btnINMoire.text = if (ivm.getMoireOn()) "🏳️‍🌈 Moire 끄기" else "🏳️‍🌈 Moire 보기"
 			setImage()
 		}
 	}
 
 	private fun setResult() {
-		bd.ssiv.recycle()
-		val isComparison = mvm.comparisonDoubleItem != null
-		ivm.currentFaceStaticsItem.forEach { addCommentInFCI(it, isComparison) }
+		bd.ssivIN.recycle()
 
-		val width = bd.ssiv.width
-		val height = bd.ssiv.height
+		val width = bd.ssivIN.width
+		val height = bd.ssivIN.height
 		ivm.setCropRatio(width, height)
 
 		setImage()
-		bd.rvGD2.apply {
+		bd.rvIN2.apply {
 			layoutManager = LinearLayoutManager(requireContext(), LinearLayoutManager.VERTICAL, false)
 
 		}
@@ -176,14 +155,14 @@ class InformationFragment : Fragment(), OnFacialPartClickListener {
 		lifecycleScope.launch {
 			mvm.currentResult.value?.let { result ->
 				coroutineScope {
-					val deferred = async { getCombineBitmap(this@InformationFragment, result, currentSeq, ivm) }
+					val deferred = async { getCombineBitmap(this@INormalFragment, result, currentSeq, ivm) }
 					val awaitedResult = deferred.await()
-					awaitedResult.first?.let { setSSIV(it, bd.ssiv) }
+					awaitedResult.first?.let { setSSIV(it, bd.ssivIN) }
 
 					val drawInfos = awaitedResult.second
 					val faceRect = awaitedResult.third
 					setBoxInfos(drawInfos, faceRect)
-					bd.overlayView.visibility = if (ivm.getLineOn()) View.VISIBLE else View.GONE
+					bd.ovIN.visibility = if (ivm.getLineOn()) View.VISIBLE else View.GONE
 				}
 			}
 		}
@@ -202,9 +181,9 @@ class InformationFragment : Fragment(), OnFacialPartClickListener {
 		}
 		val info = "$name${if (mobile.length < 5) "" else " | $transformMobile"}"
 
-		bd.tvIdInfo.visibility = View.VISIBLE
-		bd.tvIdInfo.text = info
-		bd.tvIdInfo.gravity = if (name == "GUEST") {
+		bd.tvINInfo.visibility = View.VISIBLE
+		bd.tvINInfo.text = info
+		bd.tvINInfo.gravity = if (name == "GUEST") {
 			Gravity.CENTER
 		} else {
 			Gravity.NO_GRAVITY
@@ -213,41 +192,41 @@ class InformationFragment : Fragment(), OnFacialPartClickListener {
 
 	private fun setBoxInfos(textInfos: List<BitmapUtility.TextBoxData>, faceRect : TextBoxOverlayView.FaceRect?) {
 		val isTablet = MyApplication.isTablet()
-		if (isTablet) bd.overlayView.setTabletUI() else bd.overlayView.setMobileUI()
-		bd.overlayView.setFaceRect(faceRect)
-		bd.overlayView.attachToImageView(bd.ssiv)
-		bd.overlayView.setTextBoxes(textInfos)
+		if (isTablet) bd.ovIN.setTabletUI() else bd.ovIN.setMobileUI()
+		bd.ovIN.setFaceRect(faceRect)
+		bd.ovIN.attachToImageView(bd.ssivIN)
+		bd.ovIN.setTextBoxes(textInfos)
 	}
 
 	private fun initAngleTool() {
 		viewLifecycleOwner.lifecycleScope.launch {
 			ivm.isAngleModeActive.collect { isActive ->
 				if (isActive) {
-					val savedScale = bd.ssiv.scale
-					val savedCenter = bd.ssiv.center?.let { PointF(it.x, it.y) }
+					val savedScale = bd.ssivIN.scale
+					val savedCenter = bd.ssivIN.center?.let { PointF(it.x, it.y) }
 
 					Log.d("AngleDebug", "Saved - scale: $savedScale, center: $savedCenter")
 
-					bd.ssiv.apply {
+					bd.ssivIN.apply {
 						isPanEnabled = false
 						isZoomEnabled = false
 						isQuickScaleEnabled = false
 					}
 
-					bd.angleMeasureView.visibility = View.VISIBLE
-					bd.angleMeasureView.post {
+					bd.amvIN.visibility = View.VISIBLE
+					bd.amvIN.post {
 						if (savedCenter != null) {
-							bd.ssiv.setScaleAndCenter(savedScale, savedCenter)
+							bd.ssivIN.setScaleAndCenter(savedScale, savedCenter)
 						}
 
-						bd.angleMeasureView.postDelayed({
-							bd.angleMeasureView.resetSelectedLine()
+						bd.amvIN.postDelayed({
+							bd.amvIN.resetSelectedLine()
 						}, 50)
 					}
 
 				} else {
-					bd.angleMeasureView.visibility = View.GONE
-					bd.ssiv.apply {
+					bd.amvIN.visibility = View.GONE
+					bd.ssivIN.apply {
 						isPanEnabled = true
 						isZoomEnabled = true
 						isQuickScaleEnabled = true
@@ -256,9 +235,9 @@ class InformationFragment : Fragment(), OnFacialPartClickListener {
 			}
 		}
 
-		bd.btnIDAngle.setOnClickListener {
+		bd.btnINAngle.setOnClickListener {
 			ivm.toggleAngleMode()
-			bd.btnIDAngle.text = if (bd.btnIDAngle.text.contains("끄기")) "📐 각도계산 켜기" else "📐 각도계산 끄기"
+			bd.btnINAngle.text = if (bd.btnINAngle.text.contains("끄기")) "📐 각도계산 켜기" else "📐 각도계산 끄기"
 		}
 	}
 
@@ -280,9 +259,9 @@ class InformationFragment : Fragment(), OnFacialPartClickListener {
 		svm.updateFacialPart(part)
 		if (ivm.isAngleModeActive.value) {
 			ivm.toggleAngleMode()
-			bd.btnIDAngle.text = "📐 각도계산 켜기"
+			bd.btnINAngle.text = "📐 각도계산 켜기"
 		}
-		bd.rvGD1.adapter?.notifyDataSetChanged()
+		bd.rvIN1.adapter?.notifyDataSetChanged()
 		setImage()
 	}
 
@@ -290,19 +269,19 @@ class InformationFragment : Fragment(), OnFacialPartClickListener {
 		// 1. 어댑터 설정 (표시할 이름들을 리스트로 추출)
 		val displayNames = svm.sequenceEntries.map { it.displayName }
 		val adapter = ArrayAdapter(requireContext(), R.layout.list_item_dropdown, displayNames)
-		bd.actvTSeq.setAdapter(adapter)
+		bd.actvINSeq.setAdapter(adapter)
 
 		// 2. 드롭다운 아이템 클릭 리스너
-		bd.actvTSeq.setOnItemClickListener { _, _, position, _ ->
+		bd.actvINSeq.setOnItemClickListener { _, _, position, _ ->
 			val selectedSeq = svm.sequenceEntries[position]
 
-			// ViewModel 업데이트
+			// ViewModel 업데이트h
 			svm.updateSequence(selectedSeq)
 
 			// 🕊️ 여기서 사진을 바꾸는 로직을 추가하시면 됩니다.
 			ivm.setSeq(selectedSeq)
 			setResult()
-			bd.actvTSeq.clearFocus()
+			bd.actvINSeq.clearFocus()
 		}
 		setAdapter()
 		setInsightBottomSheet()
@@ -313,7 +292,7 @@ class InformationFragment : Fragment(), OnFacialPartClickListener {
 			viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
 				svm.currentSequence.collect { seq ->
 					// 3. ViewModel 상태와 UI 텍스트 동기화 (필터링 방지를 위해 filter = false)
-					bd.actvTSeq.setText(seq.displayName, false)
+					bd.actvINSeq.setText(seq.displayName, false)
 				}
 			}
 		}
@@ -321,49 +300,54 @@ class InformationFragment : Fragment(), OnFacialPartClickListener {
 	private val scrollHandler = Handler(Looper.getMainLooper())
 	private var scrollRunnable: Runnable? = null
 	private fun setInsightBottomSheet() {
-		val behavior = BottomSheetBehavior.from(bd.bottomSheet)
+		val behavior = BottomSheetBehavior.from(bd.bsIN)
 		behavior.isDraggable = false
 		behavior.state = BottomSheetBehavior.STATE_HIDDEN
 		behavior.peekHeight = 0
-
-		bd.nsvI.setOnScrollChangeListener { _, _, scrollY, _, _ ->
-			scrollRunnable?.let { scrollHandler.removeCallbacks(it) }
-
-			val child = bd.nsvI.getChildAt(0)
-			if (child != null) {
-				val contentHeight = child.measuredHeight
-				val scrollViewHeight = bd.nsvI.measuredHeight
-
-				if (scrollY + scrollViewHeight >= contentHeight - 10) {
-					scrollRunnable = Runnable {
-						if (behavior.state == BottomSheetBehavior.STATE_HIDDEN) {
-							tryInsight()
-							behavior.state = BottomSheetBehavior.STATE_EXPANDED
-						}
-					}
-
-					scrollHandler.postDelayed(scrollRunnable!!, 200) // 200ms 대기시간
-				}
+		bd.clINHint.setOnSingleClickListener {
+			if (behavior.state == BottomSheetBehavior.STATE_HIDDEN) {
+				tryInsight()
+				behavior.state = BottomSheetBehavior.STATE_EXPANDED
 			}
 		}
+//		bd.nsvI.setOnScrollChangeListener { _, _, scrollY, _, _ ->
+//			scrollRunnable?.let { scrollHandler.removeCallbacks(it) }
+//
+//			val child = bd.nsvI.getChildAt(0)
+//			if (child != null) {
+//				val contentHeight = child.measuredHeight
+//				val scrollViewHeight = bd.nsvI.measuredHeight
+//
+//				if (scrollY + scrollViewHeight >= contentHeight - 10) {
+//					scrollRunnable = Runnable {
+//						if (behavior.state == BottomSheetBehavior.STATE_HIDDEN) {
+//							tryInsight()
+//							behavior.state = BottomSheetBehavior.STATE_EXPANDED
+//						}
+//					}
+//
+//					scrollHandler.postDelayed(scrollRunnable!!, 200) // 200ms 대기시간
+//				}
+//			}
+//		}
 
 		behavior.addBottomSheetCallback(object : BottomSheetBehavior.BottomSheetCallback() {
 			override fun onStateChanged(bottomSheet: View, newState: Int) {
 				if (newState == BottomSheetBehavior.STATE_HIDDEN) {
-					bd.vIDim.visibility = View.GONE
+					bd.vINim.visibility = View.GONE
 				} else {
-					bd.vIDim.visibility = View.VISIBLE
+					bd.vINim.visibility = View.VISIBLE
 				}
 			}
 
 			override fun onSlide(bottomSheet: View, slideOffset: Float) {
 				val alpha = slideOffset * 0.6f
-				bd.vIDim.alpha = if (alpha >= 0) alpha else 0f
+				bd.vINim.alpha = if (alpha >= 0) alpha else 0f
 			}
 		})
 
 // (선택사항) 어두운 영역을 터치하면 바텀시트 닫기
-		bd.vIDim.setOnClickListener {
+		bd.vINim.setOnClickListener {
 			behavior.state = BottomSheetBehavior.STATE_HIDDEN
 		}
 	}
@@ -378,7 +362,7 @@ class InformationFragment : Fragment(), OnFacialPartClickListener {
 		typingJob = lifecycleScope.launch {
 			while (this.isActive) {
 				typingList.forEachIndexed { idx, text ->
-					startTypingAnimation(bd.tvIGeminiShimmer, text, 45)
+					startTypingAnimation(bd.tvINGeminiShimmer, text, 45)
 					delay(1000)
 				}
 			}
@@ -386,8 +370,8 @@ class InformationFragment : Fragment(), OnFacialPartClickListener {
 	}
 
 	private fun startGeminiShimmer() {
-		bd.clIShimmer.visibility = View.VISIBLE
-		bd.clIResult.visibility = View.GONE
+		bd.clINShimmer.visibility = View.VISIBLE
+		bd.clINResult.visibility = View.GONE
 		startTypingLoop()
 	}
 	private fun stopTypingLoop() {
@@ -396,16 +380,16 @@ class InformationFragment : Fragment(), OnFacialPartClickListener {
 	}
 	private fun stopGeminiShimmer() {
 		// 1. 애니메이션 시작
-		bd.sflI.animate()
+		bd.sflIN.animate()
 			.alpha(0f)          // 투명도를 0으로 (흐릿하게)
 			.scaleX(1.1f)       // 살짝 커지면서 사라지면 더 자연스러워요
 			.scaleY(1.1f)
 			.setDuration(600)   // 0.6초 동안 진행
 			.withEndAction {
-				bd.sflI.stopShimmer()
+				bd.sflIN.stopShimmer()
 				stopTypingLoop()
-				bd.clIShimmer.visibility = View.GONE
-				bd.clIResult.visibility = View.VISIBLE
+				bd.clINShimmer.visibility = View.GONE
+				bd.clINResult.visibility = View.VISIBLE
 			}
 			.start()
 	}
@@ -415,7 +399,7 @@ class InformationFragment : Fragment(), OnFacialPartClickListener {
 
 		// 1. 데이터가 이미 있거나, 분석에 필요한 기본 정보가 없으면 중단
 		if (!currentResultValue?.insight.isNullOrEmpty()) {
-			bd.tvGDInsight.text = currentResultValue.insight ?: ""
+			bd.tvINInsight.text = currentResultValue.insight ?: ""
 			Log.v("gemini", "기존 기록이 있나요?\n${currentResultValue.insight}")
 			stopGeminiShimmer()
 			return
@@ -453,10 +437,10 @@ class InformationFragment : Fragment(), OnFacialPartClickListener {
 
 					// 4. UI 업데이트 및 ViewModel 상태 동기화
 					if (!resultString.isNullOrBlank()) {
-						bd.tvGDInsight.text = resultString
+						bd.tvINInsight.text = resultString
 						currentResultValue.insight = resultString
 					} else {
-						bd.tvGDInsight.text = "인사이트를 불러오는 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요."
+						bd.tvINInsight.text = "인사이트를 불러오는 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요."
 						currentResultValue.insight = "인사이트를 불러오는 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요."
 						throw Exception("Empty Insight")
 					}
@@ -481,13 +465,13 @@ class InformationFragment : Fragment(), OnFacialPartClickListener {
 		bounceJob = lifecycleScope.launch {
 			while (isActive) {
 				// 1. 위로 부드럽게 슉! 올라가기 (Y축 -30px 이동)
-				bd.tvIScrollHint.animate()
+				bd.tvINScrollHint.animate()
 					.translationY(-30f)
 					.setDuration(400)
 					.setInterpolator(DecelerateInterpolator())
 					.withEndAction {
 						// 2. 올라간 뒤, 통통 튀며 제자리(0f)로 떨어지기
-						bd.tvIScrollHint.animate()
+						bd.tvINScrollHint.animate()
 							.translationY(0f)
 							.setDuration(600)
 							.setInterpolator(BounceInterpolator()) // 핵심: 통통 튀는 물리 효과
@@ -501,7 +485,7 @@ class InformationFragment : Fragment(), OnFacialPartClickListener {
 
 	private fun stopScrollHintAnimation() {
 		bounceJob?.cancel()
-		bd.tvIScrollHint.translationY = 0f // 원래 위치로 초기화
+		bd.tvINScrollHint.translationY = 0f // 원래 위치로 초기화
 	}
 
 }

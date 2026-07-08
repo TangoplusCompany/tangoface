@@ -73,6 +73,8 @@ import androidx.media3.common.MediaItem
 import androidx.media3.common.MimeTypes
 import androidx.media3.common.audio.ChannelMixingAudioProcessor
 import androidx.media3.common.util.UnstableApi
+import androidx.media3.effect.Crop
+import androidx.media3.effect.Presentation
 import androidx.media3.effect.ScaleAndRotateTransformation
 import androidx.media3.transformer.Composition
 import androidx.media3.transformer.EditedMediaItem
@@ -99,6 +101,7 @@ import com.tangoplus.facebeautyexpert.domain.util.LandmarkUtility.p1
 import com.tangoplus.facebeautyexpert.domain.util.LandmarkUtility.p2
 import com.tangoplus.facebeautyexpert.domain.util.LandmarkUtility.toScaledIntrinsic
 import com.tangoplus.facebeautyexpert.domain.util.LandmarkUtility.undistortLandmarks
+import com.tangoplus.facebeautyexpert.domain.util.MathHelpers.getNormalizedDistance
 import com.tangoplus.facebeautyexpert.domain.util.MathHelpers.getScaleFactor
 import com.tangoplus.facebeautyexpert.domain.util.MathHelpers.toFloatTarget
 import com.tangoplus.facebeautyexpert.domain.util.PreferenceUtility
@@ -264,8 +267,6 @@ class MeasureViewModel : ViewModel() {
 	var isDepthCameraMeasure = true
 
 	fun resultBundleToJson(
-//		resultBundle: FaceLandmarkResult,
-//		flr3D: List<Point3D> = listOf(),
 		seq: Sequence
 	) {
 		Log.v("3d좌표?", "${face3DResult.size}")
@@ -616,7 +617,228 @@ class MeasureViewModel : ViewModel() {
 				Log.v("스태틱저장", "0: 스태틱 저장 ${staticJA.length()}")
 			}
 
+			// ℹ️ℹ️ EXPERT ️ℹ️ℹ️
+			if (seq == Sequence.OCCLUSAL) {
+				val eyeBrowAngle =
+					calculateSlope(vmFlr[107].first, vmFlr[107].second, vmFlr[336].first, vmFlr[336].second)
 
+				// 468: 실제 오른쪽 눈  473: 실제 왼쪽 눈
+				val eyeAngle =
+					calculateSlope(vmFlr[468].first, vmFlr[468].second, vmFlr[473].first, vmFlr[473].second)
+				val correctionValue = 180f - eyeAngle
+				// 입술끝 왼: 291 오: 61
+				val tipOfLipsAngle =
+					calculateSlope(vmFlr[61].first, vmFlr[61].second, vmFlr[291].first, vmFlr[291].second)
+				val correctTipOfLipsAngle = correctingValue(tipOfLipsAngle, correctionValue)
+				// 턱
+				val tipOfChinsAngle =
+					calculateSlope(vmFlr[148].first, vmFlr[148].second, vmFlr[377].first, vmFlr[377].second)
+				val correctTipOfChinsAngle = correctingValue(tipOfChinsAngle, correctionValue)
+				val canthusOralAngle = Pair(
+					calculateSlope(vmFlr[33].first, vmFlr[33].second, vmFlr[61].first, vmFlr[61].second),
+					calculateSlope(vmFlr[291].first, vmFlr[291].second, vmFlr[263].first, vmFlr[263].second)
+				)
+				val nasalWingLipsAngle = Pair(
+					calculateSlope(vmFlr[64].first, vmFlr[64].second, vmFlr[61].first, vmFlr[61].second),
+					calculateSlope(vmFlr[291].first, vmFlr[291].second, vmFlr[294].first, vmFlr[294].second)
+				)
+
+				val cheeksExtents = if (isDepthCameraMeasure) {
+					Pair(
+						calculateAreaWithScaling(leftCheeks, currentCoordinate, current3DCoordinate),
+						calculateAreaWithScaling(rightCheeks, currentCoordinate, current3DCoordinate)
+					)
+				} else {
+					val leftCheeksPoint = leftCheeks.map { currentCoordinate[it] }
+					val rightCheeksPoint = rightCheeks.map { currentCoordinate[it] }
+					Log.v("뎁스카메라", "2-Cheeks: $leftCheeksPoint, $rightCheeksPoint")
+					Pair(
+						calculatePolygonArea(leftCheeksPoint),
+						calculatePolygonArea(rightCheeksPoint)
+					)
+				}
+
+				val sideHeadAngle = Pair(
+					calculateAngle(
+						vmFlr[156].first,
+						vmFlr[156].second,
+						vmFlr[143].first,
+						vmFlr[143].second,
+						vmFlr[111].first,
+						vmFlr[111].second
+					),
+					calculateAngle(
+						vmFlr[383].first,
+						vmFlr[383].second,
+						vmFlr[372].first,
+						vmFlr[372].second,
+						vmFlr[340].first,
+						vmFlr[340].second
+					)
+				)
+
+				val cheekboneExtents = if (isDepthCameraMeasure) {
+					Pair(
+						calculateAreaWithScaling(leftCheekBone, currentCoordinate, current3DCoordinate),
+						calculateAreaWithScaling(rightCheekBone, currentCoordinate, current3DCoordinate)
+					)
+				} else {
+					val leftCheekBonePoint = leftCheekBone.map { currentCoordinate[it] }
+					val rightCheekBonePoint = rightCheekBone.map { currentCoordinate[it] }
+					Log.v("뎁스카메라", "2-CheekBone: $leftCheekBonePoint, $rightCheekBonePoint")
+					Pair(
+						calculatePolygonArea(leftCheekBonePoint),
+						calculatePolygonArea(rightCheekBonePoint)
+					)
+				}
+
+				// 양쪾을 벌렸을 때 7.2 안벌렸을 때 4.6
+				val tempStatic = JSONObject().apply {
+					put("occlusal_eye_horizontal_angle", eyeAngle)
+					put("occlusal_eyebrow_horizontal_angle", eyeBrowAngle)
+					put("occlusal_tip_of_lips_horizontal_angle", correctTipOfLipsAngle)
+					put("occlusal_tip_of_chin_horizontal_angle", correctTipOfChinsAngle)
+					put("occlusal_canthus_oral_left_vertical_angle", canthusOralAngle.second)
+					put("occlusal_canthus_oral_right_vertical_angle", canthusOralAngle.first)
+					put("occlusal_nasal_wing_tip_of_lips_left_vertical_angle", nasalWingLipsAngle.second)
+					put("occlusal_nasal_wing_tip_of_lips_right_vertical_angle", nasalWingLipsAngle.first)
+					put("occlusal_side_head_left_angle", sideHeadAngle.second)
+					put("occlusal_side_head_right_angle", sideHeadAngle.first)
+					put("occlusal_left_cheeks_extent", cheeksExtents.second)
+					put("occlusal_right_cheeks_extent", cheeksExtents.first)
+					put("occlusal_left_cheekbone_extent", cheekboneExtents.second)
+					put("occlusal_right_cheekbone_extent", cheekboneExtents.first)
+				}
+				staticJA.put(tempStatic)
+				Log.v(
+					"교합 각도들",
+					"eyeAngle: $eyeAngle eyebrowAngle: $eyeBrowAngle tipOfLipsAngle: $tipOfLipsAngle chinAngle: $correctTipOfChinsAngle canthusOralAngle: $canthusOralAngle nasalWingLipsAngle:$nasalWingLipsAngle, cheeksExtent: $cheeksExtents"
+				)
+			}
+
+			// ℹ️ℹ️ TILT ️ℹ️ℹ️
+			if (seq == Sequence.JAW_LEFT_TILT) {
+				if (tempStaticJo == null) {
+					val tiltNoseChinAngle =
+						calculateSlope(vmFlr[1].first, vmFlr[1].second, vmFlr[152].first, vmFlr[152].second)
+					val tiltTipOfLipsAngle =
+						calculateSlope(vmFlr[61].first, vmFlr[61].second, vmFlr[291].first, vmFlr[291].second)
+					val mandibularDistance = Pair(
+						getNormalizedDistance(
+							Pair(vmFlr[13].first, vmFlr[13].second),
+							Pair(vmFlr[58].first, vmFlr[58].second)
+						),
+						getNormalizedDistance(
+							Pair(vmFlr[13].first, vmFlr[13].second),
+							Pair(vmFlr[288].first, vmFlr[288].second)
+						)
+					)
+
+					// 양쪾을 벌렸을 때 7.2 안벌렸을 때 4.6
+					val tempStatic = JSONObject().apply {
+						put("jaw_left_tilt_nose_chin_vertical_angle", tiltNoseChinAngle)
+						put("jaw_left_tilt_tip_of_lips_horizontal_angle", tiltTipOfLipsAngle)
+						put("jaw_left_tilt_left_mandibular_distance", mandibularDistance.second)
+						put("jaw_left_tilt_right_mandibular_distance", mandibularDistance.first)
+					}
+					// 측정 값 초기화
+					tempStaticJo = tempStatic
+					staticJA.put(tempStaticJo)
+					Log.v(
+						"왼쪽 턱 쏠림 각도들",
+						"noseChinAngle: $tiltNoseChinAngle tipOfLipsAngle: $tiltTipOfLipsAngle  mandibularDistance: $mandibularDistance"
+					)
+				}
+			}
+
+			if (seq == Sequence.JAW_RIGHT_TILT) {
+				if (tempStaticJo == null) {
+					val tiltNoseChinAngle =
+						calculateSlope(vmFlr[1].first, vmFlr[1].second, vmFlr[152].first, vmFlr[152].second)
+					val tiltTipOfLipsAngle =
+						calculateSlope(vmFlr[61].first, vmFlr[61].second, vmFlr[291].first, vmFlr[291].second)
+					val mandibularDistance = Pair(
+						getNormalizedDistance(
+							Pair(vmFlr[13].first, vmFlr[13].second),
+							Pair(vmFlr[58].first, vmFlr[58].second)
+						),
+						getNormalizedDistance(
+							Pair(vmFlr[13].first, vmFlr[13].second),
+							Pair(vmFlr[288].first, vmFlr[288].second)
+						)
+					)
+
+					// 양쪾을 벌렸을 때 7.2 안벌렸을 때 4.6
+					val tempStatic = JSONObject().apply {
+						put("jaw_right_tilt_nose_chin_vertical_angle", tiltNoseChinAngle)
+						put("jaw_right_tilt_tip_of_lips_horizontal_angle", tiltTipOfLipsAngle)
+						put("jaw_right_tilt_left_mandibular_distance", mandibularDistance.second)
+						put("jaw_right_tilt_right_mandibular_distance", mandibularDistance.first)
+
+					}
+					tempStaticJo = tempStatic
+					staticJA.put(tempStaticJo)
+					Log.v(
+						"왼쪽 턱 쏠림 각도들",
+						"noseChinAngle: $tiltNoseChinAngle tipOfLipsAngle: $tiltTipOfLipsAngle  mandibularDistance: $mandibularDistance"
+					)
+				}
+			}
+
+			// ℹ️ℹ️ OPENING ️ℹ️ℹ️
+			if (seq == Sequence.JAW_OPENING) {
+				val openingLipsDistance = if (isDepthCameraMeasure) {
+					Log.v(
+						"뎁스카메라",
+						"5-OpeningLips: 13-${current3DCoordinate[13]}, 14-${current3DCoordinate[14]}, ${
+							get3DDistance(
+								current3DCoordinate[13],
+								current3DCoordinate[14]
+							)
+						}"
+					)
+					get3DDistance(current3DCoordinate[13], current3DCoordinate[14])
+				} else {
+					getNormalizedDistance(
+						Pair(vmFlr[13].first, vmFlr[13].second),
+						Pair(vmFlr[14].first, vmFlr[14].second)
+					)
+				}
+				val openingLipsAngle = calculateSlope(
+					vmFlr[13].first,
+					vmFlr[13].second,
+					vmFlr[14].first,
+					vmFlr[14].second
+				) % 180f
+
+				val cheeksExtents = if (isDepthCameraMeasure) {
+
+					Pair(
+						calculateAreaWithScaling(leftCheeks, currentCoordinate, current3DCoordinate),
+						calculateAreaWithScaling(rightCheeks, currentCoordinate, current3DCoordinate),
+					)
+				} else {
+					val leftCheeksPoint = leftCheeks.map { currentCoordinate[it] }
+					val rightCheeksPoint = rightCheeks.map { currentCoordinate[it] }
+					Pair(
+						calculatePolygonArea(leftCheeksPoint),
+						calculatePolygonArea(rightCheeksPoint)
+					)
+				}
+
+				// 양쪾을 벌렸을 때 7.2 안벌렸을 때 4.6
+				val tempStatic = JSONObject().apply {
+					put("jaw_opening_lips_distance", openingLipsDistance)
+					put("jaw_opening_lips_vertical_angle", openingLipsAngle)
+					put("jaw_opening_left_cheeks_extent", cheeksExtents.first)
+					put("jaw_opening_right_cheeks_extent", cheeksExtents.second)
+				}
+				staticJA.put(tempStatic)
+				Log.v(
+					"입 벌림 각도들",
+					"openingLipsDistance: $openingLipsDistance openingLipsAngle: $openingLipsAngle cheeksExtents: $cheeksExtents"
+				)
+			}
 		}
 
 		if (seq == Sequence.NECK_EXTENTION) {
@@ -634,30 +856,6 @@ class MeasureViewModel : ViewModel() {
 			val midEye = Pair((plr[1].first + plr[4].first) / 2, (plr[1].second + plr[4].second) / 2)
 			val faceVerticalAngle =
 				calculateSlope(midEye.first, midEye.second, plr[0].first, plr[0].second)
-//				val leftChinAngle = calculateAngle(
-//					vmFlr[234].first,
-//					vmFlr[234].second,
-//					vmFlr[58].first,
-//					vmFlr[58].second,
-//					vmFlr[152].first,
-//					vmFlr[152].second
-//				)
-//				val rightChinAngle = calculateAngle(
-//					vmFlr[454].first,
-//					vmFlr[454].second,
-//					vmFlr[288].first,
-//					vmFlr[288].second,
-//					vmFlr[152].first,
-//					vmFlr[152].second
-//				)
-//				val middleChinAngle = calculateAngle(
-//					vmFlr[58].first,
-//					vmFlr[58].second,
-//					vmFlr[152].first,
-//					vmFlr[152].second,
-//					vmFlr[288].first,
-//					vmFlr[288].second
-//				)
 
 			// 양쪾을 벌렸을 때 7.2 안벌렸을 때 4.6
 			val tempStatic = JSONObject().apply {
@@ -665,9 +863,6 @@ class MeasureViewModel : ViewModel() {
 				put("neck_extention_ear_horizontal_angle", earHorizontalAngle)
 				put("neck_extention_neck_vertical_angle", neckVerticalAngle)
 				put("neck_extention_face_vertical_angle", faceVerticalAngle)
-//					put("neck_extention_left_mandibular_chin_angle", leftChinAngle)
-//					put("neck_extention_right_mandibular_chin_angle", rightChinAngle)
-//					put("neck_extention_middle_mandibular_chin_angle", middleChinAngle)
 			}
 			staticJA.put(tempStatic)
 			Log.v(
@@ -676,6 +871,8 @@ class MeasureViewModel : ViewModel() {
 			)
 			Log.v("스태틱저장", "1: 스태틱 저장 ${staticJA.length()}")
 		}
+
+
 
 	}
 
@@ -1291,7 +1488,12 @@ class MeasureViewModel : ViewModel() {
     }
 		val seqIndex = allSeqs.indexOf(seq)
 		val mediaFileName = mediaFileNames[seqIndex]
-
+		val measureTypeNum = when (measureType) {
+			MeasureType.NORMAL -> 0
+			MeasureType.EXPERT -> 1
+			MeasureType.BOW -> 2
+			else -> 0
+		}
 		return originJo.apply {
 			put("temp_server_sn", prefsUtil.getLastTempServerSn())
 			put("media_file_name", mediaFileName)
@@ -1307,6 +1509,7 @@ class MeasureViewModel : ViewModel() {
 
 			put("scale_factor", getScaleFactor())
 			put("depth_result", isDepthResult)
+			put("measure_type", measureTypeNum)
 		}
 	}
 
@@ -1644,13 +1847,16 @@ class MeasureViewModel : ViewModel() {
 		// 입력 비디오 URI 생성
 		val inputUri = Uri.fromFile(File(inputPath))
 		val mediaItem = MediaItem.fromUri(inputUri)
-
+		val cropEffect = Crop(-0.421875f, 0.421875f, -1f, 1f)
+		val presentation = Presentation.createForWidthAndHeight(
+			540, 720, Presentation.LAYOUT_SCALE_TO_FIT
+		)
 		val flipEffect = ScaleAndRotateTransformation.Builder()
 			.setScale(-1f, 1f)
 			.build()
 		val effects = Effects(
 			listOf(ChannelMixingAudioProcessor()),
-			listOf(flipEffect)
+			listOf(cropEffect, flipEffect, presentation)
 		)
 		val editedMediaItem = EditedMediaItem.Builder(mediaItem)
 			.setEffects(effects)

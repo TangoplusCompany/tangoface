@@ -213,24 +213,14 @@ class MeasureImageFragment : Fragment() {
 								try {
 									val lastTempServerSn = prefsUtil.getLastTempServerSn()
 									prefsUtil.setNextTempServerSn()
-
 									viewModel.comparisonDoubleItem = null
-									Log.v("전부 끝", "저장완료, $lastTempServerSn")
-
 									if (lastTempServerSn != -1) {
-										val statics = withContext(Dispatchers.IO) {
-											fDao.getStatic(lastTempServerSn)
-										}
-										val insight = withContext(Dispatchers.IO) {
-											fDao.getInsight(lastTempServerSn)
-										}
 										val result = withContext(Dispatchers.IO) {
-											mainVm.convertToFaceResult(requireContext(), statics, insight)
+											mainVm.convertToFaceResult(requireContext(), fDao, lastTempServerSn)
 										}
 										startLongVibrate(requireContext())
 										mainVm.currentResult.value = result
-
-										(activity as MainActivity).navigateToMeasureHistoryInformation()
+										(activity as MainActivity).navigateToMeasureHistoryInformation(result.measureType)
 										initSettings()
 										ivm.isFinishInput.value = false
 									} else {

@@ -15,5 +15,7 @@ data class FaceResult(
 	val seqs: Set<Sequence>,
 	val factors: Factor,
 	var insight: String,
-	var regDate: String? = null
+	var regDate: String? = null,
+	var measureType : Int,
+	var bowSns : List<Int> = listOf()
 )

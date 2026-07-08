@@ -131,6 +131,15 @@ android {
 //noinspection UseTomlInstead
 dependencies {
     // 외부 라이브러리
+
+//    // Ktor 서버 코어 및 Netty 엔진
+//    implementation("io.ktor:ktor-server-core:2.3.12")
+//    implementation("io.ktor:ktor-server-netty:2.3.12")
+//    implementation("io.ktor:ktor-server-cors:2.3.12")
+//    implementation("io.ktor:ktor-server-content-negotiation:2.3.12")
+//    implementation("io.ktor:ktor-serialization-kotlinx-json:2.3.12")
+//    implementation("com.github.mwiede:jsch:0.2.20")
+
     implementation("com.microsoft.onnxruntime:onnxruntime-android:1.17.0")
     implementation("com.hbb20:ccp:2.7.0")
     implementation("com.github.PhilJay:MPAndroidChart:v3.1.0")

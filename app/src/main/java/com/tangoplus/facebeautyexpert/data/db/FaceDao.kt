@@ -84,7 +84,8 @@ interface FaceDao {
 
 	@Query("SELECT temp_server_sn FROM t_face_static WHERE activated = 1 ORDER BY temp_server_sn DESC LIMIT 1")
 	suspend fun getLatestTempServerSn(): Int
-
+	@Query("SELECT temp_server_sn FROM t_face_static WHERE measure_type = 2 AND uuid = :uuid ORDER BY reg_date DESC")
+	suspend fun getBowSns(uuid: String): List<Int>
 	// ------------------------------------# 설문지 넣기 #------------------------------------
 	@Insert
 	suspend fun insertPreCheckListResult(precheckListResult: PreCheckList): Long
@@ -95,4 +96,11 @@ interface FaceDao {
 	@Query("SELECT COUNT(DISTINCT local_sn) FROM t_face_pre_checklist")
 	suspend fun getPreChecklistCount(): Int
 
+
+	// ------------# expert survey #--------------
+	@Insert
+	suspend fun insertAfterSurvey(survey: AfterSurvey): Long
+
+	@Query("SELECT * FROM t_after_survey WHERE server_sn = :serverSn")
+	suspend fun getAfterSurvey(serverSn: Int): AfterSurvey?
 }

@@ -38,7 +38,7 @@ import com.tangoplus.facebeautyexpert.domain.util.PermissionUtility.getAllPermis
 import com.tangoplus.facebeautyexpert.domain.util.PreferenceUtility
 import com.tangoplus.facebeautyexpert.domain.util.UXUtility
 import com.tangoplus.facebeautyexpert.domain.util.UXUtility.startLongVibrate
-import com.tangoplus.facebeautyexpert.ui.info.InformationFragment
+import com.tangoplus.facebeautyexpert.ui.info.InfoContainerFragment
 import com.tangoplus.facebeautyexpert.ui.info.MeasureHistoryFragment
 import com.tangoplus.facebeautyexpert.ui.main.vm.FragmentViewModel
 import com.tangoplus.facebeautyexpert.ui.main.vm.MainViewModel
@@ -170,15 +170,14 @@ class MainActivity : AppCompatActivity() {
 		// 측정이 완료되고 바로 결과를 볼 때
 		val fd = FaceDatabase.getDatabase(this)
 		fDao = fd.faceDao()
+
 		if (mvm.tempServerSnAfterMeasure != -1) {
 			lifecycleScope.launch(Dispatchers.IO) {
-				val statics = fDao.getStatic(mvm.tempServerSnAfterMeasure)
-				val insight = fDao.getInsight(mvm.tempServerSnAfterMeasure)
-				val result = mvm.convertToFaceResult(this@MainActivity, statics, insight)
-//        scrollToView(bd.ibtnMBack, bd.nsvM)
+				val result = mvm.convertToFaceResult(this@MainActivity, fDao, mvm.tempServerSnAfterMeasure)
+
 				withContext(Dispatchers.Main) {
 					mvm.currentResult.value = result
-					navigateToMeasureHistoryInformation()
+					navigateToMeasureHistoryInformation(result.measureType)
 				}
 			}
 		}
@@ -607,25 +606,18 @@ class MainActivity : AppCompatActivity() {
 	}
 
 	// informationFragment로 바로 가는 함수
-	fun navigateToMeasureHistoryInformation() {
-		// 1. 바텀 네비게이션의 탭을 먼저 Measure History로 변경합니다.
-		// (이 코드가 실행되면 자동으로 기존에 만들어둔 setCurrentFragment가 호출되어
-		// MeasureHistoryFragment가 바닥에 깔립니다.)
+	fun navigateToMeasureHistoryInformation(measureType: Int) {
 		bd.bnv.selectedItemId = R.id.nav_measure_history
 
-		// 2. 프래그먼트 트랜잭션이 완전히 끝날 때까지 동기화 대기 (매우 중요!)
-		// 1번의 뷰 교체가 끝나기도 전에 3번이 실행되어 꼬이는 것을 방지합니다.
 		supportFragmentManager.executePendingTransactions()
 
-		// 3. 방금 깔린 MeasureHistoryFragment 위에 InformationFragment를 덮어씌웁니다.
 		supportFragmentManager.beginTransaction().apply {
 			setCustomAnimations(
 				android.R.anim.fade_in, android.R.anim.fade_out,
 				android.R.anim.fade_in, android.R.anim.fade_out
 			)
-			replace(R.id.flMain, InformationFragment())
+			replace(R.id.flMain, InfoContainerFragment.newInstance(measureType))
 
-			// 백스택에 추가하여 뒤로 가기 시 MeasureHistoryFragment로 돌아오게 만듦
 			addToBackStack(null)
 			commit()
 		}

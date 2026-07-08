@@ -188,4 +188,25 @@ object AnimationUtility {
 			prefs.edit { putLong(prefKey, System.currentTimeMillis()) }
 		}
 	}
+
+	fun crossFadeViews(oldView: View, newView: View) {
+		// 기존 리사이클러뷰 페이드 아웃
+		oldView.animate()
+			.alpha(0f)
+			.setDuration(400)
+			.withEndAction { oldView.visibility = View.GONE }
+
+		// 새로운 결과창 페이드 인 + 아래에서 위로 살짝 올라오는 효과
+		newView.alpha = 0f
+		newView.translationY = 50f // 밑으로 50포인트 내려놓은 상태에서
+		newView.visibility = View.VISIBLE
+
+		newView.animate()
+			.alpha(1f)
+			.translationY(0f) // 제자리로 올리면서 나타나기
+			.setDuration(500)
+			.start()
+	}
+
+
 }
