@@ -13,7 +13,7 @@ class PosterViewModel(private val pPrefs: PreferenceUtility)  : ViewModel() {
 
 	// 현재 수정/추가 중인 위치 (-1: 추가, 0~4: 수정)
 	var targetPosition: Int = -1
-	val MAX_COUNT = 5
+	val MAX_COUNT = 6
 
 	init {
 		loadPosters()

@@ -24,6 +24,7 @@ import com.tangoplus.facebeautyexpert.databinding.FragmentStatisticsBinding
 import com.tangoplus.facebeautyexpert.domain.util.BitmapUtility.getScreenOrientation
 import com.tangoplus.facebeautyexpert.domain.util.FileUtility.setOnSingleClickListener
 import com.tangoplus.facebeautyexpert.domain.vo.PreCheckList
+import com.tangoplus.facebeautyexpert.orbbec.application.MyApplication
 import com.tangoplus.facebeautyexpert.ui.adapter.ChartRVAdapter
 import com.tangoplus.facebeautyexpert.ui.adapter.PreCheckListFilterRVAdapter
 import com.tangoplus.facebeautyexpert.ui.adapter.SettingsRVAdapter
@@ -69,6 +70,17 @@ class StatisticsFragment : Fragment(), PreCheckListFilterCheckListener {
 	private fun setChart(counts: Map<String, Int>) {
 		val entries = ArrayList<BarEntry>()
 		val labels = ArrayList<String>()
+		val maxY = counts.values.maxOrNull() ?: 0
+		val unitHeightDp = 10f
+		val minHeightDp = 256f
+		val maxHeightDp = 500f
+		val density = resources.displayMetrics.density
+		val calculatedHeight = (maxY * unitHeightDp).let {
+			if (it < minHeightDp) minHeightDp else if (it > maxHeightDp) maxHeightDp else it
+		} * density
+		val bc = bd.bcCD
+		bc.layoutParams.height = calculatedHeight.toInt()
+		bc.requestLayout()
 
 		var index = 0f
 		for ((title, count) in counts) {
@@ -99,8 +111,6 @@ class StatisticsFragment : Fragment(), PreCheckListFilterCheckListener {
 		}
 		val bcData = BarData(dataSet)
 		bcData.barWidth = 0.5f
-
-		val bc = bd.bcCD
 
 		// ⭐ 렌더러와 기본 설정은 최초 1회만 설정
 		if (!isChartInitialized) {
@@ -161,8 +171,8 @@ class StatisticsFragment : Fragment(), PreCheckListFilterCheckListener {
 	private fun setAdapter() {
 		val rvs = listOf(bd.rvS0, bd.rvS1, bd.rvS2)
 		rvs.forEachIndexed { i, rv ->
-			val isPortrait = activity?.getScreenOrientation()?.contains("portrait") == true
-			val layoutManager = GridLayoutManager(requireContext(), if (isPortrait) 4 else 2)
+			val isTablet = MyApplication.isTablet()
+			val layoutManager = GridLayoutManager(requireContext(), if (isTablet) 4 else 2)
 			val cAdapter = PreCheckListFilterRVAdapter(cvm, i)
 			cAdapter.preChecklistFilterCheckLister = this@StatisticsFragment
 			rv.layoutManager = layoutManager

@@ -54,7 +54,6 @@ class UserSetupDialogFragment : DialogFragment() {
 	companion object {
 		private const val ARG_PARENT = "PARENT_TYPE"
 		fun newInstance(parent: Int) : UserSetupDialogFragment {
-			// TODO 여기서 input dialogfragment에다가 args를 건네줘서 onboarding 체크리스트 안보이게하기.
 			val fragment = UserSetupDialogFragment()
 			val args = Bundle()
 			args.putInt(ARG_PARENT, parent)
@@ -108,11 +107,15 @@ class UserSetupDialogFragment : DialogFragment() {
 	@SuppressLint("ClickableViewAccessibility")
 	override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
 		super.onViewCreated(view, savedInstanceState)
-		val bundle = Bundle()
-		val parentCase = bundle.getInt(ARG_PARENT)
+		val parentCase = arguments?.getInt(ARG_PARENT) ?: 0
+		bd.btnUSDProgress.text = when (parentCase) {
+			0 -> "사전 체크리스트 시작"
+			else -> "입력 완료"
+		}
+
 		// 초기 설정: 이름 입력창이 나오고, 키보드가 올라옴
 		bd.etUSDMobile.visibility = View.INVISIBLE
-		bd.btnUSDProgres.visibility = View.INVISIBLE
+//		bd.btnUSDProgress.visibility = View.INVISIBLE
 		bd.clUSDGender.visibility = View.INVISIBLE
 		bd.clUSDAgeRange.visibility = View.INVISIBLE
 		setGuideAnimation(bd.etUSDName)
@@ -121,7 +124,7 @@ class UserSetupDialogFragment : DialogFragment() {
 		}
 
 		// 버튼 클릭 위치 감지
-		bd.btnUSDProgres.setOnTouchListener { _, event ->
+		bd.btnUSDProgress.setOnTouchListener { _, event ->
 			if (event.action == MotionEvent.ACTION_DOWN) {
 				touchX = event.x
 				touchY = event.y
@@ -180,6 +183,7 @@ class UserSetupDialogFragment : DialogFragment() {
 					bd.etUSDMobile.setText(formatted) // setText를 사용하여 확실하게 변경
 					bd.etUSDMobile.setSelection(formatted.length) // 커서를 마지막 위치로 이동
 				}
+				if (s.toString().length > 1) bd.tvUSDMobileGuide.visibility  =  View.VISIBLE
 
 				isFormatting = false
 				ivm.mobileCondition.value =
@@ -187,6 +191,10 @@ class UserSetupDialogFragment : DialogFragment() {
 				if (ivm.mobileCondition.value == true) {
 					bd.etUSDMobile.backgroundTintList =
 						ContextCompat.getColorStateList(requireContext(), R.color.black)
+					bd.tvUSDMobileGuide.apply {
+						text = "올바른 전화번호 형식입니다"
+						setTextColor(ContextCompat.getColorStateList(requireContext(), R.color.accentContrast))
+					}
 					ivm.mobileValue.value = bd.etUSDMobile.text.toString().replace("-", "")
 
 					// 키보드 내리고 버튼 보이기
@@ -205,9 +213,14 @@ class UserSetupDialogFragment : DialogFragment() {
 				} else {
 					bd.etUSDMobile.backgroundTintList =
 						ContextCompat.getColorStateList(requireContext(), R.color.red)
+					bd.tvUSDMobileGuide.apply {
+						setTextColor(ContextCompat.getColorStateList(requireContext(), R.color.accent))
+						text = "휴대전화번호: 010으로 시작하는 휴대폰 번호를 정확히 입력해주세요"
+					}
 				}
 			}
 		})
+
 		bd.etUSDMobile.setOnEditorActionListener { _, actionId, _ ->
 			if (actionId == EditorInfo.IME_ACTION_DONE || actionId == EditorInfo.IME_ACTION_NEXT) {
 				if (ivm.mobileCondition.value == true) {
@@ -232,18 +245,18 @@ class UserSetupDialogFragment : DialogFragment() {
 		ivm.inputCondition.observe(viewLifecycleOwner) { allTrue ->
 			if (allTrue) {
 				if (!ivm.isShownBtn) {
-					setGuideAnimation(bd.btnUSDProgres, 1)
+					setGuideAnimation(bd.btnUSDProgress, 1)
 					ivm.isShownBtn = true
 				}
-				bd.btnUSDProgres.isEnabled = true
+				bd.btnUSDProgress.isEnabled = true
 			} else {
-				bd.btnUSDProgres.isEnabled = false
+				bd.btnUSDProgress.isEnabled = false
 			}
 		}
 
-		bd.btnUSDProgres.setOnSingleClickListener {
+		bd.btnUSDProgress.setOnSingleClickListener {
 			val key = getString(R.string.kekeke)
-			val uuid = generateCustomUUID(ivm.nameValue.value, ivm.mobileValue.value, key)
+			val uuid = generateCustomUUID(ivm.nameValue.value, ivm.mobileValue.value, ivm.birthdayValue.value,ivm.genderValue.value,key)
 			Log.v("createdUUID", uuid)
 			mvm.currentUUID = uuid
 
@@ -269,7 +282,6 @@ class UserSetupDialogFragment : DialogFragment() {
 		bd.etUSDMobile.setText("")
 	}
 
-
 	private fun namePatternCheck(ivm: InputViewModel, input: EditText): TextWatcher {
 		val nameRegex = "^[가-힣]{2,5}$|^[a-zA-Z]{2,20}$"
 		val namePatternCheck = Pattern.compile(nameRegex)
@@ -277,6 +289,7 @@ class UserSetupDialogFragment : DialogFragment() {
 			override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
 			override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
 			override fun afterTextChanged(s: Editable?) {
+				if (s.toString().length > 1) bd.tvUSDNameGuide.visibility  =  View.VISIBLE
 				ivm.nameCondition.value = namePatternCheck.matcher(input.text.toString()).find()
 //                Log.v("이름컨디션", "${ivm.nameCondition.value}, ${input.text}")
 //                Log.v("보스", "${ivm.inputCondition.value}, ${ivm.nameCondition.value}, ${ivm.mobileCondition.value}")
@@ -284,9 +297,18 @@ class UserSetupDialogFragment : DialogFragment() {
 					input.backgroundTintList =
 						ContextCompat.getColorStateList(requireContext(), R.color.black)
 					ivm.nameValue.value = input.text.toString().trim()
+					bd.tvUSDNameGuide.apply {
+						text = "사용가능한 이름 형식입니다"
+						setTextColor(ContextCompat.getColorStateList(requireContext(), R.color.accentContrast))
+					}
+
 				} else {
 					input.backgroundTintList =
 						ContextCompat.getColorStateList(requireContext(), R.color.red)
+					bd.tvUSDNameGuide.apply {
+						text = "이름: 한국어(2-5자), 영어(2-20자)만 사용가능합니다."
+						setTextColor(ContextCompat.getColorStateList(requireContext(), R.color.accent))
+					}
 				}
 			}
 		}
@@ -307,7 +329,7 @@ class UserSetupDialogFragment : DialogFragment() {
 				ivm.mobileValue.value =
 					(PreferenceUtility(requireContext()).getLastTempServerSn() + 1).toString() // 측정 결과 저장 전이니 일단 +1 한 temp_server_sn을 mobile로 uuid생성
 
-				val uuid = generateCustomUUID(ivm.nameValue.value, ivm.mobileValue.value, key)
+				val uuid = generateCustomUUID(ivm.nameValue.value, ivm.mobileValue.value, ivm.birthdayValue.value,ivm.genderValue.value,key)
 				Log.v("createdUUID", uuid)
 				mvm.currentUUID = uuid
 				ivm.isFinishInput.value = true

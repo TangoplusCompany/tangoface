@@ -49,8 +49,17 @@ class UserRVAdapter(
 				if ( it.length > 1) currentItem.name.substring(0, 1) else "G"
 			}
 			holder.tvUICircle.text = circleInitial
-
-
+			holder.tvUICircle.background = ContextCompat.getDrawable(context, when (currentItem.gender) {
+				0 -> R.drawable.color_gradation_accent_contrast_64
+				1 -> R.drawable.color_gradation_accent_64
+				else -> R.drawable.color_gradation_bg_64
+			})
+			holder.tvUICircle.setTextColor(
+				ContextCompat.getColor(context, when (currentItem.gender) {
+					0 -> R.color.bg
+					else -> R.color.subColor100
+				})
+			)
 //            Log.v("mobiel", "${currentItem.userMobile.isNullOrEmpty()}, ${currentItem.userMobile}")
 			val mobile = if (currentItem.mobile?.length == 11) {
 				"📱 " + currentItem.mobile.substring(0, 3) + "-****-" + currentItem.mobile.substring(7)

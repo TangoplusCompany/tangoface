@@ -8,6 +8,7 @@ import android.graphics.BitmapFactory
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.DashPathEffect
+import android.graphics.ImageDecoder
 import android.graphics.Matrix
 import android.graphics.Paint
 import android.graphics.Path
@@ -15,9 +16,12 @@ import android.graphics.PointF
 import android.graphics.Rect
 import android.hardware.display.DisplayManager
 import android.icu.text.DecimalFormat
+import android.os.Build
+import android.provider.MediaStore
 import android.util.Log
 import android.view.Display
 import android.view.Surface
+import androidx.core.content.ContentProviderCompat.requireContext
 import androidx.core.content.ContextCompat
 import androidx.core.graphics.toColorInt
 import androidx.fragment.app.Fragment
@@ -38,12 +42,14 @@ import kotlin.math.sqrt
 import androidx.core.graphics.scale
 import androidx.core.graphics.createBitmap
 import com.tangoplus.facebeautyexpert.R
+import com.tangoplus.facebeautyexpert.domain.util.LandmarkUtility.extractBowCoordinates
 import com.tangoplus.facebeautyexpert.domain.util.LandmarkUtility.extractFace3DCoordinates
 import com.tangoplus.facebeautyexpert.domain.util.LandmarkUtility.extractFaceCoordinates
 import com.tangoplus.facebeautyexpert.domain.util.LandmarkUtility.extractHairLine3DCoordinate
 import com.tangoplus.facebeautyexpert.domain.util.LandmarkUtility.extractHairLineCoordinate
 import com.tangoplus.facebeautyexpert.domain.util.LandmarkUtility.extractPose3DCoordinates
 import com.tangoplus.facebeautyexpert.domain.util.LandmarkUtility.extractPoseCoordinates
+import com.tangoplus.facebeautyexpert.domain.util.LandmarkUtility.scaleHsvToFHD
 import com.tangoplus.facebeautyexpert.domain.util.LandmarkUtility.scaleLandmarksToFHD
 import com.tangoplus.facebeautyexpert.domain.vision.face.FaceLandmarkResult
 import com.tangoplus.facebeautyexpert.domain.vo.BitmapFlag
@@ -55,6 +61,7 @@ import kotlinx.coroutines.withContext
 
 object BitmapUtility {
 	data class DrawImageUiModel(
+		val fragment: Fragment,
 		val originalBitmap: Bitmap,
 		val faceResult: FaceResult,
 		val setedLine: MutableSet<DrawLine>,
@@ -72,7 +79,6 @@ object BitmapUtility {
 		try {
 			val seqs = faceResult.seqs
 			val seqIndex = seqs.indexOf(seq)
-			Log.v("getCombindBitmap", "$seqs, ${seqIndex}, ${faceResult.mediaUri.getOrNull(seqIndex)}")
 
 			if (seqIndex == -1) {
 				return@withContext Triple(createInfoBitmap(fragment.context, 0), listOf(), null)
@@ -82,7 +88,6 @@ object BitmapUtility {
 
 
 			val path = getPathFromContentUri(fragment.requireContext(), imageUri)
-			Log.v("imageUri", "$path")
 
 			val bitmap = BitmapFactory.decodeStream(
 				fragment.requireContext().contentResolver.openInputStream(imageUri)
@@ -109,6 +114,7 @@ object BitmapUtility {
 			val face3DCoordinates = extractFace3DCoordinates(jsonData)
 			val poseCoordinates = extractPoseCoordinates(jsonData)
 			val pose3DCoordinates = extractPose3DCoordinates(jsonData)
+			val bowCoordinates = extractBowCoordinates(jsonData)
 			val hairLineCoordinate = extractHairLineCoordinate(jsonData)
 			val hairLine3DCoordinate = extractHairLine3DCoordinate(jsonData)
 			val faceLandmarkResult = fromFaceCoordinates(faceCoordinates)
@@ -126,17 +132,21 @@ object BitmapUtility {
 				face3DCoordinates,
 				scaledPLs!!,
 				pose3DCoordinates,
+				scaleHsvToFHD(bowCoordinates),
 				scaledHairline,
 				hairLine3DCoordinate
 			)
 			val isLineOn = ivm.getLineOn()
 			val isGridLineOn = ivm.getGridLineOn()
+			val isMoireOn = ivm.getMoireOn()
 			val flags = BitmapFlag(
 				isLineOn = isLineOn,
-				isGridLineOn = isGridLineOn
+				isGridLineOn = isGridLineOn,
+				isMoireOn = isMoireOn
 			)
 			val (combinedBitmap, textBoxes, faceRect) = combineImageAndOverlay(
 				DrawImageUiModel(
+					fragment,
 					processedBitmap,
 					faceResult,
 					setedLine = ivm.currentCheckedLines,
@@ -321,19 +331,18 @@ object BitmapUtility {
 			}
 
 			if (dim.setedLine.contains(DrawLine.A_SHOULDER)) {
-				val topLm0 = dimFLS.landmarks[11]
-				val bottomLm0 = dimFLS.landmarks[12]
+				val topLm0 = dimPLS.landmarks[11]
+				val bottomLm0 = dimPLS.landmarks[12]
 				val x00 = topLm0.x
 				val y00 = topLm0.y
 				val x01 = bottomLm0.x
 				val y01 = bottomLm0.y
-				drawExtendedLine(canvas, x00, y00, x01, y01, 50f, 50f, whitePaint, )
+				drawExtendedLine(canvas, x00, y00, x01, y01, 0f, 0f, whitePaint, )
 			}
 
 			if (dim.setedLine.contains(DrawLine.NECK)) {
 				val topLm0 = dimPLS.landmarks[11]
 				val bottomLm0 = dimPLS.landmarks[12]
-
 				val middleShoulderX = (topLm0.x + bottomLm0.x) / 2
 				val middleShoulderY = (topLm0.y + bottomLm0.y) / 2
 				val nose = dimFLS.landmarks[1]
@@ -350,7 +359,7 @@ object BitmapUtility {
 					0f,
 					100f,
 					whitePaint,
-				) // neck에 대해서 끝 위치
+				)
 			}
 
 			if (dim.setedLine.contains(DrawLine.FACE)) {
@@ -413,8 +422,6 @@ object BitmapUtility {
 					100f,
 					whitePaint,
 				)
-
-
 
 				val leftLm1 = dimFLS.landmarks[234]
 				val rightLm1 = dimFLS.landmarks[454]
@@ -1181,6 +1188,42 @@ object BitmapUtility {
 				drawExtendedLine(canvas, x1, y4, x1 + 1, y4, 300f, 300f, redPaint)
 			}
 		}
+
+		if (dim.flags.isMoireOn && dim.faceResult.moireUri.isNotEmpty()) {
+			val originalMoireBitmap = BitmapFactory.decodeStream(
+				dim.fragment.requireContext().contentResolver.openInputStream(dim.faceResult.moireUri.first()!!)
+			)
+
+			if (originalMoireBitmap != null) {
+				Log.d("BitmapSize", "Original moire size: ${originalMoireBitmap.width}x${originalMoireBitmap.height}")
+
+				val targetWidth = 1920
+				val targetHeight = 1080
+				val matrix = Matrix().apply {
+					// x축을 -1로 설정하여 좌우를 뒤집고, 1920x1080 비율에 맞게 스케일을 계산합니다.
+					postScale(1f * (targetWidth.toFloat() / originalMoireBitmap.width), // -1f
+						targetHeight.toFloat() / originalMoireBitmap.height)
+
+					// 뒤집힌 이미지가 화면 밖으로 나가지 않도록 가로 크기만큼 보정 이동해 줍니다.
+					postTranslate(targetWidth.toFloat(), 0f)
+				}
+				val scaledMoire = Bitmap.createBitmap(
+					originalMoireBitmap,
+					0, 0,
+					originalMoireBitmap.width,
+					originalMoireBitmap.height,
+					matrix,
+					true
+				)
+				canvas.drawBitmap(scaledMoire, 0f, 0f, null)
+				if (scaledMoire != originalMoireBitmap) {
+					originalMoireBitmap.recycle()
+				}
+				scaledMoire.recycle()
+			} else {
+				Log.e("BitmapSize", "모아레 이미지를 로드하지 못했습니다.")
+			}
+		}
 // ------------------------------# 선택에 따라 바로 그리기 #----------------------------------
 		val (textBoxInfos, faceRect) = createRawDataBox(dim)
 		return Triple(drawDirectionUIOnBitmap(resultBitmap), textBoxInfos, faceRect)
@@ -1444,16 +1487,14 @@ object BitmapUtility {
 		val seqIndex = seqss.indexOf(dim.seq)
 
 		val keys = when (dl) {
-			DrawLine.A_SAGGING_FACE ->
-				when (seq) {
-					Sequence.COMFORT -> listOf("comfort_left_sagging_scale", "comfort_right_sagging_scale")
-					else -> listOf()
-				}
+			DrawLine.A_SAGGING_FACE -> when (seq) {
+				Sequence.COMFORT -> listOf("comfort_left_sagging_scale", "comfort_right_sagging_scale")
+				else -> listOf()
+			}
 			DrawLine.A_SHOULDER -> when (seq) {
 				Sequence.COMFORT -> listOf("comfort_shoulder_horizontal_angle")
 				else -> listOf("neck_extention_shoulder_horizontal_angle")
 			}
-
 			DrawLine.NECK -> when (seq) {
 				Sequence.COMFORT -> listOf("comfort_neck_vertical_angle", "comfort_neck_length")
 				else -> listOf("neck_extention_neck_vertical_angle")
@@ -1487,8 +1528,6 @@ object BitmapUtility {
 					)
 					else -> listOf()
 				}
-
-
 			DrawLine.L_CORNEA -> when (seq) {
 				Sequence.COMFORT -> listOf(
 					"comfort_left_cornea_length",
@@ -1497,20 +1536,18 @@ object BitmapUtility {
 				else -> listOf()
 			}
 			DrawLine.EYEBROW -> when (seq) {
-					Sequence.COMFORT -> listOf(
-						"comfort_left_eyebrow_horizontal_angle",
-						"comfort_right_eyebrow_horizontal_angle",
-						"comfort_left_eyebrow_start_length",
-						"comfort_left_eyebrow_arch_length",
-						"comfort_left_eyebrow_end_length",
-						"comfort_right_eyebrow_start_length",
-						"comfort_right_eyebrow_arch_length",
-						"comfort_right_eyebrow_end_length",
-					)
-					else -> listOf()
-				}
-
-
+				Sequence.COMFORT -> listOf(
+					"comfort_left_eyebrow_horizontal_angle",
+					"comfort_right_eyebrow_horizontal_angle",
+					"comfort_left_eyebrow_start_length",
+					"comfort_left_eyebrow_arch_length",
+					"comfort_left_eyebrow_end_length",
+					"comfort_right_eyebrow_start_length",
+					"comfort_right_eyebrow_arch_length",
+					"comfort_right_eyebrow_end_length",
+				)
+				else -> listOf()
+			}
 			DrawLine.NOSE -> when (seq) {
 				Sequence.COMFORT -> listOf(
 					"comfort_nose_height",
@@ -1716,7 +1753,7 @@ object BitmapUtility {
 						TextBoxData(
 							anchorX = finalPos.x,
 							anchorY = finalPos.y,
-							targetGridIndex = 27,
+							targetGridIndex = 26,
 							info = TextDrawInfo(
 								title = "처짐 지수",
 								items = listOf(
@@ -1737,7 +1774,7 @@ object BitmapUtility {
 				if (rawData.isNotEmpty()) {
 					textBoxes.add(TextBoxData(
 						anchorX = finalPos.x, anchorY = finalPos.y,
-						targetGridIndex = 32, // 중앙 하단부
+						targetGridIndex = 31, // 중앙 하단부
 						info = TextDrawInfo("어깨 각도", listOf(TextItem("너비:", "${rawData.getOrNull(0) ?: ""}º")))
 					))
 				}
@@ -1761,13 +1798,17 @@ object BitmapUtility {
 				val finalPos = calculateFinalPixel(boxLocation.x, boxLocation.y)
 				val rawData = extractRawData(dim, DrawLine.FACE)
 				if (rawData.isNotEmpty()) {
+					val v10 = rawData.getOrNull(1)
+					val v20 = rawData.getOrNull(2)
+					val v1 = if (v10 == null || v10 == "0") "🚫" else v10 + "cm"
+					val v2 = if (v20 == null || v20 == "0") "🚫" else v20 + "cm"
 					textBoxes.add(TextBoxData(
 						anchorX = finalPos.x, anchorY = finalPos.y,
 						targetGridIndex = 15, // 얼굴 왼쪽 구역
 						info = TextDrawInfo("얼굴 정보", if (dim.seq == Sequence.COMFORT) {
 							listOf(
-								TextItem("너비:", "${rawData.getOrNull(1) ?: ""}cm"),
-								TextItem("높이:", "${rawData.getOrNull(2) ?: ""}cm"),
+								TextItem("너비:", v1),
+								TextItem("높이:", v2),
 								TextItem("각도:", "${rawData.getOrNull(0) ?: ""}º")
 							)
 						} else  listOf(
@@ -1805,15 +1846,26 @@ object BitmapUtility {
 				if (rawData.isNotEmpty()) {
 					// 왼쪽 눈 (233번)
 					val leftEyePos = calculateFinalPixel(flm[233].x, flm[233].y,)
+
+					val v1 = listOf(
+						rawData.getOrNull(6),
+						rawData.getOrNull(8),
+					).joinToString(" | ") { if (it == null || it == "0") "🚫" else "${it}cm" }
+
 					textBoxes.add(TextBoxData(
 						anchorX = leftEyePos.x, anchorY = leftEyePos.y,
 						targetGridIndex = 16, // 좌측 상단
 						info = TextDrawInfo("왼쪽 눈", listOf(
 							TextItem("눈매:", "${rawData.getOrNull(0)}º"),
-							TextItem("너비 | 높이:", "${rawData.getOrNull(6)}cm | ${rawData.getOrNull(8)}cm"),
+							TextItem("너비 | 높이:", v1),
 							TextItem("눈꼬리 | 눈앞머리", "${rawData.getOrNull(4)}º | ${rawData.getOrNull(2)}º")
 						))
 					))
+
+					val v2 = listOf(
+						rawData.getOrNull(7),
+						rawData.getOrNull(9),
+					).joinToString(" | ") { if (it == null || it == "0") "🚫" else "${it}cm" }
 
 					// 오른쪽 눈 (453번)
 					val rightEyePos = calculateFinalPixel(flm[453].x, flm[453].y,)
@@ -1822,7 +1874,7 @@ object BitmapUtility {
 						targetGridIndex = 18, // 우측 상단
 						info = TextDrawInfo("오른쪽 눈", listOf(
 							TextItem("눈매:", "${rawData.getOrNull(1)}º"),
-							TextItem("너비 | 높이:", "${rawData.getOrNull(7)}cm | ${rawData.getOrNull(9)}cm"),
+							TextItem("너비 | 높이:", v2),
 							TextItem("눈앞머리 | 눈꼬리", "${rawData.getOrNull(3)} | ${rawData.getOrNull(5)}º")
 						))
 					))
@@ -1834,14 +1886,27 @@ object BitmapUtility {
 				if (rawData.isNotEmpty()) {
 					// 왼쪽 눈 (233번)
 					val leftEyePos = calculateFinalPixel(flm[66].x, flm[66].y,)
+
+					val v1 = listOf(
+						rawData.getOrNull(4),
+						rawData.getOrNull(3),
+						rawData.getOrNull(2)
+					).joinToString(" | ") { if (it == null || it == "0") "🚫" else "${it}cm" }
+
 					textBoxes.add(TextBoxData(
 						anchorX = leftEyePos.x, anchorY = leftEyePos.y,
 						targetGridIndex = 6, // 좌측 상단
 						info = TextDrawInfo("왼쪽 눈썹", listOf(
 							TextItem("각도: ", "${rawData.getOrNull(0)}º"),
-							TextItem("두께: ", "${rawData.getOrNull(4)}cm | ${rawData.getOrNull(3)}cm | ${rawData.getOrNull(2)}cm")
+							TextItem("두께: ", v1)
 						))
 					))
+
+					val v2 = listOf(
+						rawData.getOrNull(5),
+						rawData.getOrNull(6),
+						rawData.getOrNull(7)
+					).joinToString(" | ") { if (it == null || it == "0") "🚫" else "${it}cm" }
 
 					// 오른쪽 눈 (453번)
 					val rightEyePos = calculateFinalPixel(flm[296].x, flm[296].y,)
@@ -1850,7 +1915,7 @@ object BitmapUtility {
 						targetGridIndex = 8, // 우측 상단
 						info = TextDrawInfo("오른쪽 눈썹", listOf(
 							TextItem("각도: ", "${rawData.getOrNull(1)}º"),
-							TextItem("두께: ", "${rawData.getOrNull(5)}cm | ${rawData.getOrNull(6)}cm | ${rawData.getOrNull(7)}cm")
+							TextItem("두께: ", v2)
 						))
 					))
 				}
@@ -1860,11 +1925,17 @@ object BitmapUtility {
 				val noseCenter = calculateFinalPixel(flm[164].x, flm[164].y)
 				val rawData = extractRawData(dim, DrawLine.NOSE)
 				if (rawData.isNotEmpty()) {
+
+					val v1 = listOf(
+						rawData.getOrNull(0),
+						rawData.getOrNull(1),
+					).joinToString(" | ") { if (it == null || it == "0") "🚫" else "${it}cm" }
+
 					textBoxes.add(TextBoxData(
 						anchorX = noseCenter.x, anchorY = noseCenter.y,
 						targetGridIndex = 18, // 중앙 상단 (얼굴 중앙)
 						info = TextDrawInfo("코 정보", listOf(
-							TextItem("길이 | 너비:", "${rawData.getOrNull(0)}cm | ${rawData.getOrNull(1)}cm"),
+							TextItem("길이 | 너비:", v1),
 							TextItem("콧날개 각:", "${rawData.getOrNull(2)}º")
 						))
 					))
@@ -1930,19 +2001,25 @@ object BitmapUtility {
 
 				// 좌측 볼 (132번)
 				if (rawData.isNotEmpty()) {
+
+					val v10 = rawData.getOrNull(0)
+					val v1 = if (v10 == null || v10 == "0") "🚫" else v10 + "㎠"
+
 					val leftPos = calculateFinalPixel(flm[132].x, flm[132].y,)
 					textBoxes.add(TextBoxData(
 						anchorX = leftPos.x, anchorY = leftPos.y,
 						targetGridIndex = 20, // 왼쪽 하단부
-						info = TextDrawInfo("볼 너비(좌)", listOf(TextItem("", "${rawData.getOrNull(0) ?: ""}㎠")))
+						info = TextDrawInfo("볼 너비(좌)", listOf(TextItem("", v1)))
 					))
 
+					val v20 = rawData.getOrNull(1)
+					val v2 = if (v20 == null || v20 == "0") "🚫" else v20 + "㎠"
 					// 우측 볼 (361번)
 					val rightPos = calculateFinalPixel(flm[361].x, flm[361].y,)
 					textBoxes.add(TextBoxData(
 						anchorX = rightPos.x, anchorY = rightPos.y,
 						targetGridIndex = 24, // 오른쪽 하단부
-						info = TextDrawInfo("볼 너비(우)", listOf(TextItem("", "${rawData.getOrNull(1) ?: ""}㎠")))
+						info = TextDrawInfo("볼 너비(우)", listOf(TextItem("", v2)))
 					))
 				}
 			}
@@ -1950,15 +2027,29 @@ object BitmapUtility {
 				val mousePos = calculateFinalPixel(flm[17].x, flm[17].y,)
 				val rawData = extractRawData(dim, DrawLine.MOUSE)
 				if (rawData.isNotEmpty()) {
+
+					val v10 = rawData.getOrNull(2)
+					val v20 = rawData.getOrNull(3)
+					val v30 = rawData.getOrNull(4)
+					val v40 = rawData.getOrNull(5)
+
+					val v1 = if (v10 == null || v10 == "0") "🚫" else v10 + "cm"
+					val v2 = if (v20 == null || v20 == "0") "🚫" else v20 + "cm"
+					val v3 = if (v30 == null || v10 == "0") "🚫" else v30 + "cm"
+					val v4 = if (v40 == null || v20 == "0") "🚫" else v40 + "cm"
+
+
+
+
 					textBoxes.add(TextBoxData(
 						anchorX = mousePos.x, anchorY = mousePos.y,
 						targetGridIndex = 27, // 하단 중앙
 						info = TextDrawInfo("입 정보", listOf(
-							TextItem("인중 길이:", "${rawData.getOrNull(2)}cm"),
-							TextItem("입 길이", "${rawData.getOrNull(3)}cm"),
+							TextItem("인중 길이:", v1),
+							TextItem("입 길이", v2),
 							TextItem("입꼬리 각도:", "${rawData.getOrNull(0)}º / ${rawData.getOrNull(1)}º"),
-							TextItem("윗입술 두께", "${rawData.getOrNull(4)}cm"),
-							TextItem("아래입술 두께", "${rawData.getOrNull(5)}cm")
+							TextItem("윗입술 두께", v3),
+							TextItem("아래입술 두께", v4)
 						))
 					))
 				}
@@ -1987,35 +2078,35 @@ object BitmapUtility {
 						anchorX = 0f, anchorY = 0f,
 						targetGridIndex = 30, // 하단 중앙
 						info = TextDrawInfo("", listOf(
-							TextItem("", verticalRatio[0]),
+							TextItem("", "${verticalRatio[0]}"),
 						))
 					))
 					textBoxes.add(TextBoxData(
 						anchorX = 0f, anchorY = 0f,
 						targetGridIndex = 31, // 하단 중앙
 						info = TextDrawInfo("", listOf(
-							TextItem("", verticalRatio[1]),
+							TextItem("", "${verticalRatio[1]}%"),
 						))
 					))
 					textBoxes.add(TextBoxData(
 						anchorX = 0f, anchorY = 0f,
 						targetGridIndex = 32, // 하단 중앙
 						info = TextDrawInfo("", listOf(
-							TextItem("", verticalRatio[2]),
+							TextItem("", "${verticalRatio[2]}%"),
 						))
 					))
 					textBoxes.add(TextBoxData(
 						anchorX = 0f, anchorY = 0f,
 						targetGridIndex = 33, // 하단 중앙
 						info = TextDrawInfo("", listOf(
-							TextItem("", verticalRatio[3]),
+							TextItem("", "${verticalRatio[3]}%"),
 						))
 					))
 					textBoxes.add(TextBoxData(
 						anchorX = 0f, anchorY = 0f,
 						targetGridIndex = 34, // 하단 중앙
 						info = TextDrawInfo("", listOf(
-							TextItem("", verticalRatio[4]),
+							TextItem("", "${verticalRatio[4]}%"),
 						))
 					))
 				}
@@ -2028,21 +2119,21 @@ object BitmapUtility {
 						anchorX = 0f, anchorY = 0f,
 						targetGridIndex = 9, // 하단 중앙
 						info = TextDrawInfo("", listOf(
-							TextItem("", "${verticalRatio[0]}"),
+							TextItem("", "${verticalRatio[0]}%"),
 						))
 					))
 					textBoxes.add(TextBoxData(
 						anchorX = 0f, anchorY = 0f,
 						targetGridIndex = 19, // 하단 중앙
 						info = TextDrawInfo("", listOf(
-							TextItem("", "${verticalRatio[1]}"),
+							TextItem("", "${verticalRatio[1]}%"),
 						))
 					))
 					textBoxes.add(TextBoxData(
 						anchorX = 0f, anchorY = 0f,
 						targetGridIndex = 29, // 하단 중앙
 						info = TextDrawInfo("", listOf(
-							TextItem("", "${verticalRatio[2]}"),
+							TextItem("", "${verticalRatio[2]}%"),
 						))
 					))
 				}

@@ -97,7 +97,7 @@ object HairLineUtility {
 		faceLandmarks: FaceLandmarkResult,
 		// ★ 튜닝 파라미터 - 조정 가능
 		skinHairLabThreshold: Double = 25.0,  // 피부→머리 색변화 임계값 (낮을수록 민감)
-		sustainLength: Int = 3                 // 연속으로 threshold 넘어야 하는 픽셀 수
+		sustainLength: Int = 5                // 연속으로 threshold 넘어야 하는 픽셀 수
 	): HairlineResult? {
 
 		if (faceLandmarks.landmarks.size < 339) {

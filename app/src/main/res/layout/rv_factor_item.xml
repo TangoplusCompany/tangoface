@@ -10,7 +10,7 @@
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:orientation="horizontal">
+        android:orientation="vertical">
 
         <androidx.constraintlayout.widget.ConstraintLayout
             android:layout_width="match_parent"
@@ -24,7 +24,7 @@
                 android:layout_marginTop="15dp"
                 android:text="하관 비대칭"
                 android:textColor="@color/accent"
-                android:textSize="24sp"
+                android:textSize="16sp"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toTopOf="parent" />
@@ -32,7 +32,7 @@
             <TextView
                 android:id="@+id/tvFIValue0"
                 android:layout_width="0dp"
-                android:layout_height="128dp"
+                android:layout_height="80dp"
                 android:layout_marginTop="5dp"
                 android:layout_marginBottom="15dp"
                 android:background="@drawable/bckgnd_20"
@@ -41,7 +41,7 @@
                 android:padding="10dp"
                 android:text="asdfasdfasdf"
                 android:textColor="@color/accent300"
-                android:textSize="20sp"
+                android:textSize="14sp"
                 app:layout_constraintBottom_toBottomOf="parent"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
@@ -74,15 +74,15 @@
                 android:layout_marginTop="15dp"
                 android:text="피부처짐 지수"
                 android:textColor="@color/accent"
-                android:textSize="24sp"
+                android:textSize="16sp"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toTopOf="parent" />
 
             <LinearLayout
                 android:id="@+id/llFIValue"
-                android:layout_width="wrap_content"
-                android:layout_height="128dp"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
                 android:layout_marginTop="5dp"
                 android:layout_marginBottom="15dp"
                 android:background="@drawable/bckgnd_20"
@@ -91,7 +91,8 @@
                 app:layout_constraintBottom_toBottomOf="parent"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toBottomOf="@+id/tvFITitle1">
+                app:layout_constraintTop_toBottomOf="@+id/tvFITitle1"
+                app:layout_constraintWidth_percent="0.5">
 
                 <TextView
                     android:id="@+id/tvFIValue10"
@@ -101,7 +102,7 @@
                     android:gravity="center"
                     android:padding="10dp"
                     android:textColor="@color/accent300"
-                    android:textSize="18sp" />
+                    android:textSize="14sp" />
 
                 <TextView
                     android:id="@+id/tvFIValue11"
@@ -111,7 +112,7 @@
                     android:gravity="center"
                     android:padding="10dp"
                     android:textColor="@color/accent300"
-                    android:textSize="18sp" />
+                    android:textSize="14sp" />
             </LinearLayout>
 
             <ImageButton
@@ -141,7 +142,7 @@
                 android:layout_marginTop="15dp"
                 android:text="얼굴형"
                 android:textColor="@color/accent"
-                android:textSize="24sp"
+                android:textSize="16sp"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toTopOf="parent" />
@@ -149,16 +150,17 @@
             <TextView
                 android:id="@+id/tvFIValue2"
                 android:layout_width="0dp"
-                android:layout_height="128dp"
+                android:layout_height="80dp"
                 android:layout_marginTop="5dp"
                 android:layout_marginBottom="15dp"
                 android:background="@drawable/bckgnd_20"
                 android:backgroundTint="@color/bg300"
                 android:gravity="center"
+                android:lineSpacingExtra="12dp"
                 android:padding="10dp"
                 android:text="asdfasdfasdf"
                 android:textColor="@color/accent300"
-                android:textSize="20sp"
+                android:textSize="14sp"
                 app:layout_constraintBottom_toBottomOf="parent"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"

@@ -23,8 +23,8 @@ data class FaceStatic(
 	val reg_date: String? = getCurrentDateTime(),
 	val scale_factor: Float = 1f,
 	val depth_result: Boolean = false,
-
-	// 🍿🍿🍿🍿🍿🍿 현재 사용하지 않는 칼럼들 🍿🍿🍿🍿🍿🍿🍿
+	val measure_type: Int = 0, // 0:NORMAL 1:EXPERT 2:BOW
+	// 🍿🍿🍿🍿🍿🍿 현재 사용하지 않는 칼럼들 🍿🍿🍿🍿🍿🍿
 	val front_camera: Boolean = true,
 	val bow_eye_horizontal_angle: Float = 0f,
 	val bow_tip_of_lips_horizontal_angle: Float = 0f,
@@ -90,6 +90,7 @@ data class FaceStatic(
 	val vertical_ratio: String = "",
 
 	val comfort_face_shape: FaceShape = FaceShape.DEFAULT,
+	val comfort_face_shape_sub: FaceShape = FaceShape.DEFAULT,
 	val comfort_left_sagging_scale: Float = 0f,
 	val comfort_right_sagging_scale: Float = 0f,
 	val comfort_length_symmetry_factor : Float = 0f,

@@ -16,6 +16,7 @@ class PreferenceUtility(context: Context) {
 	private val bPrefs = context.getSharedPreferences("backup_prefs", Context.MODE_PRIVATE)
 	private val mPrefs = context.getSharedPreferences("measure_prefs", Context.MODE_PRIVATE)
 	private val fPrefs = context.getSharedPreferences("flicker_prefs", Context.MODE_PRIVATE)
+	private val veloPrefs = context.getSharedPreferences("velocity_prefs", Context.MODE_PRIVATE)
 	private val pPrefs = context.getSharedPreferences("poster_prefs", Context.MODE_PRIVATE)
 	private val KEY_LAST_SN = "last_temp_server_sn"
 	private val KEY_LAST_COUNT = "last_data_count"
@@ -89,6 +90,7 @@ class PreferenceUtility(context: Context) {
 
 	// ---- poster url 저장 ----
 	private val KEY_IMAGES = "images"
+	private val KEY_IS_INIT = "is_initialized"
 	private val MAX_COUNT = 6
 	fun savePosters( urls: List<String>) {
 		val json = Gson().toJson(urls.take(MAX_COUNT))
@@ -101,22 +103,25 @@ class PreferenceUtility(context: Context) {
 		return Gson().fromJson(json, type)
 	}
 	fun initDefaultPosters(context: Context) {
-		val currentPosters = getPosters()
-		Log.v("포스터", "$currentPosters")
-		// 저장된 데이터가 없을 때만 실행
-		if (currentPosters.isEmpty()) {
-			val defaultResIds = listOf(R.drawable.poster_main_0, R.drawable.poster_main_1)
-			val defaultPaths = mutableListOf<String>()
+		// 1. 이미 초기화(기본값 생성이) 완료되었다면 바로 종료
+		val isInitialized = pPrefs.getBoolean(KEY_IS_INIT, false)
+		if (isInitialized) return
 
-			defaultResIds.forEachIndexed { index, resId ->
-				val fileName = "default_poster_$index.jpg"
-				val path = copyResourceToFile(context, resId, fileName)
-				path?.let { defaultPaths.add(it) }
-			}
+		Log.v("포스터", "최초 실행: 기본 포스터를 생성합니다.")
 
-			if (defaultPaths.isNotEmpty()) {
-				savePosters( defaultPaths)
-			}
+		val defaultResIds = listOf(R.drawable.poster_main_0, R.drawable.poster_main_1, R.drawable.poster_main_2)
+		val defaultPaths = mutableListOf<String>()
+
+		defaultResIds.forEachIndexed { index, resId ->
+			val fileName = "default_poster_$index.jpg"
+			val path = copyResourceToFile(context, resId, fileName)
+			path?.let { defaultPaths.add(it) }
+		}
+
+		if (defaultPaths.isNotEmpty()) {
+			savePosters(defaultPaths)
+			// 2. ✅ 초기화 완료 플래그를 true로 저장 (리스트를 다 지워도 이건 계속 true)
+			pPrefs.edit { putBoolean(KEY_IS_INIT, true) }
 		}
 	}
 
@@ -137,5 +142,16 @@ class PreferenceUtility(context: Context) {
 			e.printStackTrace()
 			null
 		}
+	}
+
+	// --------# count prefs #------
+	fun setSlideVelocity(velo: Float) {
+		veloPrefs.edit {
+			putFloat("SLIDE_VELOCITY", velo)
+		}
+	}
+
+	fun getSlideVelocity(): Float {
+		return veloPrefs.getFloat("SLIDE_VELOCITY" , 7.0f)
 	}
 }

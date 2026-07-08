@@ -3,9 +3,13 @@ package com.tangoplus.facebeautyexpert.domain.util
 import android.content.Context
 import android.media.MediaPlayer
 import android.media.SoundPool
+import android.os.Build
+import android.os.VibrationEffect
+import android.os.Vibrator
+import android.os.VibratorManager
 import com.tangoplus.facebeautyexpert.R
 
-object SoundManager {
+object UXUtility {
 	private val soundMap = mutableMapOf<Int, Int>()
 	private var soundPool: SoundPool? = null
 	private var mediaPlayer: MediaPlayer? = null
@@ -40,4 +44,19 @@ object SoundManager {
 		mediaPlayer?.release()
 		mediaPlayer = null
 	}
+
+	private fun getVibrator(context: Context): Vibrator {
+		return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+			val vibratorManager = context.getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as VibratorManager
+			vibratorManager.defaultVibrator
+		} else {
+			context.getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
+		}
+	}
+	fun startLongVibrate(context: Context) {
+		val vibrator = getVibrator(context)
+		vibrator.vibrate(VibrationEffect.createPredefined(VibrationEffect.EFFECT_HEAVY_CLICK))
+	}
+
+
 }

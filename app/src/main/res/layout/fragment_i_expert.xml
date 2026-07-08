@@ -1,0 +1,459 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.coordinatorlayout.widget.CoordinatorLayout xmlns:android="http://schemas.android.com/apk/res/android"
+                                                     xmlns:app="http://schemas.android.com/apk/res-auto"
+                                                     xmlns:tools="http://schemas.android.com/tools"
+                                                     android:layout_width="match_parent"
+                                                     android:layout_height="match_parent"
+                                                     tools:context=".ui.info.IExpertFragment">
+
+    <androidx.core.widget.NestedScrollView
+            android:id="@+id/nsvIE"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="@color/accentContrast"
+            android:fillViewport="true">
+
+        <androidx.constraintlayout.widget.ConstraintLayout
+                android:id="@+id/clIE"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="@color/bg"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent">
+
+            <androidx.cardview.widget.CardView
+                    android:id="@+id/cardView3"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    app:cardBackgroundColor="#00FFFFFF"
+                    app:cardCornerRadius="0dp"
+                    app:cardElevation="0dp"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toTopOf="parent">
+                <androidx.constraintlayout.widget.ConstraintLayout
+                        android:id="@+id/clIEVideo"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:visibility="invisible">
+
+                    <FrameLayout
+                            android:id="@+id/flIE"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            app:layout_constraintBottom_toBottomOf="parent"
+                            app:layout_constraintEnd_toEndOf="parent"
+                            app:layout_constraintStart_toStartOf="parent"
+                            app:layout_constraintTop_toTopOf="parent">
+
+                        <com.google.android.exoplayer2.ui.PlayerView
+                                android:id="@+id/pvIE"
+                                android:layout_width="match_parent"
+                                android:layout_height="match_parent"
+                                app:auto_show="false"
+                                app:controller_layout_id="@layout/exo_player_control_view"
+                                app:resize_mode="fit"
+                                app:surface_type="surface_view"
+                                app:use_controller="true" />
+
+                    </FrameLayout>
+
+                    <com.tangoplus.facebeautyexpert.ui.view.OverlayView
+                            android:id="@+id/ovIE"
+                            android:layout_width="0dp"
+                            android:layout_height="0dp"
+                            app:layout_constraintBottom_toBottomOf="@id/flIE"
+                            app:layout_constraintEnd_toEndOf="@id/flIE"
+                            app:layout_constraintStart_toStartOf="@id/flIE"
+                            app:layout_constraintTop_toTopOf="@id/flIE" />
+                </androidx.constraintlayout.widget.ConstraintLayout>
+
+                <androidx.constraintlayout.widget.ConstraintLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content" android:visibility="invisible" android:id="@+id/clIEImage">
+
+                    <com.davemorrissey.labs.subscaleview.SubsamplingScaleImageView
+                            android:id="@+id/ssivIE"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:visibility="visible"
+                            app:layout_constraintEnd_toEndOf="parent"
+                            app:layout_constraintStart_toStartOf="parent"
+                            app:layout_constraintTop_toTopOf="parent"/>
+
+                    <com.tangoplus.facebeautyexpert.ui.view.TextBoxOverlayView
+                            android:id="@+id/tbovIE"
+                            android:layout_width="0dp"
+                            android:layout_height="0dp"
+                            app:layout_constraintBottom_toBottomOf="@id/ssivIE"
+                            app:layout_constraintEnd_toEndOf="@id/ssivIE"
+                            app:layout_constraintStart_toStartOf="@id/ssivIE"
+                            app:layout_constraintTop_toTopOf="@id/ssivIE"/>
+
+                    <com.tangoplus.facebeautyexpert.ui.view.AngleMeasureView
+                            android:id="@+id/amvIE"
+                            android:layout_width="0dp"
+                            android:layout_height="0dp"
+                            app:layout_constraintBottom_toBottomOf="@id/ssivIE"
+                            app:layout_constraintEnd_toEndOf="@id/ssivIE"
+                            app:layout_constraintStart_toStartOf="@id/ssivIE"
+                            app:layout_constraintTop_toTopOf="@id/ssivIE"/>
+
+
+                    <TextView
+                            android:id="@+id/tvIEInfo"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="10dp"
+                            android:layout_marginTop="20dp"
+                            android:background="@drawable/bckgnd_12"
+                            android:backgroundTint="@color/bg15"
+                            android:gravity="center_vertical"
+                            android:padding="5dp"
+                            android:text="이강휘, 010-4544-9999"
+                            android:textColor="@color/white"
+                            android:textSize="14sp"
+                            app:layout_constraintStart_toStartOf="parent"
+                            app:layout_constraintTop_toTopOf="parent"/>
+
+
+                </androidx.constraintlayout.widget.ConstraintLayout>
+
+            </androidx.cardview.widget.CardView>
+
+            <LinearLayout
+                    android:id="@+id/llIEBtns"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="bottom|end"
+                    android:layout_margin="10dp"
+                    android:layout_marginTop="10dp"
+                    android:orientation="horizontal"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toBottomOf="@+id/cardView3">
+
+                <TextView
+                        android:id="@+id/btnIEMoire"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="bottom|end"
+                        android:layout_marginBottom="5dp"
+                        android:background="@drawable/effect_20"
+                        android:backgroundTint="#1A140000"
+                        android:gravity="center"
+                        android:paddingStart="16dp"
+                        android:paddingTop="8dp"
+                        android:paddingEnd="16dp"
+                        android:paddingBottom="8dp"
+                        android:text="🏳️‍🌈 Moire 보기"
+                        android:textColor="@color/white"
+                        android:textSize="18dp" />
+                <TextView
+                        android:id="@+id/btnIEClean"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="bottom|end"
+                        android:layout_weight="1"
+                        android:background="@drawable/effect_20"
+                        android:backgroundTint="#1A140000"
+                        android:gravity="center"
+                        android:paddingStart="6dp"
+                        android:paddingTop="4dp"
+                        android:paddingEnd="6dp"
+                        android:paddingBottom="4dp"
+                        android:text="🔍 가이드라인 끄기"
+                        android:textColor="@color/white"
+                        android:textSize="12sp" />
+
+
+                <TextView
+                        android:id="@+id/btnIEGrid"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="bottom|end"
+                        android:layout_weight="1.1"
+                        android:background="@drawable/effect_20"
+                        android:backgroundTint="#1A140000"
+                        android:gravity="center"
+                        android:paddingStart="6dp"
+                        android:paddingTop="4dp"
+                        android:paddingEnd="6dp"
+                        android:paddingBottom="4dp"
+                        android:text="ꖛ 그리드 끄기 "
+                        android:textColor="@color/white"
+                        android:textSize="12sp" />
+
+                <TextView
+                        android:id="@+id/btnIEAngle"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="bottom|end"
+                        android:layout_weight="1.1"
+                        android:background="@drawable/effect_20"
+                        android:backgroundTint="#1A140000"
+                        android:gravity="center"
+                        android:paddingStart="6dp"
+                        android:paddingTop="4dp"
+                        android:paddingEnd="6dp"
+                        android:paddingBottom="4dp"
+                        android:text="📐 각도계산 켜기"
+                        android:textColor="@color/white"
+                        android:textSize="12sp" />
+
+            </LinearLayout>
+
+            <androidx.recyclerview.widget.RecyclerView
+                    android:id="@+id/rvIE1"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="10dp"
+                    android:layout_marginTop="10dp"
+                    android:layout_marginEnd="10dp"
+                    android:background="@drawable/bckgnd_20"
+                    android:backgroundTint="@color/bg700"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toBottomOf="@id/llIEBtns">
+
+            </androidx.recyclerview.widget.RecyclerView>
+
+            <androidx.recyclerview.widget.RecyclerView
+                    android:id="@+id/rvIE2"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="10dp"
+                    android:layout_marginTop="10dp"
+                    android:layout_marginEnd="10dp"
+                    android:layout_marginBottom="60dp"
+                    app:layout_constraintBottom_toBottomOf="parent"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toBottomOf="@id/rvIE1"
+                    app:layout_constraintVertical_bias="0.0">
+
+            </androidx.recyclerview.widget.RecyclerView>
+
+            <androidx.recyclerview.widget.RecyclerView
+                    android:id="@+id/rvIE3"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="10dp"
+                    android:layout_marginTop="10dp"
+                    android:layout_marginEnd="10dp"
+                    android:layout_marginBottom="60dp"
+                    app:layout_constraintBottom_toBottomOf="parent"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toBottomOf="@id/rvIE2"
+                    app:layout_constraintVertical_bias="0.0">
+
+            </androidx.recyclerview.widget.RecyclerView>
+            <ImageView
+                    android:id="@+id/ivCheckFeedback"
+                    android:layout_width="100dp"
+                    android:layout_height="100dp"
+                    android:visibility="gone"
+                    android:src="@android:drawable/checkbox_on_background"
+                    android:contentDescription="완료 애니메이션용 이미지"
+                    app:layout_constraintTop_toTopOf="@id/rvIE3"
+                    app:layout_constraintBottom_toBottomOf="@id/rvIE3"
+                    app:layout_constraintStart_toStartOf="@id/rvIE3"
+                    app:layout_constraintEnd_toEndOf="@id/rvIE3" />
+
+            <androidx.constraintlayout.widget.ConstraintLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="bottom" android:id="@+id/clIEHint"
+                    app:layout_constraintEnd_toEndOf="parent" app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toBottomOf="@+id/rvIE2">
+
+                <TextView
+                        android:id="@+id/tvIEScrollHint"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="20dp"
+                        android:gravity="center"
+                        android:text="아래로 슬라이드 해서 AI 인사이트를 확인해 보세요 ✨"
+                        android:textColor="@color/accent"
+                        android:textSize="12sp"
+                        app:layout_constraintBottom_toBottomOf="parent"
+                        app:layout_constraintEnd_toEndOf="parent"
+                        app:layout_constraintStart_toStartOf="parent"/>
+
+                <View
+                        android:id="@+id/vIEScrollHint"
+                        android:layout_width="wrap_content"
+                        android:layout_height="128dp"
+                        android:background="@drawable/color_gradation_accent_transparent"
+                        app:layout_constraintBottom_toBottomOf="parent"
+                        app:layout_constraintEnd_toEndOf="parent"
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintTop_toTopOf="parent"/>
+            </androidx.constraintlayout.widget.ConstraintLayout>
+
+        </androidx.constraintlayout.widget.ConstraintLayout>
+    </androidx.core.widget.NestedScrollView>
+
+    <View
+            android:id="@+id/vIEim"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="#000000"
+            android:alpha="0"
+            android:visibility="gone" />
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+            android:id="@+id/bsIE"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@drawable/bckgnd_top_20"
+            android:backgroundTint="@color/bg500"
+            android:clickable="true"
+            android:focusable="true"
+            android:visibility="visible"
+            app:behavior_hideable="true"
+            app:layout_behavior="com.google.android.material.bottomsheet.BottomSheetBehavior">
+
+        <androidx.core.widget.NestedScrollView
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:fillViewport="true">
+
+            <androidx.constraintlayout.widget.ConstraintLayout
+                    android:id="@+id/clIEResult"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content">
+
+                <TextView
+                        android:id="@+id/textView6"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="20dp"
+                        android:layout_marginTop="10dp"
+                        android:text="AI 생성 인사이트"
+                        android:textColor="@color/accent"
+                        android:textSize="18sp"
+                        android:visibility="visible"
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintTop_toTopOf="parent" />
+
+                <ImageView
+                        android:id="@+id/imageView4"
+                        android:layout_width="86dp"
+                        android:layout_height="64dp"
+                        android:layout_marginStart="15dp"
+                        android:src="@drawable/ic_gemini_logo"
+                        android:visibility="visible"
+                        app:layout_constraintBottom_toBottomOf="@+id/textView6"
+                        app:layout_constraintStart_toEndOf="@+id/textView6"
+                        app:layout_constraintTop_toTopOf="@+id/textView6" />
+
+                <TextView
+                        android:id="@+id/textView9"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="30dp"
+                        android:text="* 데이터 기반 Gemini AI 분석으로 실제와 차이가 있을 수 있습니다."
+                        android:textColor="@color/subColor500"
+                        android:textSize="12sp"
+                        android:visibility="visible"
+                        app:layout_constraintEnd_toEndOf="parent"
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintTop_toBottomOf="@+id/tvIEInsight" />
+
+                <TextView
+                        android:id="@+id/tvIEInsight"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="20dp"
+                        android:layout_marginTop="30dp"
+                        android:layout_marginEnd="20dp"
+                        android:textColor="@color/subColor100"
+                        android:textSize="14sp"
+                        android:visibility="visible"
+                        app:layout_constraintEnd_toEndOf="parent"
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintTop_toBottomOf="@+id/textView6" />
+
+                <TextView
+                        android:id="@+id/tvIEClose"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="20dp"
+                        android:layout_marginTop="25dp"
+                        android:layout_marginEnd="20dp"
+                        android:layout_marginBottom="10dp"
+                        android:background="@drawable/color_gradation_accent_64"
+                        android:gravity="center"
+                        android:paddingTop="10dp"
+                        android:paddingBottom="10dp"
+                        android:text="닫기"
+                        android:textColor="@color/subColor100"
+                        app:layout_constraintBottom_toBottomOf="parent"
+                        app:layout_constraintEnd_toEndOf="parent"
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintTop_toBottomOf="@+id/textView6" />
+            </androidx.constraintlayout.widget.ConstraintLayout>
+        </androidx.core.widget.NestedScrollView>
+
+        <androidx.constraintlayout.widget.ConstraintLayout
+                android:id="@+id/clIEShimmer"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:background="@color/bg500"
+                android:minHeight="250dp"
+                android:visibility="visible"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent">
+
+            <com.facebook.shimmer.ShimmerFrameLayout
+                    android:id="@+id/sflIE"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    app:layout_constraintBottom_toTopOf="@+id/tvIEGeminiShimmer"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toTopOf="parent"
+                    app:layout_constraintVertical_chainStyle="packed"
+                    app:layout_constraintWidth_percent="0.25"
+                    app:shimmer_auto_start="true"
+                    app:shimmer_colored="false"
+                    app:shimmer_direction="left_to_right"
+                    app:shimmer_duration="1500"
+                    app:shimmer_highlight_color="#CCFFFFFF"
+                    app:shimmer_repeat_count="-1"
+                    app:shimmer_tilt="45">
+
+                <ImageView
+                        android:id="@+id/imageView2"
+                        android:layout_width="wrap_content"
+                        android:layout_height="128dp"
+                        android:scaleType="fitCenter"
+                        android:src="@drawable/ic_gemini_logo" />
+            </com.facebook.shimmer.ShimmerFrameLayout>
+
+            <TextView
+                    android:id="@+id/tvIEGeminiShimmer"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="20dp"
+                    android:layout_marginTop="20dp"
+                    android:layout_marginEnd="20dp"
+                    android:layout_marginBottom="40dp"
+                    android:gravity="center"
+                    android:textColor="@color/subColor100"
+                    android:textSize="16sp"
+                    app:layout_constraintBottom_toBottomOf="parent"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toBottomOf="@+id/sflIE" />
+
+        </androidx.constraintlayout.widget.ConstraintLayout>
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+</androidx.coordinatorlayout.widget.CoordinatorLayout>

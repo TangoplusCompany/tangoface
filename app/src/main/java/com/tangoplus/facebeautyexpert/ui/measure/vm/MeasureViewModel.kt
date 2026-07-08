@@ -4,15 +4,24 @@ import android.content.ContentValues
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.graphics.BlurMaskFilter
+import android.graphics.Canvas
+import android.graphics.Color
 import android.graphics.ImageDecoder
 import android.graphics.Matrix
+import android.graphics.Paint
+import android.graphics.Path
+import android.graphics.RectF
+import android.graphics.Region
 import android.media.ExifInterface
 import android.net.Uri
 import android.os.Build
+import android.os.Environment
 import android.provider.MediaStore
 import android.util.JsonWriter
 import android.util.Log
 import android.widget.Toast
+import androidx.annotation.OptIn
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.graphics.scale
 import androidx.lifecycle.MutableLiveData
@@ -58,14 +67,65 @@ import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import kotlin.use
 import androidx.core.net.toUri
+import androidx.fragment.app.FragmentActivity
+import androidx.lifecycle.LiveData
+import androidx.media3.common.MediaItem
+import androidx.media3.common.MimeTypes
+import androidx.media3.common.audio.ChannelMixingAudioProcessor
+import androidx.media3.common.util.UnstableApi
+import androidx.media3.effect.Crop
+import androidx.media3.effect.Presentation
+import androidx.media3.effect.ScaleAndRotateTransformation
+import androidx.media3.transformer.Composition
+import androidx.media3.transformer.EditedMediaItem
+import androidx.media3.transformer.Effects
+import androidx.media3.transformer.ExportException
+import androidx.media3.transformer.ExportResult
+import androidx.media3.transformer.Transformer
+import com.orbbec.obsensor.DepthFrame
+import com.orbbec.obsensor.Device
+import com.orbbec.obsensor.HoleFillingFilter
+import com.orbbec.obsensor.Pipeline
+import com.orbbec.obsensor.types.CameraDistortion
+import com.orbbec.obsensor.types.FrameType
+import com.tangoplus.facebeautyexpert.domain.opencv.HsvColorTracker
+import com.tangoplus.facebeautyexpert.domain.util.BitmapUtility.faceOutLineIndexes
+import com.tangoplus.facebeautyexpert.domain.util.FileUtility.getMoireFileName
+import com.tangoplus.facebeautyexpert.domain.util.LandmarkUtility.buildFaceMaskPathFromPoints
+import com.tangoplus.facebeautyexpert.domain.util.LandmarkUtility.convertFaceLandmarksTo3D
+import com.tangoplus.facebeautyexpert.domain.util.LandmarkUtility.generateGradientLayer
+import com.tangoplus.facebeautyexpert.domain.util.LandmarkUtility.k1
+import com.tangoplus.facebeautyexpert.domain.util.LandmarkUtility.k2
+import com.tangoplus.facebeautyexpert.domain.util.LandmarkUtility.k3
+import com.tangoplus.facebeautyexpert.domain.util.LandmarkUtility.p1
+import com.tangoplus.facebeautyexpert.domain.util.LandmarkUtility.p2
+import com.tangoplus.facebeautyexpert.domain.util.LandmarkUtility.toScaledIntrinsic
+import com.tangoplus.facebeautyexpert.domain.util.LandmarkUtility.undistortLandmarks
+import com.tangoplus.facebeautyexpert.domain.util.MathHelpers.getNormalizedDistance
 import com.tangoplus.facebeautyexpert.domain.util.MathHelpers.getScaleFactor
+import com.tangoplus.facebeautyexpert.domain.util.MathHelpers.toFloatTarget
 import com.tangoplus.facebeautyexpert.domain.util.PreferenceUtility
+import com.tangoplus.facebeautyexpert.domain.util.copyFrom
 import com.tangoplus.facebeautyexpert.domain.vision.face.FaceLandmarkAdapter
+import com.tangoplus.facebeautyexpert.domain.vo.MeasureType
+import com.tangoplus.facebeautyexpert.orbbec.vo.ScaledIntrinsic
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.launch
+import kotlin.io.use
+import kotlin.math.abs
+import kotlin.math.min
 import kotlin.text.replace
 
 class MeasureViewModel : ViewModel() {
-	// 측정할 것들만 가져오기
-	var allSeqs = Sequence.entries.toMutableList()
+	private val sequenceMap = mapOf(
+		MeasureType.NORMAL to listOf(Sequence.COMFORT, Sequence.NECK_EXTENTION),
+		MeasureType.EXPERT to Sequence.entries.filter { it != Sequence.BOW },
+		MeasureType.BOW to listOf(Sequence.BOW)
+	)
+	var measureType: MeasureType? = null
+
+	val allSeqs: List<Sequence>
+		get() = sequenceMap[measureType] ?: emptyList()
 	var currentSeq = Sequence.COMFORT
 
 	fun moveToNextSeq(): Boolean {
@@ -95,22 +155,22 @@ class MeasureViewModel : ViewModel() {
 	// ----------# flag들 #-----------
 
 	// 🍿🍿🍿🍿🍿 results들 🍿🍿🍿🍿🍿
-	var latestResult: List<Point3D> = listOf()
-	var customResult: FaceLandmarkResult? = null
+	var face3DResult: List<Point3D> = listOf()
+	var face2DResult: FaceLandmarkResult? = null
 	// 🍿🍿🍿🍿🍿🍿🍿🍿🍿🍿🍿🍿🍿🍿🍿🍿🍿🍿🍿🍿🍿🍿🍿🍿🍿🍿🍿🍿
 	// detect Face Pose Landmarker
-	var poseLandmarker: PoseLandmarkerHelper? = null
-	var flh: FaceLandmarkerHelper? = null
+//	var poseLandmarker: PoseLandmarkerHelper? = null
+//	var flh: FaceLandmarkerHelper? = null
 	// 🍿🍿🍿🍿🍿🍿🍿🍿🍿🍿🍿🍿🍿🍿🍿🍿🍿🍿🍿🍿🍿🍿🍿🍿🍿🍿🍿🍿
 
 	// 측정 초기화
 	var initMeasure = MutableLiveData(true)
 
-	val resultTargetFs = JSONArray()
-	val hsvColorJo = JSONObject()
-	val hsvFLCoordinatesJA = JSONArray() // 484개의 얼굴좌표 담는 곳
-	val hsvPLCoordinatesJA = JSONArray()
-	var hsvMediaFileName = ""
+//	val resultTargetFs = JSONArray()
+//	val hsvColorJo = JSONObject()
+//	val hsvFLCoordinatesJA = JSONArray() // 484개의 얼굴좌표 담는 곳
+//	val hsvPLCoordinatesJA = JSONArray()
+//	var hsvMediaFileName = ""
 
 	// 결과값 임시로 담을 곳 (영상 녹화가 끝나면 초기화)
 	var tempStaticJo: JSONObject? = null
@@ -149,7 +209,14 @@ class MeasureViewModel : ViewModel() {
 	val currentPlrCoordinate = mutableListOf<Pair<Float, Float>>()
 	val current3DPlrCoordinate = mutableListOf<Triple<Float, Float, Float>>() // 절대 좌표
 	val currentHairLine3DCoordinate = mutableListOf<Triple<Float, Float, Float>>()
-	fun getCurrentDateTime(): String = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))
+	val currentHairLine2DCoordinate = mutableListOf<Pair<Float, Float>>()
+	// ----------------# 보우 #-----------------
+	var currentTarget: List<HsvColorTracker.Target> = listOf()
+	val resultTargetFs = JSONArray()
+	val hsvColorJo = JSONObject()
+	val hsvFLCoordinatesJA = JSONArray() // 484개의 얼굴좌표 담는 곳
+	val hsvPLCoordinatesJA = JSONArray()
+	var hsvMediaFileName = ""
 
 	// ----------------# 헤어라인 #---------------
 	var latestDepthData: ShortArray? = null
@@ -200,13 +267,11 @@ class MeasureViewModel : ViewModel() {
 	var isDepthCameraMeasure = true
 
 	fun resultBundleToJson(
-//		resultBundle: FaceLandmarkResult,
-//		flr3D: List<Point3D> = listOf(),
 		seq: Sequence
 	) {
-		Log.v("3d좌표?", "${latestResult.size}")
-		if (customResult?.landmarks?.isNotEmpty() == true) {
-			val flr = customResult?.landmarks!!
+		Log.v("3d좌표?", "${face3DResult.size}")
+		if (face2DResult?.landmarks?.isNotEmpty() == true) {
+			val flr = face2DResult?.landmarks!!
 			Log.v("3d좌표?", "현재seq: ${flr}")
 
 			/* 1. 키오스크 -> pose좌표까지 좌우 반전 -> 8이 왼쪽 어깨
@@ -224,13 +289,11 @@ class MeasureViewModel : ViewModel() {
 			current3DCoordinate.clear()
 
 			flr.forEachIndexed { index, faceLandmark ->
-				val scaledX = calculateScreenX(
-					if (isDepthCameraMeasure) (1f - faceLandmark.x) else faceLandmark.x
-				)
+				val scaledX = calculateScreenX(1f - faceLandmark.x)
 				val scaledY = calculateScreenY( faceLandmark.y)
-				val x = latestResult.getOrNull(index)?.x ?: 0f
-				val y = latestResult.getOrNull(index)?.y ?: 0f
-				val z = latestResult.getOrNull(index)?.z ?: 0f
+				val x = face3DResult.getOrNull(index)?.x ?: 0f
+				val y = face3DResult.getOrNull(index)?.y ?: 0f
+				val z = face3DResult.getOrNull(index)?.z ?: 0f
 
 				val ja = JSONArray().apply {
 					put(index)
@@ -251,9 +314,7 @@ class MeasureViewModel : ViewModel() {
 					)
 				)
 				// 3d 변환 좌표
-				if (isDepthCameraMeasure) {
-					current3DCoordinate.add(Triple(x, y, z))
-				}
+				current3DCoordinate.add(Triple(x, y, z))
 			}
 			// seq 1개의 좌표를 담고 tempCoordinates는 초기화
 			coordinatesJA.put(tempCoordinateJA)
@@ -348,7 +409,14 @@ class MeasureViewModel : ViewModel() {
 					get3DFloorDistance(flr3D[2], rightAlaEndPoint),
 				)
 				val earFlapAngle = calculateSlope(vmFlr[61].first, vmFlr[61].second, vmFlr[291].first, vmFlr[291].second)
-				val alaAngle = calculateSlope(leftAlaStartPoint.first, leftAlaStartPoint.second, rightAlaEndPoint.first, rightAlaEndPoint.second)
+
+				val leftAla2DPoint = listOf(209, 49, 64)
+					.map { flr[it] }
+					.minByOrNull { it.x } ?: flr[49]
+				val rightAla2DPoint = listOf(429, 279, 294)
+					.map { flr[it] }
+					.maxByOrNull { it.x } ?: flr[279]
+				val alaAngle = calculateSlope(leftAla2DPoint.x, leftAla2DPoint.y, rightAla2DPoint.x, rightAla2DPoint.y)
 
 				// 🎀🎀🎀🎀🎀 하안부 🎀🎀🎀🎀🎀
 
@@ -373,8 +441,8 @@ class MeasureViewModel : ViewModel() {
 				)
 
 				val cheeksExtents = if (isDepthCameraMeasure) {
-					val leftCheeksPoint = leftCheeks.map { current3DCoordinate[it] }
-					val rightCheeksPoint = rightCheeks.map { current3DCoordinate[it] }
+//					val leftCheeksPoint = leftCheeks.map { current3DCoordinate[it] }
+//					val rightCheeksPoint = rightCheeks.map { current3DCoordinate[it] }
 //						Log.v("뎁스카메라", "5-Cheeks: $leftCheeksPoint, $rightCheeksPoint")
 					Pair(
 						calculateAreaWithScaling(leftCheeks, currentCoordinate, current3DCoordinate),
@@ -451,44 +519,37 @@ class MeasureViewModel : ViewModel() {
 					calculateSlope(vmFlr[152].first, vmFlr[152].second, vmFlr[10].first, vmFlr[10].second)
 				val midShoulder3D =
 					Triple((plr3D[11].first + plr3D[12].first) / 2, (plr3D[11].second + plr3D[12].second) / 2, (plr3D[11].third + plr3D[12].third) / 2)
-				val neckHeight = get3DDistance(midShoulder3D, flr3D[152])
-				val faceHeight = get3DFloorDistance(flr3D[152], currentHairLine3DCoordinate[3])
+				val neckHeight = get3DFloorDistance(midShoulder3D, flr3D[152])
+				val faceHeight = if (isDepthCameraMeasure) get3DFloorDistance(flr3D[152], currentHairLine3DCoordinate[3]) else 0f
 //					val neckWidth = get3DDistance(midShoulder3D, flr3D[152])
-				Log.v("faceHeight", "${flr3D[152]}, ${currentHairLine3DCoordinate[3]}")
 
 				val leftIndices = listOf(162, 127, 234, 93, 132, 58)
 				val rightIndices = listOf(389, 356, 454, 323, 401, 435)
 
-// 1. Z값 보정을 "먼저" 전체적으로 실행 (Point-by-Point 검사)
-				for (i in leftIndices.indices) {
-					val leftIdx = leftIndices[i]
-					val rightIdx = rightIndices[i]
-
-					val leftPoint = flr3D[leftIdx]
-					val rightPoint = flr3D[rightIdx]
-
-					// 왼쪽 깊이가 대칭되는 오른쪽보다 0.5f(50cm) 이상 비정상적으로 멀다면
-					if ((leftPoint.third - rightPoint.third) > 0.5f) {
-						// X, Y는 원래 왼쪽 값을 유지하고, Z만 오른쪽 정상 값을 빌려와서 덮어쓰기
-						flr3D[leftIdx] = Triple(leftPoint.first, leftPoint.second, rightPoint.third)
-					}
+				val widths = leftIndices.indices.map { i ->
+					val left = flr3D[leftIndices[i]]
+					val right = flr3D[rightIndices[i]]
+					get3DFloorDistance(left, right)
 				}
 
-			// 2. 보정이 완료된 깨끗한 flr3D에서 최외곽 좌표 추출
-				val leftFacePoint = leftIndices.map { flr3D[it] }.minByOrNull { it.first } ?: flr3D[234]
-				val rightFacePoint = rightIndices.map { flr3D[it] }.maxByOrNull { it.first } ?: flr3D[454]
-
-				val faceWidth = get3DFloorDistance(leftFacePoint, rightFacePoint)
-				val faceShape = classifyFaceShape(vmFlr, currentHairLine3DCoordinate)
+				// 그중 가장 넓은 지점의 거리를 faceWidth로 결정합니다.
+				val maxHorizontalWidth = widths.maxOrNull() ?: 0f
+				val faceWidth = maxHorizontalWidth
+				Log.v("너비들", "face: $faceWidth, $faceHeight | ${neckHeight}")
+				val fs = classifyFaceShape(currentCoordinate, currentHairLine3DCoordinate)
+				val faceShape = fs.primaryShape
+				val faceShapeSub = fs.secondaryShape
 				val facialAxisShape = classifyFacialAxis(vmFlr)
 				val verticalRatio = calculateVerticalRatio(vmFlr)
 				val seggingDepths = classifySaggingDepth(vmFlr)
 				val asymmetrys = classifyFacialAsymmetry(vmFlr)
 				// 양쪾을 벌렸을 때 7.2 안벌렸을 때 4.6
+
 				val tempStatic = JSONObject().apply {
 
 					put("vertical_ratio", verticalRatio)
-					put("comfort_face_shape", faceShape.shape)
+					put("comfort_face_shape", faceShape)
+					put("comfort_face_shape_sub", faceShapeSub)
 					put("comfort_left_sagging_scale", seggingDepths.first)
 					put("comfort_right_sagging_scale", seggingDepths.second)
 					put("comfort_length_symmetry_factor", asymmetrys.first)
@@ -556,7 +617,228 @@ class MeasureViewModel : ViewModel() {
 				Log.v("스태틱저장", "0: 스태틱 저장 ${staticJA.length()}")
 			}
 
+			// ℹ️ℹ️ EXPERT ️ℹ️ℹ️
+			if (seq == Sequence.OCCLUSAL) {
+				val eyeBrowAngle =
+					calculateSlope(vmFlr[107].first, vmFlr[107].second, vmFlr[336].first, vmFlr[336].second)
 
+				// 468: 실제 오른쪽 눈  473: 실제 왼쪽 눈
+				val eyeAngle =
+					calculateSlope(vmFlr[468].first, vmFlr[468].second, vmFlr[473].first, vmFlr[473].second)
+				val correctionValue = 180f - eyeAngle
+				// 입술끝 왼: 291 오: 61
+				val tipOfLipsAngle =
+					calculateSlope(vmFlr[61].first, vmFlr[61].second, vmFlr[291].first, vmFlr[291].second)
+				val correctTipOfLipsAngle = correctingValue(tipOfLipsAngle, correctionValue)
+				// 턱
+				val tipOfChinsAngle =
+					calculateSlope(vmFlr[148].first, vmFlr[148].second, vmFlr[377].first, vmFlr[377].second)
+				val correctTipOfChinsAngle = correctingValue(tipOfChinsAngle, correctionValue)
+				val canthusOralAngle = Pair(
+					calculateSlope(vmFlr[33].first, vmFlr[33].second, vmFlr[61].first, vmFlr[61].second),
+					calculateSlope(vmFlr[291].first, vmFlr[291].second, vmFlr[263].first, vmFlr[263].second)
+				)
+				val nasalWingLipsAngle = Pair(
+					calculateSlope(vmFlr[64].first, vmFlr[64].second, vmFlr[61].first, vmFlr[61].second),
+					calculateSlope(vmFlr[291].first, vmFlr[291].second, vmFlr[294].first, vmFlr[294].second)
+				)
+
+				val cheeksExtents = if (isDepthCameraMeasure) {
+					Pair(
+						calculateAreaWithScaling(leftCheeks, currentCoordinate, current3DCoordinate),
+						calculateAreaWithScaling(rightCheeks, currentCoordinate, current3DCoordinate)
+					)
+				} else {
+					val leftCheeksPoint = leftCheeks.map { currentCoordinate[it] }
+					val rightCheeksPoint = rightCheeks.map { currentCoordinate[it] }
+					Log.v("뎁스카메라", "2-Cheeks: $leftCheeksPoint, $rightCheeksPoint")
+					Pair(
+						calculatePolygonArea(leftCheeksPoint),
+						calculatePolygonArea(rightCheeksPoint)
+					)
+				}
+
+				val sideHeadAngle = Pair(
+					calculateAngle(
+						vmFlr[156].first,
+						vmFlr[156].second,
+						vmFlr[143].first,
+						vmFlr[143].second,
+						vmFlr[111].first,
+						vmFlr[111].second
+					),
+					calculateAngle(
+						vmFlr[383].first,
+						vmFlr[383].second,
+						vmFlr[372].first,
+						vmFlr[372].second,
+						vmFlr[340].first,
+						vmFlr[340].second
+					)
+				)
+
+				val cheekboneExtents = if (isDepthCameraMeasure) {
+					Pair(
+						calculateAreaWithScaling(leftCheekBone, currentCoordinate, current3DCoordinate),
+						calculateAreaWithScaling(rightCheekBone, currentCoordinate, current3DCoordinate)
+					)
+				} else {
+					val leftCheekBonePoint = leftCheekBone.map { currentCoordinate[it] }
+					val rightCheekBonePoint = rightCheekBone.map { currentCoordinate[it] }
+					Log.v("뎁스카메라", "2-CheekBone: $leftCheekBonePoint, $rightCheekBonePoint")
+					Pair(
+						calculatePolygonArea(leftCheekBonePoint),
+						calculatePolygonArea(rightCheekBonePoint)
+					)
+				}
+
+				// 양쪾을 벌렸을 때 7.2 안벌렸을 때 4.6
+				val tempStatic = JSONObject().apply {
+					put("occlusal_eye_horizontal_angle", eyeAngle)
+					put("occlusal_eyebrow_horizontal_angle", eyeBrowAngle)
+					put("occlusal_tip_of_lips_horizontal_angle", correctTipOfLipsAngle)
+					put("occlusal_tip_of_chin_horizontal_angle", correctTipOfChinsAngle)
+					put("occlusal_canthus_oral_left_vertical_angle", canthusOralAngle.second)
+					put("occlusal_canthus_oral_right_vertical_angle", canthusOralAngle.first)
+					put("occlusal_nasal_wing_tip_of_lips_left_vertical_angle", nasalWingLipsAngle.second)
+					put("occlusal_nasal_wing_tip_of_lips_right_vertical_angle", nasalWingLipsAngle.first)
+					put("occlusal_side_head_left_angle", sideHeadAngle.second)
+					put("occlusal_side_head_right_angle", sideHeadAngle.first)
+					put("occlusal_left_cheeks_extent", cheeksExtents.second)
+					put("occlusal_right_cheeks_extent", cheeksExtents.first)
+					put("occlusal_left_cheekbone_extent", cheekboneExtents.second)
+					put("occlusal_right_cheekbone_extent", cheekboneExtents.first)
+				}
+				staticJA.put(tempStatic)
+				Log.v(
+					"교합 각도들",
+					"eyeAngle: $eyeAngle eyebrowAngle: $eyeBrowAngle tipOfLipsAngle: $tipOfLipsAngle chinAngle: $correctTipOfChinsAngle canthusOralAngle: $canthusOralAngle nasalWingLipsAngle:$nasalWingLipsAngle, cheeksExtent: $cheeksExtents"
+				)
+			}
+
+			// ℹ️ℹ️ TILT ️ℹ️ℹ️
+			if (seq == Sequence.JAW_LEFT_TILT) {
+				if (tempStaticJo == null) {
+					val tiltNoseChinAngle =
+						calculateSlope(vmFlr[1].first, vmFlr[1].second, vmFlr[152].first, vmFlr[152].second)
+					val tiltTipOfLipsAngle =
+						calculateSlope(vmFlr[61].first, vmFlr[61].second, vmFlr[291].first, vmFlr[291].second)
+					val mandibularDistance = Pair(
+						getNormalizedDistance(
+							Pair(vmFlr[13].first, vmFlr[13].second),
+							Pair(vmFlr[58].first, vmFlr[58].second)
+						),
+						getNormalizedDistance(
+							Pair(vmFlr[13].first, vmFlr[13].second),
+							Pair(vmFlr[288].first, vmFlr[288].second)
+						)
+					)
+
+					// 양쪾을 벌렸을 때 7.2 안벌렸을 때 4.6
+					val tempStatic = JSONObject().apply {
+						put("jaw_left_tilt_nose_chin_vertical_angle", tiltNoseChinAngle)
+						put("jaw_left_tilt_tip_of_lips_horizontal_angle", tiltTipOfLipsAngle)
+						put("jaw_left_tilt_left_mandibular_distance", mandibularDistance.second)
+						put("jaw_left_tilt_right_mandibular_distance", mandibularDistance.first)
+					}
+					// 측정 값 초기화
+					tempStaticJo = tempStatic
+					staticJA.put(tempStaticJo)
+					Log.v(
+						"왼쪽 턱 쏠림 각도들",
+						"noseChinAngle: $tiltNoseChinAngle tipOfLipsAngle: $tiltTipOfLipsAngle  mandibularDistance: $mandibularDistance"
+					)
+				}
+			}
+
+			if (seq == Sequence.JAW_RIGHT_TILT) {
+				if (tempStaticJo == null) {
+					val tiltNoseChinAngle =
+						calculateSlope(vmFlr[1].first, vmFlr[1].second, vmFlr[152].first, vmFlr[152].second)
+					val tiltTipOfLipsAngle =
+						calculateSlope(vmFlr[61].first, vmFlr[61].second, vmFlr[291].first, vmFlr[291].second)
+					val mandibularDistance = Pair(
+						getNormalizedDistance(
+							Pair(vmFlr[13].first, vmFlr[13].second),
+							Pair(vmFlr[58].first, vmFlr[58].second)
+						),
+						getNormalizedDistance(
+							Pair(vmFlr[13].first, vmFlr[13].second),
+							Pair(vmFlr[288].first, vmFlr[288].second)
+						)
+					)
+
+					// 양쪾을 벌렸을 때 7.2 안벌렸을 때 4.6
+					val tempStatic = JSONObject().apply {
+						put("jaw_right_tilt_nose_chin_vertical_angle", tiltNoseChinAngle)
+						put("jaw_right_tilt_tip_of_lips_horizontal_angle", tiltTipOfLipsAngle)
+						put("jaw_right_tilt_left_mandibular_distance", mandibularDistance.second)
+						put("jaw_right_tilt_right_mandibular_distance", mandibularDistance.first)
+
+					}
+					tempStaticJo = tempStatic
+					staticJA.put(tempStaticJo)
+					Log.v(
+						"왼쪽 턱 쏠림 각도들",
+						"noseChinAngle: $tiltNoseChinAngle tipOfLipsAngle: $tiltTipOfLipsAngle  mandibularDistance: $mandibularDistance"
+					)
+				}
+			}
+
+			// ℹ️ℹ️ OPENING ️ℹ️ℹ️
+			if (seq == Sequence.JAW_OPENING) {
+				val openingLipsDistance = if (isDepthCameraMeasure) {
+					Log.v(
+						"뎁스카메라",
+						"5-OpeningLips: 13-${current3DCoordinate[13]}, 14-${current3DCoordinate[14]}, ${
+							get3DDistance(
+								current3DCoordinate[13],
+								current3DCoordinate[14]
+							)
+						}"
+					)
+					get3DDistance(current3DCoordinate[13], current3DCoordinate[14])
+				} else {
+					getNormalizedDistance(
+						Pair(vmFlr[13].first, vmFlr[13].second),
+						Pair(vmFlr[14].first, vmFlr[14].second)
+					)
+				}
+				val openingLipsAngle = calculateSlope(
+					vmFlr[13].first,
+					vmFlr[13].second,
+					vmFlr[14].first,
+					vmFlr[14].second
+				) % 180f
+
+				val cheeksExtents = if (isDepthCameraMeasure) {
+
+					Pair(
+						calculateAreaWithScaling(leftCheeks, currentCoordinate, current3DCoordinate),
+						calculateAreaWithScaling(rightCheeks, currentCoordinate, current3DCoordinate),
+					)
+				} else {
+					val leftCheeksPoint = leftCheeks.map { currentCoordinate[it] }
+					val rightCheeksPoint = rightCheeks.map { currentCoordinate[it] }
+					Pair(
+						calculatePolygonArea(leftCheeksPoint),
+						calculatePolygonArea(rightCheeksPoint)
+					)
+				}
+
+				// 양쪾을 벌렸을 때 7.2 안벌렸을 때 4.6
+				val tempStatic = JSONObject().apply {
+					put("jaw_opening_lips_distance", openingLipsDistance)
+					put("jaw_opening_lips_vertical_angle", openingLipsAngle)
+					put("jaw_opening_left_cheeks_extent", cheeksExtents.first)
+					put("jaw_opening_right_cheeks_extent", cheeksExtents.second)
+				}
+				staticJA.put(tempStatic)
+				Log.v(
+					"입 벌림 각도들",
+					"openingLipsDistance: $openingLipsDistance openingLipsAngle: $openingLipsAngle cheeksExtents: $cheeksExtents"
+				)
+			}
 		}
 
 		if (seq == Sequence.NECK_EXTENTION) {
@@ -574,30 +856,6 @@ class MeasureViewModel : ViewModel() {
 			val midEye = Pair((plr[1].first + plr[4].first) / 2, (plr[1].second + plr[4].second) / 2)
 			val faceVerticalAngle =
 				calculateSlope(midEye.first, midEye.second, plr[0].first, plr[0].second)
-//				val leftChinAngle = calculateAngle(
-//					vmFlr[234].first,
-//					vmFlr[234].second,
-//					vmFlr[58].first,
-//					vmFlr[58].second,
-//					vmFlr[152].first,
-//					vmFlr[152].second
-//				)
-//				val rightChinAngle = calculateAngle(
-//					vmFlr[454].first,
-//					vmFlr[454].second,
-//					vmFlr[288].first,
-//					vmFlr[288].second,
-//					vmFlr[152].first,
-//					vmFlr[152].second
-//				)
-//				val middleChinAngle = calculateAngle(
-//					vmFlr[58].first,
-//					vmFlr[58].second,
-//					vmFlr[152].first,
-//					vmFlr[152].second,
-//					vmFlr[288].first,
-//					vmFlr[288].second
-//				)
 
 			// 양쪾을 벌렸을 때 7.2 안벌렸을 때 4.6
 			val tempStatic = JSONObject().apply {
@@ -605,9 +863,6 @@ class MeasureViewModel : ViewModel() {
 				put("neck_extention_ear_horizontal_angle", earHorizontalAngle)
 				put("neck_extention_neck_vertical_angle", neckVerticalAngle)
 				put("neck_extention_face_vertical_angle", faceVerticalAngle)
-//					put("neck_extention_left_mandibular_chin_angle", leftChinAngle)
-//					put("neck_extention_right_mandibular_chin_angle", rightChinAngle)
-//					put("neck_extention_middle_mandibular_chin_angle", middleChinAngle)
 			}
 			staticJA.put(tempStatic)
 			Log.v(
@@ -617,14 +872,15 @@ class MeasureViewModel : ViewModel() {
 			Log.v("스태틱저장", "1: 스태틱 저장 ${staticJA.length()}")
 		}
 
+
+
 	}
 
 
 
 	// 🔶🔶🔶🔶🔶🔶🔶🔶🔶🔶🔶🔶🔶 json, media 파일 저장 🔶🔶🔶🔶🔶🔶🔶🔶🔶🔶🔶🔶🔶
-	fun saveJsonToStorage(activity: AppCompatActivity, inputJson: JSONObject, fileName: String): String? {
+	fun saveJsonToStorage(activity: FragmentActivity, inputJson: JSONObject, fileName: String): String? {
 
-		MeasureUtility.show(activity)
 		val resolver = activity.contentResolver
 		val contentValues = ContentValues().apply {
 			put(MediaStore.MediaColumns.DISPLAY_NAME, "$fileName.json")
@@ -654,7 +910,6 @@ class MeasureViewModel : ViewModel() {
 			}
 
 			Log.d("JSON_SAVE", "saved(JsonWriter): $fileName.json, uri=$uri")
-			MeasureUtility.dismiss(activity)
 			"$fileName.json"
 		} catch (e: Exception) {
 			Log.e("JSON_SAVE", "save failed(JsonWriter)", e)
@@ -662,83 +917,97 @@ class MeasureViewModel : ViewModel() {
 		}
 	}
 
-	suspend fun saveMediaToStorage(context: Context, uri: Uri, fileName: String, isImage: Boolean) {
-		withContext(Dispatchers.IO) {
+	suspend fun saveMediaToStorage(
+		context: Context,
+		uri: Uri,
+		fileName: String,
+		flh: FaceLandmarkerHelper,
+		poseLandmarker: PoseLandmarkerHelper,
+		isImage: Boolean
+	): Boolean {
+		return withContext(Dispatchers.IO) {
 			try {
 				val extension = if (isImage) ".webp" else ".mp4"
 //			val file = File(context.cacheDir, "$fileName$extension")
 
-				val contentValues = ContentValues().apply {
-					put(MediaStore.MediaColumns.DISPLAY_NAME, "$fileName$extension")
-					put(MediaStore.MediaColumns.MIME_TYPE, "image/webp")
-					put(MediaStore.Images.Media.RELATIVE_PATH, "Pictures/TangoPlus")
-				}
-				val inputStream = context.contentResolver.openInputStream(uri)
-				val tempFile = File.createTempFile("tempImage", null, context.cacheDir)
-				inputStream?.use { input ->
-					tempFile.outputStream().use { output ->
-						input.copyTo(output)
+				if (isImage) {
+					val contentValues = ContentValues().apply {
+						put(MediaStore.MediaColumns.DISPLAY_NAME, "$fileName$extension")
+						put(MediaStore.MediaColumns.MIME_TYPE, "image/webp")
+						put(MediaStore.Images.Media.RELATIVE_PATH, "Pictures/TangoPlus")
 					}
-				}
+					val inputStream = context.contentResolver.openInputStream(uri)
+					val tempFile = File.createTempFile("tempImage", null, context.cacheDir)
+					inputStream?.use { input ->
+						tempFile.outputStream().use { output ->
+							input.copyTo(output)
+						}
+					}
 
-				// EXIF 데이터 읽기
-				val exif = ExifInterface(tempFile.absolutePath)
-				val orientation =
-					exif.getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL)
+					// EXIF 데이터 읽기
+					val exif = ExifInterface(tempFile.absolutePath)
+					val orientation =
+						exif.getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL)
 //                Log.d("ExifDebug", "Exif Orientation: $orientation")
-				// 비트맵 디코딩
-				val options = BitmapFactory.Options().apply {
-					inJustDecodeBounds = true
-				}
-				BitmapFactory.decodeFile(tempFile.absolutePath, options)
+					// 비트맵 디코딩
+					val options = BitmapFactory.Options().apply {
+						inJustDecodeBounds = true
+					}
+					BitmapFactory.decodeFile(tempFile.absolutePath, options)
 
-				val sourceWidth = options.outWidth
-				val sourceHeight = options.outHeight
+					val sourceWidth = options.outWidth
+					val sourceHeight = options.outHeight
 
-				val targetWidth = 1920
-				val targetHeight = 1080
+					val targetWidth = 1920
+					val targetHeight = 1080
 
-				// 이미지 스케일 계산
-				val widthRatio = sourceWidth.toFloat() / targetWidth
-				val heightRatio = sourceHeight.toFloat() / targetHeight
-				val scale = maxOf(widthRatio, heightRatio)
+					// 이미지 스케일 계산
+					val widthRatio = sourceWidth.toFloat() / targetWidth
+					val heightRatio = sourceHeight.toFloat() / targetHeight
+					val scale = maxOf(widthRatio, heightRatio)
 
-				options.inJustDecodeBounds = false
-				options.inSampleSize = scale.toInt()
+					options.inJustDecodeBounds = false
+					options.inSampleSize = scale.toInt()
 
-				var bitmap = BitmapFactory.decodeFile(tempFile.absolutePath, options)
-				val matrix = Matrix()
+					var bitmap = BitmapFactory.decodeFile(tempFile.absolutePath, options)
+					val matrix = Matrix()
 
-				// 회전 적용
-				when (orientation) {
-					ExifInterface.ORIENTATION_ROTATE_90 -> matrix.postRotate(90f)   // 시계 방향 90도
-					ExifInterface.ORIENTATION_ROTATE_180 -> matrix.postRotate(180f) // 시계 방향 180도
-					ExifInterface.ORIENTATION_ROTATE_270 -> matrix.postRotate(270f) // 시계 방향 270도
-				}
+					// 회전 적용
+					when (orientation) {
+						ExifInterface.ORIENTATION_ROTATE_90 -> matrix.postRotate(90f)   // 시계 방향 90도
+						ExifInterface.ORIENTATION_ROTATE_180 -> matrix.postRotate(180f) // 시계 방향 180도
+						ExifInterface.ORIENTATION_ROTATE_270 -> matrix.postRotate(270f) // 시계 방향 270도
+					}
 
-				// ★★★ 좌우반전 ★★★
+					// ★★★ 좌우반전 ★★★
 //					matrix.postScale(1f, 1f, bitmap.width / 2f, bitmap.height / 2f)
 
-				// 모든 변환을 한번에 적용
-				bitmap = Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true)
+					// 모든 변환을 한번에 적용
+					bitmap = Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true)
 
-				// 스케일 조정
-				bitmap.scale(targetWidth, targetHeight).also { bitmap = it }
+					// 스케일 조정
+					bitmap.scale(targetWidth, targetHeight).also { bitmap = it }
 
-				// Pictures/TangoBeauty에 저장
-				val imageUri = context.contentResolver.insert(
-					MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
-					contentValues
-				)
-				latestBitmap = bitmap
-				// --------------------------# poselandmark를 잡기 위한 detectAsync #-------------------------
+					// Pictures/TangoBeauty에 저장
+					val imageUri = context.contentResolver.insert(
+						MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
+						contentValues
+					)
+					latestBitmap = bitmap
+					// --------------------------# poselandmark를 잡기 위한 detectAsync #-------------------------
+					// ⚠️⚠️⚠️⚠️⚠️⚠️ MeasureImage일 때만 flh image로 init 한다음 detectImage하기  ⚠️⚠️⚠️⚠️⚠️⚠️
+					if (!isDepthCameraMeasure) {
+						val flResultBundle = flh.detectImage(bitmap)
+						face2DResult = flResultBundle?.result?.let { FaceLandmarkAdapter.toCustomFaceLandmarkResult(it) }
+						Log.v("2d얼굴들어감", "$face2DResult")
+					}
 
-				val flResultBundle = flh?.detectImage(bitmap)
-				customResult = flResultBundle?.result?.let { FaceLandmarkAdapter.toCustomFaceLandmarkResult(it) }
-				Log.v("리절트덮기", "${currentSeq} -> $customResult")
-				if (currentSeq == Sequence.COMFORT) {
-					customResult?.let {
-						val absoluteLandmarks = it.landmarks.map { landmark ->
+					if (currentSeq == Sequence.COMFORT) {
+						if (face2DResult == null) {
+							Log.w("saveMedia", "얼굴 랜드마크 검출 실패. 저장을 중단합니다.")
+							return@withContext false // ❌ 중단
+						}
+						val absoluteLandmarks = face2DResult!!.landmarks.map { landmark ->
 							FaceLandmarkResult.FaceLandmark(
 								x = calculateScreenX(landmark.x),
 								y = calculateScreenY(landmark.y)
@@ -746,52 +1015,47 @@ class MeasureViewModel : ViewModel() {
 						}
 						val absoluteResult = FaceLandmarkResult(absoluteLandmarks)
 						val hairResult = findHairline(bitmap, absoluteResult)
+						if (hairResult == null || hairResult.hairlinePoints.isEmpty()) {
+							Log.w("saveMedia", "헤어라인 검출 실패. 빈 배열 생성을 막고 저장을 중단합니다.")
+							return@withContext false
+						}
+						// 1. 깊이 데이터가 유효한지 안전하게 검사
+						val isDepthValid = latestDepthData != null && latestDepthWidth > 0 && latestDepthHeight > 0 && latestIntrinsic != null
 
-						hairResult?.let { hr -> // 변수명 중첩 방지를 위해 hr로 변경
-							// 1. 깊이 데이터가 유효한지 안전하게 검사
-							val isDepthValid = latestDepthData != null && latestDepthWidth > 0 && latestDepthHeight > 0 && latestIntrinsic != null
+						if (isDepthValid) {
+							val hairline3D = convertHairlineTo3D(
+								hairlinePoints = hairResult.hairlinePoints,
+								depthData      = latestDepthData!!,
+								depthWidth     = latestDepthWidth,
+								depthHeight    = latestDepthHeight,
+								intrinsic      = latestIntrinsic!!,
+							)
 
-							if (isDepthValid) {
-								// 2. 유효할 경우 기존처럼 3D 변환 진행
-								val hairline3D = convertHairlineTo3D(
-									hairlinePoints = hr.hairlinePoints,
-									depthData      = latestDepthData!!,
-									depthWidth     = latestDepthWidth,
-									depthHeight    = latestDepthHeight,
-									intrinsic      = latestIntrinsic!!,
-								)
-
-								hairline3D.forEach { hp ->
-									val pointJA = JSONArray().apply {
-										put(hp.landmarkIndex)
-										put(hp.point2D.x.toBigDecimal().setScale(1, RoundingMode.HALF_UP))
-										put(hp.point2D.y.toBigDecimal().setScale(1, RoundingMode.HALF_UP))
-										put(hp.point3D.x.toBigDecimal().setScale(4, RoundingMode.HALF_UP))
-										put(hp.point3D.y.toBigDecimal().setScale(4, RoundingMode.HALF_UP))
-										put(hp.point3D.z.toBigDecimal().setScale(4, RoundingMode.HALF_UP))
-									}
-									tempHairLineJA.put(pointJA)
-									currentHairLine3DCoordinate.add(Triple(hp.point3D.x, hp.point3D.y, hp.point3D.z))
+							hairline3D.forEach { hp ->
+								val pointJA = JSONArray().apply {
+									put(hp.landmarkIndex)
+									put(hp.point2D.x.toBigDecimal().setScale(1, RoundingMode.HALF_UP))
+									put(hp.point2D.y.toBigDecimal().setScale(1, RoundingMode.HALF_UP))
+									put(hp.point3D.x.toBigDecimal().setScale(4, RoundingMode.HALF_UP))
+									put(hp.point3D.y.toBigDecimal().setScale(4, RoundingMode.HALF_UP))
+									put(hp.point3D.z.toBigDecimal().setScale(4, RoundingMode.HALF_UP))
 								}
-							} else {
-								// 3. 깊이 데이터가 없을 경우 3D를 모두 0f로 덮어쓰기
-								hr.hairlinePoints.forEachIndexed { index, hp2d ->
-									val pointJA = JSONArray().apply {
-										// 주의: hp2d 클래스 구조에 landmarkIndex가 없다면 index를 사용하세요.
-										// 만약 hp2d.landmarkIndex가 있다면 그걸 쓰시면 됩니다.
-										put(index)
-										// 2D 좌표는 정상적으로 입력 (x, y 프로퍼티명은 모델에 맞게 수정)
-										put(hp2d.point.x.toBigDecimal().setScale(1, RoundingMode.HALF_UP))
-										put(hp2d.point.y.toBigDecimal().setScale(1, RoundingMode.HALF_UP))
-
-										// 3D 좌표는 모두 0f로 처리
-										put(0f.toBigDecimal().setScale(4, RoundingMode.HALF_UP))
-										put(0f.toBigDecimal().setScale(4, RoundingMode.HALF_UP))
-										put(0f.toBigDecimal().setScale(4, RoundingMode.HALF_UP))
-									}
-									tempHairLineJA.put(pointJA)
-									currentHairLine3DCoordinate.add(Triple(0f, 0f, 0f))
+								tempHairLineJA.put(pointJA)
+								currentHairLine3DCoordinate.add(Triple(hp.point3D.x, hp.point3D.y, hp.point3D.z))
+							}
+						} else {
+							// 깊이 데이터가 없을 경우 z값을 0f로 채우는 기존 로직
+							hairResult.hairlinePoints.forEachIndexed { index, hp2d ->
+								val pointJA = JSONArray().apply {
+									put(index)
+									put(hp2d.point.x.toBigDecimal().setScale(1, RoundingMode.HALF_UP))
+									put(hp2d.point.y.toBigDecimal().setScale(1, RoundingMode.HALF_UP))
+									put(0f.toBigDecimal().setScale(4, RoundingMode.HALF_UP))
+									put(0f.toBigDecimal().setScale(4, RoundingMode.HALF_UP))
+									put(0f.toBigDecimal().setScale(4, RoundingMode.HALF_UP))
 								}
+								tempHairLineJA.put(pointJA)
+								currentHairLine2DCoordinate.add(Pair(hp2d.point.x, hp2d.point.y))
 							}
 						}
 
@@ -799,95 +1063,376 @@ class MeasureViewModel : ViewModel() {
 						Log.v("mvmhairLineJA", "${hairLineJA}")
 						tempHairLineJA = JSONArray()
 					}
-				}
 
-				// --------------------------# poselandmark를 잡기 위한 detectAsync #-------------------------
-				val resultBundle = poseLandmarker?.detectImage(bitmap)
-				if (resultBundle?.results?.first()?.landmarks()?.isNotEmpty() == true) {
-					val plr = resultBundle.results.first().landmarks()[0]
+					// --------------------------# poselandmark를 잡기 위한 detectAsync #-------------------------
+					val resultBundle = poseLandmarker.detectImage(bitmap)
+					if (resultBundle?.results?.first()?.landmarks()?.isNotEmpty() == true) {
+						val plr = resultBundle.results.first().landmarks()[0]
 
-					tempPlrJA = JSONArray()
-					plr.forEachIndexed { index, _ ->
-						val swapIndex = if (index >= 7 && index % 2 == 0) index - 1
-						else if (index >= 7) index + 1
-						else index
-						val targetLandmark = plr[swapIndex]
+						tempPlrJA = JSONArray()
+						plr.forEachIndexed { index, _ ->
+							val swapIndex = if (index >= 7 && index % 2 == 0) index - 1
+							else if (index >= 7) index + 1
+							else index
+							val targetLandmark = plr[swapIndex]
 
-						val scaledX = calculateScreenX(targetLandmark.x())
-						val scaledY = calculateScreenY(targetLandmark.y())
+							val scaledX = calculateScreenX(1 - targetLandmark.x())
+							val scaledY = calculateScreenY(targetLandmark.y())
 
-						// pose 랜드마크 3D 변환
-						val point3D = if (latestDepthWidth <= 0 || latestDepthHeight <= 0) {
-							Point3D(0f, 0f, 0f)
-							// point3D를 사용하는 이후 로직 수행
-						} else {
-							// 2. 유효한 경우에만 기존 변환 로직을 실행합니다.
-							val px = (targetLandmark.x() * latestDepthWidth).toInt().coerceIn(0, latestDepthWidth - 1)
-							val py = (targetLandmark.y() * latestDepthHeight).toInt().coerceIn(0, latestDepthHeight - 1)
-							val idx = py * latestDepthWidth + px
-							val depthMm = latestDepthData?.get(idx)?.toInt()?.and(0xFFFF) ?: 0
-							val depthM = depthMm / 1000f
-
-							if (depthM > 0) {
-								convertDepthPixelTo3D(latestIntrinsic!!, px.toFloat(), py.toFloat(), depthM)
+							// pose 랜드마크 3D 변환
+							val point3D = if (latestDepthWidth <= 0 || latestDepthHeight <= 0) {
+								Point3D(0f, 0f, 0f)
+								// point3D를 사용하는 이후 로직 수행
 							} else {
-								val nearbyDepth = findNearbyDepth(latestDepthData!!, px, py, latestDepthWidth, latestDepthHeight)
-								if (nearbyDepth > 0) convertDepthPixelTo3D(latestIntrinsic!!, px.toFloat(), py.toFloat(), nearbyDepth / 1000f)
-								else Point3D(0f, 0f, 0f)
+								// 2. 유효한 경우에만 기존 변환 로직을 실행합니다.
+								val px = (targetLandmark.x() * latestDepthWidth).toInt().coerceIn(0, latestDepthWidth - 1)
+								val py = (targetLandmark.y() * latestDepthHeight).toInt().coerceIn(0, latestDepthHeight - 1)
+								val idx = py * latestDepthWidth + px
+								val depthMm = latestDepthData?.get(idx)?.toInt()?.and(0xFFFF) ?: 0
+								val depthM = depthMm / 1000f
+
+								if (depthM > 0) {
+									convertDepthPixelTo3D(latestIntrinsic!!, px.toFloat(), py.toFloat(), depthM)
+								} else {
+									val nearbyDepth = findNearbyDepth(latestDepthData!!, px, py, latestDepthWidth, latestDepthHeight)
+									if (nearbyDepth > 0) convertDepthPixelTo3D(latestIntrinsic!!, px.toFloat(), py.toFloat(), nearbyDepth / 1000f)
+									else Point3D(0f, 0f, 0f)
+								}
+							}
+
+							val ja = JSONArray().apply {
+								put(index)
+								put(scaledX.toBigDecimal().setScale(1, RoundingMode.HALF_UP))
+								put(scaledY.toBigDecimal().setScale(1, RoundingMode.HALF_UP))
+								put(point3D.x.toBigDecimal().setScale(4, RoundingMode.HALF_UP))
+								put(point3D.y.toBigDecimal().setScale(4, RoundingMode.HALF_UP))
+								put(point3D.z.toBigDecimal().setScale(4, RoundingMode.HALF_UP))
+							}
+							tempPlrJA.put(ja)
+							currentPlrCoordinate.add(Pair(targetLandmark.x(), targetLandmark.y()))
+							current3DPlrCoordinate.add(Triple(point3D.x, point3D.y, point3D.z))
+						}
+						plrJA.put(tempPlrJA)
+					} else {
+						withContext(Dispatchers.Main) {
+							Toast.makeText(context, "poselandmark를 찾을 수 없습니다.", Toast.LENGTH_LONG).show()
+						}
+						Log.e("saveMedia", "poselandmark 검출 실패. 저장을 중단합니다.")
+						return@withContext false // ❌ 중단
+					}
+					// -------------------------# 목젖 위치를 잡기 위한 detectAsync 끝 #-----------------------
+					imageUri?.let { imageURI ->
+						context.contentResolver.openOutputStream(imageURI)?.use { outputStream ->
+							bitmap.compress(Bitmap.CompressFormat.WEBP_LOSSY, 100, outputStream)
+							outputStream.flush()
+						}
+						Log.d("SaveMedia", "Image saved to Pictures: ${currentSeq} ->  $fileName$extension")
+					} ?: run {
+						Log.e("SaveMedia", "Failed to create image URI")
+					}
+					mediaFileNames.add("$fileName$extension")
+
+					Log.d("SaveMedia", "seqStep: ${currentSeq} vmFileName: ${mediaFileNames}")
+
+					// 임시 파일과 비트맵 정리
+					tempFile.delete()
+					bitmap.recycle()
+					return@withContext true
+				} else {
+					val videoCollection =
+						MediaStore.Video.Media.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY)
+					val contentValues = ContentValues().apply {
+						put(MediaStore.Video.Media.DISPLAY_NAME, fileName)  // ex: 4-20251020145123.mp4
+						put(MediaStore.Video.Media.MIME_TYPE, "video/mp4")
+						put(
+							MediaStore.Video.Media.RELATIVE_PATH,
+							"${Environment.DIRECTORY_MOVIES}/TangoPlus"
+						) // Movies/TangoPlus/
+						put(MediaStore.Video.Media.IS_PENDING, 1)
+					}
+
+					val videoUri = context.contentResolver.insert(videoCollection, contentValues)
+
+					if (videoUri != null) {
+						context.contentResolver.openInputStream(uri)?.use { input ->
+							context.contentResolver.openOutputStream(videoUri)?.use { output ->
+								input.copyTo(output)
+
+								contentValues.clear()
+								contentValues.put(MediaStore.Video.Media.IS_PENDING, 0)
+								context.contentResolver.update(videoUri, contentValues, null, null)
+								Log.v("영상작업완료 후 plr넣기", "$fileName$extension")
+
+								mediaFileNames.add("$fileName$extension")
+								// 빈 jsonArray를 넣어서 index 갯수 맞추기
+								plrJA.put(JSONArray())
+								Log.v("영상작업완료 후 plr넣기", "${plrJA.length()}")
 							}
 						}
-
-						val ja = JSONArray().apply {
-							put(index)
-							put(scaledX.toBigDecimal().setScale(1, RoundingMode.HALF_UP))
-							put(scaledY.toBigDecimal().setScale(1, RoundingMode.HALF_UP))
-							put(point3D.x.toBigDecimal().setScale(4, RoundingMode.HALF_UP))
-							put(point3D.y.toBigDecimal().setScale(4, RoundingMode.HALF_UP))
-							put(point3D.z.toBigDecimal().setScale(4, RoundingMode.HALF_UP))
-						}
-						tempPlrJA.put(ja)
-						currentPlrCoordinate.add(Pair(targetLandmark.x(), targetLandmark.y()))
-						current3DPlrCoordinate.add(Triple(point3D.x, point3D.y, point3D.z))
 					}
-					Log.v("tempPlrJA", "포즈랜드마크JA 들어감: ${plrJA}")
-					plrJA.put(tempPlrJA)
-				} else {
-					Toast.makeText(context, "poselandmark를 찾을 수 없습니다.", Toast.LENGTH_LONG).show()
-					plrJA.put(JSONArray())
+					return@withContext true
 				}
-				// -------------------------# 목젖 위치를 잡기 위한 detectAsync 끝 #-----------------------
-				imageUri?.let { imageURI ->
-					context.contentResolver.openOutputStream(imageURI)?.use { outputStream ->
-						bitmap.compress(Bitmap.CompressFormat.WEBP_LOSSY, 100, outputStream)
-						outputStream.flush()
-					}
-					Log.d("SaveMedia", "Image saved to Pictures: ${currentSeq} ->  $fileName$extension")
-				} ?: run {
-					Log.e("SaveMedia", "Failed to create image URI")
-				}
-				mediaFileNames.add("$fileName$extension")
-
-				Log.d("SaveMedia", "seqStep: ${currentSeq} vmFileName: ${mediaFileNames}")
-
-				// 임시 파일과 비트맵 정리
-				tempFile.delete()
-				bitmap.recycle()
-
 			} catch (e: IndexOutOfBoundsException) {
 				Log.e("SaveMediaIndex", "${e.message}")
+				return@withContext false
 			} catch (e: IllegalArgumentException) {
 				Log.e("SaveMedia", "IllegalArgument: ${e.printStackTrace()}")
+				return@withContext false
 			} catch (e: IllegalStateException) {
 				Log.e("SaveMedia", "IllegalState: ${e.printStackTrace()}")
+				return@withContext false
 			} catch (e: NullPointerException) {
 				Log.e("SaveMediaNull", "${e.printStackTrace()}")
+				return@withContext false
 			} catch (e: java.lang.Exception) {
 				Log.e("SaveMediaException", "${e.printStackTrace()}")
+				return@withContext false
 			}
 		}
 	}
+	fun inpaintDepth(depth: FloatArray, width: Int, height: Int, iterations: Int = 15): FloatArray {
+		var current = depth.copyOf()
 
-	suspend fun scannedImage(activity: AppCompatActivity, imagePaths : List<String?>, seq: Sequence): Boolean {
+		repeat(iterations) {
+			val next = current.copyOf()
+			for (y in 1 until height - 1) {
+				for (x in 1 until width - 1) {
+					val idx = y * width + x
+					if (current[idx] > 0f) continue
+
+					var sum = 0f
+					var count = 0
+					for (dy in -1..1) {
+						for (dx in -1..1) {
+							val v = current[(y + dy) * width + (x + dx)]
+							if (v > 0f) { sum += v; count++ }
+						}
+					}
+					if (count > 0) {
+						next[idx] = sum / count
+					}
+				}
+			}
+			current = next
+		}
+		return current
+	}
+
+	fun smoothDepthByResample(
+		depthData: ShortArray, width: Int, height: Int,
+		downscaleFactor: Int = 3
+	): FloatArray {
+		val smallW = (width / downscaleFactor).coerceAtLeast(1)
+		val smallH = (height / downscaleFactor).coerceAtLeast(1)
+
+		val small = FloatArray(smallW * smallH)
+		for (sy in 0 until smallH) {
+			for (sx in 0 until smallW) {
+				var sum = 0f
+				var count = 0
+				val startX = sx * downscaleFactor
+				val startY = sy * downscaleFactor
+				for (yy in startY until minOf(startY + downscaleFactor, height)) {
+					for (xx in startX until minOf(startX + downscaleFactor, width)) {
+						val d = depthData[yy * width + xx].toInt() and 0xFFFF
+						if (d > 0) { sum += d; count++ }
+					}
+				}
+				small[sy * smallW + sx] = if (count > 0) sum / count else 0f
+			}
+		}
+
+		val result = FloatArray(width * height)
+		for (y in 0 until height) {
+			for (x in 0 until width) {
+				val fx = (x.toFloat() / downscaleFactor).coerceIn(0f, (smallW - 1).toFloat())
+				val fy = (y.toFloat() / downscaleFactor).coerceIn(0f, (smallH - 1).toFloat())
+				val x0 = fx.toInt(); val x1 = (x0 + 1).coerceAtMost(smallW - 1)
+				val y0 = fy.toInt(); val y1 = (y0 + 1).coerceAtMost(smallH - 1)
+				val tx = fx - x0; val ty = fy - y0
+
+				val v00 = small[y0 * smallW + x0]
+				val v10 = small[y0 * smallW + x1]
+				val v01 = small[y1 * smallW + x0]
+				val v11 = small[y1 * smallW + x1]
+
+				val top = v00 + (v10 - v00) * tx
+				val bottom = v01 + (v11 - v01) * tx
+				result[y * width + x] = top + (bottom - top) * ty
+			}
+		}
+		return result
+	}
+
+
+	data class LinePoint(val x: Float, val y: Float)
+
+	fun interpolate(x1: Float, y1: Float, v1: Float, x2: Float, y2: Float, v2: Float, level: Float): LinePoint {
+		val t = if (v2 != v1) (level - v1) / (v2 - v1) else 0.5f
+		return LinePoint(x1 + t * (x2 - x1), y1 + t * (y2 - y1))
+	}
+
+	fun marchingSquares(
+		depth: FloatArray, width: Int, height: Int, level: Float
+	): List<Pair<LinePoint, LinePoint>> {
+		val segments = mutableListOf<Pair<LinePoint, LinePoint>>()
+
+		for (y in 0 until height - 1) {
+			for (x in 0 until width - 1) {
+				val tl = depth[y * width + x]
+				val tr = depth[y * width + x + 1]
+				val bl = depth[(y + 1) * width + x]
+				val br = depth[(y + 1) * width + x + 1]
+
+				if (tl <= 0f || tr <= 0f || bl <= 0f || br <= 0f) continue
+
+				var caseIdx = 0
+				if (tl > level) caseIdx = caseIdx or 8
+				if (tr > level) caseIdx = caseIdx or 4
+				if (br > level) caseIdx = caseIdx or 2
+				if (bl > level) caseIdx = caseIdx or 1
+
+				val xf = x.toFloat(); val yf = y.toFloat()
+				val top = interpolate(xf, yf, tl, xf + 1, yf, tr, level)
+				val right = interpolate(xf + 1, yf, tr, xf + 1, yf + 1, br, level)
+				val bottom = interpolate(xf, yf + 1, bl, xf + 1, yf + 1, br, level)
+				val left = interpolate(xf, yf, tl, xf, yf + 1, bl, level)
+
+				when (caseIdx) {
+					1, 14 -> segments.add(left to bottom)
+					2, 13 -> segments.add(bottom to right)
+					3, 12 -> segments.add(left to right)
+					4, 11 -> segments.add(top to right)
+					6, 9 -> segments.add(top to bottom)
+					7, 8 -> segments.add(left to top)
+					5 -> { segments.add(left to top); segments.add(bottom to right) }
+					10 -> { segments.add(top to right); segments.add(left to bottom) }
+				}
+			}
+		}
+		return segments
+	}
+
+
+	fun drawContourLevel(
+		canvas: Canvas, segments: List<Pair<LinePoint, LinePoint>>, color: Int, strokeWidth: Float = 2f
+	) {
+		val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+			this.color = color
+			style = Paint.Style.STROKE
+			this.strokeWidth = strokeWidth
+			strokeCap = Paint.Cap.ROUND
+		}
+		for ((p1, p2) in segments) {
+			canvas.drawLine(p1.x, p1.y, p2.x, p2.y, paint)
+		}
+	}
+	fun computeFaceDepthRange(
+		depthData: ShortArray, depthW: Int, depthH: Int, faceMaskPath: Path
+	): Pair<Int, Int> {
+		val bounds = RectF()
+		faceMaskPath.computeBounds(bounds, true)
+
+		val region = Region()
+		region.setPath(
+			faceMaskPath,
+			Region(0, 0, depthW, depthH)
+		)
+
+		val depths = mutableListOf<Int>()
+		for (y in bounds.top.toInt().coerceIn(0, depthH - 1)..bounds.bottom.toInt().coerceIn(0, depthH - 1)) {
+			for (x in bounds.left.toInt().coerceIn(0, depthW - 1)..bounds.right.toInt().coerceIn(0, depthW - 1)) {
+				if (!region.contains(x, y)) continue   // ✅ 폴리곤 내부만
+				val d = depthData[y * depthW + x].toInt() and 0xFFFF
+				if (d > 0) depths.add(d)
+			}
+		}
+
+		if (depths.isEmpty()) return Pair(0, 0)
+
+		// ✅ 퍼센타일 기반으로 outlier 방어까지 같이 적용
+		depths.sort()
+//		val minDepth = depths[(depths.size * 0.05).toInt().coerceIn(0, depths.size - 1)]
+		val minDepth = depths[(depths.size * 0.01).toInt().coerceIn(0, depths.size - 1)]
+		val maxDepth = depths[(depths.size * 0.95).toInt().coerceIn(0, depths.size - 1)]
+
+		return Pair(minDepth, maxDepth)
+	}
+
+	// ===== 3) 무아레 등고선 생성 (band 비교 방식) =====
+	fun generateMoireBitmap(
+		rawDepthData: ShortArray,
+		depthW: Int,
+		depthH: Int,
+		faceMaskPath: Path?,
+		minDepth: Int,
+		maxDepth: Int,
+		intervalMm: Float = 2.5f,
+		strokeWidth: Float = 2f
+	): Bitmap {
+		val smoothed = smoothDepthByResample(rawDepthData, depthW, depthH, downscaleFactor = 2)
+		val filled = inpaintDepth(smoothed, depthW, depthH, iterations = 15)
+
+		val bitmap = Bitmap.createBitmap(depthW, depthH, Bitmap.Config.ARGB_8888)
+		val canvas = Canvas(bitmap)
+		if (faceMaskPath != null) {
+			canvas.clipPath(faceMaskPath)
+		}
+		val gradientLayer = generateGradientLayer(filled, depthW, depthH, minDepth, maxDepth)
+		canvas.drawBitmap(gradientLayer, 0f, 0f, null)
+		var level = minDepth.toFloat()
+		while (level <= maxDepth) {
+			val segments = marchingSquares(filled, depthW, depthH, level)
+
+			val normalized = ((level - minDepth) / (maxDepth - minDepth)).coerceIn(0f, 1f)
+			val hue = normalized * 270f
+			val color = Color.HSVToColor(floatArrayOf(hue, 1f, 0.9f))
+
+			val lineColor = Color.argb(100, 255, 255, 255)  // 흰색, 반투명, alpha 조절 가능
+			drawContourLevel(canvas, segments, lineColor, strokeWidth = 0.5f)
+			level += intervalMm
+		}
+
+		return bitmap
+	}
+  // TODO 여기서 이미 찍힌 moire를 좌우 반전하고, 보라색 부분을 잘라서 사용하면 그나마 쓸만함
+	suspend fun saveMoireToStorage (
+		context: Context,
+		moireBitmap: Bitmap,
+		fileName: String
+	) {
+		return withContext(Dispatchers.IO) {
+			try {
+				val contentValues = ContentValues().apply {
+					put(MediaStore.MediaColumns.DISPLAY_NAME, "$fileName.webp")
+					put(MediaStore.MediaColumns.MIME_TYPE, "image/webp")
+					put(MediaStore.Images.Media.RELATIVE_PATH, "Pictures/TangoPlus")
+				}
+				val imageUri = context.contentResolver.insert(
+					MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
+					contentValues
+				)
+				imageUri?.let { uri ->
+					context.contentResolver.openOutputStream(uri)?.use { os ->
+						moireBitmap.compress(Bitmap.CompressFormat.WEBP_LOSSLESS, 100, os)
+						os.flush()
+					}
+					Log.d("SaveMoire", "무아레 저장 완료: $fileName.webp")
+					true
+				} ?: false
+			} catch (e: Exception) {
+				Log.e("SaveMoire", "무아레 저장 실패: ${e.message}")
+				false
+			}
+		}
+	}
+	suspend fun scannedImage(
+		activity: AppCompatActivity,
+		imagePaths : List<String?>,
+		seq: Sequence,
+		flh: FaceLandmarkerHelper,
+		plh: PoseLandmarkerHelper
+	): Boolean {
 		// 1. 파일명 생성
 		val name = getFileName(seq)
 		val contentResolver = activity.contentResolver
@@ -920,12 +1465,12 @@ class MeasureViewModel : ViewModel() {
 
 				// 5. 최종 저장 로직 호출
 				val tempUri = Uri.fromFile(tempFile)
-				saveMediaToStorage(activity, tempUri, name, true)
+				val success = saveMediaToStorage(activity, tempUri, name, flh, plh, true)
 
-				Log.d("captureImage", "✅ 이미지 저장 완료: $name")
-				true
+				Log.d("scannedImage", "✅ 이미지 저장 완료?: $success: $name")
+				success
 			} catch (e: Exception) {
-				Log.e("captureImage", "❌ 이미지 로드/저장 실패: ${e.message}", e)
+				Log.e("scannedImage", "❌ 이미지 로드/저장 실패: ${e.message}", e)
 				false
 			}
 		}
@@ -935,14 +1480,20 @@ class MeasureViewModel : ViewModel() {
 		val seqInt = when (seq) {
 			Sequence.COMFORT -> 0
 			Sequence.NECK_EXTENTION -> 6
-		}
+      Sequence.OCCLUSAL -> 1
+			Sequence.JAW_LEFT_TILT -> 2
+			Sequence.JAW_RIGHT_TILT -> 3
+			Sequence.JAW_OPENING -> 4
+			Sequence.BOW -> 5
+    }
 		val seqIndex = allSeqs.indexOf(seq)
-		val mediaFileName = if (seqInt == 9) {
-			hsvMediaFileName
-		} else {
-			mediaFileNames[seqIndex]
+		val mediaFileName = mediaFileNames[seqIndex]
+		val measureTypeNum = when (measureType) {
+			MeasureType.NORMAL -> 0
+			MeasureType.EXPERT -> 1
+			MeasureType.BOW -> 2
+			else -> 0
 		}
-
 		return originJo.apply {
 			put("temp_server_sn", prefsUtil.getLastTempServerSn())
 			put("media_file_name", mediaFileName)
@@ -958,6 +1509,377 @@ class MeasureViewModel : ViewModel() {
 
 			put("scale_factor", getScaleFactor())
 			put("depth_result", isDepthResult)
+			put("measure_type", measureTypeNum)
 		}
 	}
+
+	// depthCamera에서 가져오는 stream pipeline/mDevice/mStreamRunnable
+	var mPipeline: Pipeline? = null
+	var mStreamThread: Thread? = null
+
+	var last3DCalculateTime = 0L
+	val calculationInterval = 200L // 5fps
+
+	var mIsStreamRunning = false
+	@Volatile var mIsDeviceDetached = false
+	var mDevice: Device? = null
+	var mHoleFillingFilter: HoleFillingFilter? = null
+
+	var scaledIntrinsic: ScaledIntrinsic? = null
+	var colorDistortion: CameraDistortion? = null
+	var depthDistortion: CameraDistortion? = null
+	var flh: FaceLandmarkerHelper? = null
+	var plh : PoseLandmarkerHelper? = null
+
+	suspend fun captureImage(seq: Sequence, activity: FragmentActivity): Boolean {
+		val name = getFileName(seq)
+		val moireName = getMoireFileName(seq)
+		return withContext(Dispatchers.IO) {
+			try {
+				mPipeline?.waitForFrameSet(1000)?.use { frameSet ->
+					val colorFrame = frameSet.getColorFrame() ?: return@use false
+					val originalDepthFrame = frameSet.getDepthFrame()
+					val dataSize = colorFrame.getDataSize()
+					Log.d("captureImage", "✅ 데이터 읽을 크기: $dataSize bytes")
+
+					val byteBuffer = ByteBuffer.allocateDirect(dataSize)
+					colorFrame.getData(byteBuffer)
+					byteBuffer.rewind() // 읽기 위치를 처음으로
+					Log.d("captureImage", "✅ colorFrame.getData 완료")
+
+					val width = colorFrame.width
+					val height = colorFrame.height
+					Log.d("captureImage", "✅ 크기: ${width}x${height}")
+
+					val pixels = IntArray(width * height)
+					for (i in pixels.indices) {
+						if (byteBuffer.remaining() >= 3) {
+							val r = byteBuffer.get().toInt() and 0xFF
+							val g = byteBuffer.get().toInt() and 0xFF
+							val b = byteBuffer.get().toInt() and 0xFF
+
+							pixels[i] = (0xFF shl 24) or (r shl 16) or (g shl 8) or b
+						}
+					}
+					colorFrame.close()
+
+					// depth 프레임 가져오기
+					var depthData: ShortArray? = null
+					var depthW = 0
+					var depthH = 0
+					val face2D = face2DResult
+					val params = mDevice?.calibrationCameraParamList
+
+
+					if (originalDepthFrame != null) {
+						val filteredFrame = try {
+							val filtered = mHoleFillingFilter?.process(originalDepthFrame)
+							val f = filtered?.`as`(FrameType.DEPTH) as? DepthFrame
+							originalDepthFrame.close()
+							f ?: originalDepthFrame
+						} catch (e: Exception) {
+							Log.e("captureImage", "HoleFilling failed: ${e.message}")
+							originalDepthFrame
+						}
+
+						filteredFrame.use { df ->
+							depthW = df.width
+							depthH = df.height
+							val byteData = ByteArray(depthW * depthH * 2)
+							df.getData(byteData)
+							depthData = ShortArray(depthW * depthH) { i ->
+								val lo = byteData[i * 2].toInt() and 0xFF
+								val hi = byteData[i * 2 + 1].toInt() and 0xFF
+								(hi shl 8 or lo).toShort()
+							}
+							latestDepthData = depthData      // ✅ 추가
+							latestDepthWidth = depthW        // ✅ 추가
+							latestDepthHeight = depthH       // ✅ 추가
+						}
+					}
+//          🖤🖤🖤🖤🖤🖤🖤 depth원본데이터 저장하기
+//					val rawDepthVis = Bitmap.createBitmap(depthW, depthH, Bitmap.Config.ARGB_8888)
+//					val pixels2 = IntArray(depthW * depthH)
+//					Log.v("크기차이", "${depthData?.size}, ${depthW * depthH}")
+//					for (i in pixels2.indices) {
+//						val d = (depthData!![i].toInt() and 0xFFFF)
+//						val v = (d.coerceIn(0, 2000) * 255 / 2000)
+//						pixels2[i] = Color.argb(255, v, v, v)
+//					}
+//					rawDepthVis.setPixels(pixels2, 0, depthW, 0, 0, depthW, depthH)
+//					val rawDepthName = name.replaceFirst("0-", "0-rawdepth-")
+//					val contentValues = ContentValues().apply {
+//						put(MediaStore.MediaColumns.DISPLAY_NAME, "$rawDepthName.webp")
+//						put(MediaStore.MediaColumns.MIME_TYPE, "image/webp")
+//						put(MediaStore.Images.Media.RELATIVE_PATH, "Pictures/TangoPlus")
+//					}
+//					val imageUri = contentResolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, contentValues)
+//					imageUri?.let { uri ->
+//						contentResolver.openOutputStream(uri)?.use { os ->
+//							rawDepthVis.compress(Bitmap.CompressFormat.WEBP_LOSSY, 100, os)
+//							os.flush()
+//						}
+//						Log.d("RawDepthVis", "저장 완료: $rawDepthName.webp")
+//					}
+//          depth원본데이터 저장하기 끝 🖤🖤🖤🖤🖤🖤🖤
+
+//					val alignedDepth = if (depthData != null && params != null) {
+//						val paramsUnit = params.getCameraParam(0)
+//						Log.v("ExtrinsicRaw", "${paramsUnit.transform}")
+//						Log.d("RawCheck", "depthW=$depthW depthH=$depthH")
+//						buildColorAlignedDepth(
+//							rawDepth = depthData,
+//							rawW = depthW,
+//							rawH = depthH,
+//							colorW = width,   // color bitmap 해상도 (1920)
+//							colorH = height,  // color bitmap 해상도 (1080)
+//							depthIntrinsic = paramsUnit.depthIntrinsic,
+//							colorIntrinsic = paramsUnit.colorIntrinsic,
+//							extrinsic = paramsUnit.transform
+//						)
+//					} else null
+//
+//					var minVal = Int.MAX_VALUE
+//					var minX = -1; var minY = -1
+//					for (y in 0 until depthH) {
+//						for (x in 0 until depthW) {
+//							val d = depthData!![y * depthW + x].toInt() and 0xFFFF
+//							if (d in 1 until minVal) { minVal = d; minX = x; minY = y }
+//						}
+//					}
+//					Log.d("NoseCheck", "실제 depth 최솟값=$minVal at ($minX,$minY)")
+//					Log.d("NoseCheck", "실제 depth (${depthW} x ${depthH})")
+//					val lm4 = face2D!!.landmarks[4]
+//					Log.d("NoseCheck", "landmark[4] 위치=(${lm4.x * depthW}, ${lm4.y * depthH})")
+//					val cx = 743; val cy = 714
+//					for (dy in -3..3) {
+//						val row = (cy + dy).coerceIn(0, depthH - 1) * depthW
+//						val vals = (-3..3).map { dx ->
+//							val xx = (cx + dx).coerceIn(0, depthW - 1)
+//							depthData!![row + xx].toInt() and 0xFFFF
+//						}
+//						Log.d("CheckMinArea", "y=${cy+dy}: $vals")
+//					}
+
+
+					val undistortedPoints: List<Pair<Float, Float>>? = if (face2D != null && params != null) {
+						val paramsUnit = params.getCameraParam(0)
+						val rawPoints = face2D.landmarks.map { Pair(it.x * depthW, it.y * depthH) }
+						val depthIntrc = paramsUnit.depthIntrinsic.toScaledIntrinsic()
+						undistortLandmarks(rawPoints, depthIntrc, depthDistortion!!)
+					} else null
+					if (face2D != null && params != null && depthData != null) {
+						val paramsUnit = params.getCameraParam(0)
+						val base = paramsUnit.depthIntrinsic
+						latestIntrinsic = base
+						Log.d("Distortion", "k1=${depthDistortion?.k1()} k2=${depthDistortion?.k2()} k3=${depthDistortion?.k3()} p1=${depthDistortion?.p1()} p2=${depthDistortion?.p2()}")// ✅ VM에 저장
+						val landmarks3D = convertFaceLandmarksTo3D(
+							face2D,
+							depthData,
+							depthW,
+							depthH,
+							base,
+							depthDistortion!!
+						)
+
+						face3DResult = landmarks3D
+						Log.d("captureImage", "✅ 3D landmark 계산 완료: ${landmarks3D.size}개")
+					} else {
+						Log.w("captureImage", "⚠️ face2D 또는 params 없음, 3D 계산 스킵")
+					}
+
+					// D2C align 확인용 로그 (한 번 찍어보세요)
+					Log.d("captureImage", "color=${width}x${height}  depth=${depthW}x${depthH}")
+
+					val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+					bitmap.setPixels(pixels, 0, width, 0, 0, width, height)
+
+					face2D?.let { result ->
+						val noseIndexes = listOf(1, 4, 5)
+						noseIndexes.forEach { idx ->
+							val lm = result.landmarks[idx]
+							val px = (lm.x * depthW).toInt().coerceIn(0, depthW - 1)
+							val py = (lm.y * depthH).toInt().coerceIn(0, depthH - 1)
+
+							val sb = StringBuilder()
+							for (dy in -2..2) {
+								for (dx in -2..2) {
+									val xx = (px + dx).coerceIn(0, depthW - 1)
+									val yy = (py + dy).coerceIn(0, depthH - 1)
+									val d = depthData?.get(yy * depthW + xx)?.toInt()?.and(0xFFFF) ?: -1
+									sb.append("$d ")
+								}
+								sb.append("| ")
+							}
+							Log.d("NoseDepth", "landmark[$idx] at ($px,$py): $sb")
+						}
+					}
+					val faceMaskPath = undistortedPoints?.let { pts ->
+						Log.v("포인트들", "$pts")
+						buildFaceMaskPathFromPoints(pts, faceOutLineIndexes)
+					}
+
+
+					val (minDepth, maxDepth) = computeFaceDepthRange(depthData!!, depthW, depthH, faceMaskPath!!)
+					Log.d("Moire", "minDepth=$minDepth maxDepth=$maxDepth")
+					val tempMoireBitmap = generateMoireBitmap(depthData, depthW, depthH, faceMaskPath, minDepth, maxDepth)
+					val tempFile = File.createTempFile("color_capture", ".webp", activity.cacheDir)
+					FileOutputStream(tempFile).use { fos ->
+						bitmap.compress(Bitmap.CompressFormat.WEBP_LOSSY, 100, fos)
+					}
+					val tempUri = Uri.fromFile(tempFile)
+
+					if (flh != null && plh!= null) {
+						saveMediaToStorage(activity, tempUri, name, flh!!, plh!!, false)
+						if (seq == Sequence.COMFORT) saveMoireToStorage(activity, tempMoireBitmap, moireName)
+					}
+					return@withContext true
+				} ?: false
+			} catch (e: Exception) {
+				Log.e("captureImage", "❌ Frame capture failed: ${e.message}", e)
+				false
+			}
+		}
+	}
+	fun resultHsvToJson(
+		resultBundle: FaceLandmarkResult,
+		targets: List<HsvColorTracker.Target>,
+		flr3D: List<Point3D> = listOf()
+	) {
+		if (resultBundle.landmarks.isNotEmpty()) {
+			val flr = resultBundle.landmarks
+
+			val targetFs = targets.map { toFloatTarget(it, baseW = 1920, baseH = 1080, mirrorX = true) }
+				.sortedBy { it.cx }
+			val ja = JSONArray()
+			for (t in targetFs) {
+				val obj = JSONObject()
+					.put("cx", t.cx)
+					.put("cy", t.cy)
+				ja.put(obj)
+			}
+			resultTargetFs.copyFrom(ja)
+//            Log.v("좌표까봐-결과", "resultTargetFs: ${mvm.resultTargetFs}")
+
+			currentCoordinate.clear()
+			relativeCoordinate.clear()
+			current3DCoordinate.clear()
+
+			flr.forEachIndexed { index, faceLandmark ->
+				val scaledX = calculateScreenX( 1f - faceLandmark.x)
+				val scaledY = calculateScreenY( faceLandmark.y)
+				val x = flr3D.getOrNull(index)?.x ?: 0f
+				val y = flr3D.getOrNull(index)?.y ?: 0f
+				val z = flr3D.getOrNull(index)?.z ?: 0f
+
+				val ja = JSONArray().apply {
+					put(index)
+					put(scaledX)
+					put(scaledY)
+					put(x)
+					put(y)
+					put(z)
+				}
+				tempCoordinateJA.put(ja)
+				// 절대좌표
+				currentCoordinate.add(Pair(scaledX, scaledY))
+				// 상대좌표
+
+				relativeCoordinate.add(
+					Pair(
+						faceLandmark.x,
+						faceLandmark.y
+					)
+				)
+			}
+			hsvFLCoordinatesJA.copyFrom(tempCoordinateJA)
+
+			val vmFlr = relativeCoordinate
+			if (targetFs.size >= 3) {
+				val eyeAngle =
+					calculateSlope(vmFlr[468].first, vmFlr[468].second, vmFlr[473].first, vmFlr[473].second)
+				val lipsAngle =
+					calculateSlope(targetFs[0].cx, targetFs[0].cy, targetFs[2].cx, targetFs[2].cy)
+				val chinAngle =
+					calculateSlope(vmFlr[291].first, vmFlr[291].second, vmFlr[61].first, vmFlr[61].second)
+
+				hsvColorJo.apply {
+					put("bow_eye_horizontal_angle", eyeAngle)
+					put("bow_tip_of_lips_horizontal_angle", lipsAngle)
+					put("bow_tip_of_chin_horizontal_angle", chinAngle)
+				}
+			}
+		}
+	}
+
+
+  @OptIn(UnstableApi::class)
+  fun flipVideoHorizontally(
+		context: Context,
+		inputPath: String,
+		outputPath: String,
+		callback: (Boolean) -> Unit
+	) {
+		CoroutineScope(Dispatchers.Main).launch {
+			flipVideo(
+				context = context,
+				inputPath = inputPath,
+				outputPath = outputPath,
+				onSuccess = { file ->
+					callback(true)
+					println("비디오 플립 성공: ${file.path}")
+				},
+				onError = { errorMessage ->
+					callback(false)
+					println("비디오 크롭 실패: $errorMessage")
+				},
+			)
+		}
+	}
+	@UnstableApi
+	private fun flipVideo(
+		context: Context,
+		inputPath: String,
+		outputPath: String,
+		onSuccess: (File) -> Unit,
+		onError: (String) -> Unit
+	) {
+		// 입력 비디오 URI 생성
+		val inputUri = Uri.fromFile(File(inputPath))
+		val mediaItem = MediaItem.fromUri(inputUri)
+		val cropEffect = Crop(-0.421875f, 0.421875f, -1f, 1f)
+		val presentation = Presentation.createForWidthAndHeight(
+			540, 720, Presentation.LAYOUT_SCALE_TO_FIT
+		)
+		val flipEffect = ScaleAndRotateTransformation.Builder()
+			.setScale(-1f, 1f)
+			.build()
+		val effects = Effects(
+			listOf(ChannelMixingAudioProcessor()),
+			listOf(cropEffect, flipEffect, presentation)
+		)
+		val editedMediaItem = EditedMediaItem.Builder(mediaItem)
+			.setEffects(effects)
+			.build()
+
+		val transformer = Transformer.Builder(context)
+			.setVideoMimeType(MimeTypes.VIDEO_H264)
+			.addListener(object : Transformer.Listener {
+				override fun onCompleted(composition: Composition, exportResult: ExportResult) {
+					super.onCompleted(composition, exportResult)
+					onSuccess(File(outputPath))
+				}
+
+				override fun onError(
+					composition: Composition,
+					exportResult: ExportResult,
+					exportException: ExportException
+				) {
+					super.onError(composition, exportResult, exportException)
+					onError(exportException.message ?: "Unknown error")
+				}
+			}).build()
+		transformer.start(editedMediaItem, outputPath)
+	}
+
 }

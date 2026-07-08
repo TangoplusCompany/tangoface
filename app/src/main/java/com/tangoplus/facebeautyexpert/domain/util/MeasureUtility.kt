@@ -57,18 +57,6 @@ object MeasureUtility {
 		}
 	}
 
-	fun showReStartDialog(context: Context, callback: () -> Unit) {
-		MaterialAlertDialogBuilder(context, R.style.ThemeOverlay_App_MaterialAlertDialog).apply {
-			setTitle("알림")
-			setMessage("다시 시작하시겠습니까?")
-			setPositiveButton("예") { _, _ ->
-				callback()
-			}
-			setNegativeButton("아니오") { _, _ -> }
-			show()
-		}
-	}
-
 	fun showGoMainDialog(currentActivity: AppCompatActivity) {
 		MaterialAlertDialogBuilder(currentActivity, R.style.ThemeOverlay_App_MaterialAlertDialog)
 			.setTitle("알림")
@@ -83,55 +71,4 @@ object MeasureUtility {
 			.show()
 	}
 
-	private var loadingDialog: LoadingDialogFragment? = null
-	fun show(activity: AppCompatActivity) {
-		// 이미 표시 중이거나 Activity가 유효하지 않으면 return
-		if (loadingDialog?.isAdded == true ||
-			activity.isFinishing ||
-			activity.isDestroyed
-		) {
-			return
-		}
-
-		try {
-			loadingDialog = LoadingDialogFragment.newInstance(0).apply {
-				show(activity.supportFragmentManager, "loading")
-			}
-		} catch (e: Exception) {
-			Log.e("LoadingDialogManager", "Failed to show loading dialog", e)
-		}
-	}
-
-	fun dismiss(activity: AppCompatActivity) {
-		try {
-			loadingDialog?.let { dialog ->
-				if (dialog.isAdded &&
-					!activity.isFinishing &&
-					!activity.isDestroyed &&
-					!activity.supportFragmentManager.isStateSaved
-				) {
-					dialog.dismissAllowingStateLoss()
-				}
-			}
-		} catch (e: Exception) {
-			Log.e("LoadingDialogManager", "Failed to dismiss loading dialog", e)
-		} finally {
-			loadingDialog = null
-		}
-	}
-
-	fun dismissSafely() {
-		try {
-			loadingDialog?.dismissAllowingStateLoss()
-		} catch (e: Exception) {
-			Log.e("LoadingDialogManager", "Failed to dismiss loading dialog safely", e)
-		} finally {
-			loadingDialog = null
-		}
-	}
-
-	// Activity 종료 시 강제로 정리
-	fun clear() {
-		loadingDialog = null
-	}
 }

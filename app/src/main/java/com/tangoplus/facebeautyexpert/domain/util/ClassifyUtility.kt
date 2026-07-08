@@ -3,11 +3,13 @@ package com.tangoplus.facebeautyexpert.domain.util
 import android.util.Log
 import com.tangoplus.facebeautyexpert.data.db.FaceShape
 import com.tangoplus.facebeautyexpert.data.db.FacialAxisShape
+import com.tangoplus.facebeautyexpert.domain.util.MathHelpers.calculateAngle
 import com.tangoplus.facebeautyexpert.domain.util.MathHelpers.calculateRatios
 import com.tangoplus.facebeautyexpert.domain.vision.face.FaceLandmarkResult
 import kotlin.math.abs
 import kotlin.math.atan2
 import kotlin.math.hypot
+import kotlin.math.roundToInt
 
 object ClassifyUtility {
 	fun getIntFromFaceType(faceType: FaceShape?): Int {
@@ -35,8 +37,9 @@ object ClassifyUtility {
 		}
 	}
 	data class FaceShapeResult(
-		val shape: FaceShape,
-		val ratios: Map<String, Float>  // 디버깅용 비율값
+		val primaryShape: FaceShape,      // 1순위 얼굴형
+		val secondaryShape: FaceShape?,   // 2순위 얼굴형 (단독일 경우 null)
+		val ratios: Map<String, Float>    // 분석 수치들
 	)
 
 	fun classifyFaceShape(
@@ -46,90 +49,124 @@ object ClassifyUtility {
 
 		val lm = faceLandmarks
 
-		// 핵심 width 측정
-		val cheekWidth    = abs(lm[454].first - lm[234].first)   // 광대 width (가장 넓은 부분)
-		val foreheadWidth = abs(lm[332].first - lm[103].first)   // 이마 width
-		val jawWidth      = abs(lm[397].first - lm[172].first)   // 턱 width
-		val midFaceWidth  = abs(lm[361].first - lm[132].first)   // 볼 중간 width (광대 아래)
+		// --- 1. 기본 골격 데이터 추출 ---
+		val cheekWidth    = abs(lm[454].first - lm[234].first)
+		val foreheadWidth = abs(lm[332].first - lm[103].first)
+		val jawWidth      = abs(lm[397].first - lm[172].first)
+		val midFaceWidth  = abs(lm[361].first - lm[132].first)
 
-		// 헤어라인 Y
 		val hairlineY = hairlinePoints.getOrNull(3)?.second ?: lm[10].second
 		val chinY     = lm[152].second
 		val faceHeight = abs(chinY - hairlineY)
 
-		// 비율들
-		val cheekToForehead = cheekWidth / foreheadWidth   // 광대/이마 (>1 = 광대가 넓음)
-		val cheekToJaw      = cheekWidth / jawWidth        // 광대/턱  (>1 = 광대가 넓음)
-		val foreheadToJaw   = foreheadWidth / jawWidth     // 이마/턱  (>1 = 이마가 넓음)
-		val widthToHeight   = cheekWidth / faceHeight      // 가로/세로 비율
+		val widthToHeight   = cheekWidth / faceHeight
+		val cheekToJaw      = cheekWidth / jawWidth
+		val foreheadToJaw   = foreheadWidth / jawWidth
+		val cheekToForehead = cheekWidth / foreheadWidth
 
-		// 볼살 굴곡: 볼 중간이 광대보다 얼마나 좁은지
-		// 값이 클수록 볼이 패임 (땅콩형)
-		// 값이 작을수록 볼살이 많음 (둥근형)
-		val cheekHollowRatio = midFaceWidth / cheekWidth   // 1에 가까울수록 볼살 많음, 작을수록 패임
+		val chinAngle = calculateAngle(lm[132], lm[152], lm[361])
 
-		val ratios = mapOf(
-			"cheekToForehead" to cheekToForehead,
-			"cheekToJaw"      to cheekToJaw,
-			"foreheadToJaw"   to foreheadToJaw,
-			"widthToHeight"   to widthToHeight,
-			"cheekHollow"     to cheekHollowRatio
+		// --- 2. ✨ NEW: 상/하단 볼살(Flesh) 여백 추출 ---
+		// [상단 여백] 눈 끝 ~ 얼굴 외곽 (광대 부각 및 상단 볼살 확인)
+		val upperFleshWidth = abs(lm[454].first - lm[263].first) + abs(lm[33].first - lm[234].first)
+		val upperFleshRatio = upperFleshWidth / cheekWidth
+
+		// [하단 여백] 입꼬리 ~ 얼굴 외곽 (심술보, 하단 볼살 두께 확인)
+		// 좌측: 외곽(58) - 입꼬리(61) / 우측: 외곽(288) - 입꼬리(291)
+		val lowerFleshWidth = abs(lm[61].first - lm[58].first) + abs(lm[288].first - lm[291].first)
+		val lowerFleshRatio = lowerFleshWidth / cheekWidth
+
+		// --- 1. 핵심 판별 플래그 (Celebrity 데이터 기반 최적화) ---
+// 김정은(0.45), 봉준호(0.44) 등 '머리 너비'가 넓은 타입
+		val isUpperWide = upperFleshRatio > 0.42f
+// 김정은(0.64) 등 하단 볼살이 비정상적으로 많은 타입
+		val isChubby = upperFleshRatio > 0.43f && lowerFleshRatio > 0.60f
+// 정호연(0.37), 한효주(0.35) 등 뼈가 도드라지고 하단은 매끈한 타입
+		val isBoneProminent = upperFleshRatio > 0.33f && lowerFleshRatio <= 0.54f
+
+// --- 2. 얼굴형 점수판 세팅 ---
+		val scores = mutableMapOf(
+			FaceShape.EGG to 0f,
+			FaceShape.HEART to 0f,
+			FaceShape.HEXAGON to 0f,
+			FaceShape.CIRCLE to 0f,
+			FaceShape.RHOMBUS to 0f
 		)
+		fun add(shape: FaceShape, points: Float) { scores[shape] = (scores[shape] ?: 0f) + points }
 
-		Log.v("얼굴형비율", """
-        광대/이마: ${"%.3f".format(cheekToForehead)}
-        광대/턱:   ${"%.3f".format(cheekToJaw)}
-        이마/턱:   ${"%.3f".format(foreheadToJaw)}
-        가로/세로: ${"%.3f".format(widthToHeight)}
-        볼굴곡:    ${"%.3f".format(cheekHollowRatio)}
-    """.trimIndent())
+		// --- 3. 특징별 채점 시작 ---
 
-		val shape = when {
+		// [A. 둥근형(CIRCLE)] - 김정은, 봉준호 타겟
+		if (widthToHeight > 0.83f) add(FaceShape.CIRCLE, 40f)
+		if (isChubby) add(FaceShape.CIRCLE, 60f) // 고도비만형
+		if (isUpperWide) add(FaceShape.CIRCLE, 50f) // 상단 너비가 넓은 넙데데형
 
-			// 마름모형: 광대 큼, 이마 좁음, 턱 좁음
-			// cheekToForehead 크고, cheekToJaw 크고, foreheadToJaw ≈ 1
-			cheekToForehead > 1.15f
-				&& cheekToJaw > 1.25f
-				&& foreheadToJaw in 0.85f..1.15f
-				&& cheekHollowRatio > 0.85f -> FaceShape.RHOMBUS
-
-			// 땅콩형: 광대 큼, 턱 큼, 볼이 패임
-			// cheekToForehead 크고, cheekToJaw 작음 (턱이 광대만큼 넓음), 볼 패임
-			cheekToForehead > 1.1f
-				&& cheekToJaw < 1.15f
-				&& cheekHollowRatio < 0.82f -> FaceShape.PEANUT
-
-			// 하트형: 광대 큼, 이마 넓음, 턱 중간
-			// cheekToForehead 작고(이마도 넓음), cheekToJaw 중간
-			cheekToForehead in 0.95f..1.15f
-				&& cheekToJaw in 1.15f..1.35f
-				&& foreheadToJaw > 1.1f -> FaceShape.HEART
-
-			// 육각형: 광대 작음, 턱 큼
-			// cheekToJaw 작음 (턱이 광대만큼 넓거나 더 넓음)
-			cheekToJaw < 1.05f
-				&& cheekToForehead < 1.1f
-				&& foreheadToJaw < 0.95f -> FaceShape.HEXAGON
-
-			// 둥근형: 광대 작음, 턱 작음, 볼살 많음
-			// 가로/세로 비율 크고, 볼 굴곡 작음 (볼살 많음)
-			widthToHeight > 0.80f
-				&& cheekToJaw < 1.2f
-				&& cheekToForehead < 1.15f
-				&& cheekHollowRatio > 0.88f -> FaceShape.CIRCLE
-
-			// 계란형: 광대 작음, 이마>턱, 아래로 갈수록 좁아짐
-			foreheadToJaw > 1.1f
-				&& cheekToForehead in 0.9f..1.15f
-				&& cheekToJaw in 1.1f..1.35f
-				&& widthToHeight < 0.80f -> FaceShape.EGG
-
-			// fallback
-			else -> FaceShape.EGG
+		// [B. 골격형 판별 (마름모 vs 육각형)] - 정호연, 한효주 타겟
+		if (isBoneProminent) {
+			if (cheekToJaw > 1.28f) {
+				// 💎 정호연 타입 (턱이 극단적으로 좁은 마름모/다이아몬드)
+				add(FaceShape.RHOMBUS, 80f)
+				add(FaceShape.HEART, 40f)
+				if (chinAngle < 100f) add(FaceShape.RHOMBUS, 20f)
+			} else {
+				// 📐 한효주 타입 (턱 골격이 우아하게 살아있는 육각형)
+				add(FaceShape.HEXAGON, 90f)
+				add(FaceShape.HEART, 20f)
+				if (widthToHeight in 0.70f..0.80f) add(FaceShape.HEXAGON, 20f)
+			}
+		} else if (cheekToJaw < 1.10f && !isChubby) {
+			// 일반 사각턱 타입 육각형
+			add(FaceShape.HEXAGON, 60f)
 		}
 
-		Log.v("얼굴형결과", shape.displayName)
-		return FaceShapeResult(shape, ratios)
+		// [C. 계란형(EGG)] - 고윤정 타겟
+		// 💡 계란형은 뼈 부각, 살집, 넓은 상단이 모두 없을 때만 도달 가능
+		if (!isChubby && !isUpperWide && !isBoneProminent) {
+			if (chinAngle < 116f) add(FaceShape.EGG, 60f)
+			if (cheekToJaw > 1.25f) add(FaceShape.EGG, 30f)
+			if (widthToHeight <= 0.82f) add(FaceShape.EGG, 10f)
+		} else {
+			// 특징이 하나라도 튀면 계란형에서 강력 제외
+			add(FaceShape.EGG, -100f)
+		}
+
+		// [D. 하트형(HEART)] - 역삼각형 실루엣 보정
+		if (!isChubby) {
+			// 턱이 뾰족하면 하트형 점수를 주되, 뼈 부각 시 육각형/마름모보다 낮게 설정
+			if (chinAngle < 105f) {
+				// 턱이 1.28보다 좁을 때만 하트형 점수 비중을 높임
+				val heartBonus = if (cheekToJaw > 1.28f) 50f else 20f
+				add(FaceShape.HEART, heartBonus)
+			}
+			if (foreheadToJaw > 1.15f) add(FaceShape.HEART, 20f)
+		}
+
+		// --- 5. 순위 매기기 ---
+		val sortedScores = scores.entries.sortedByDescending { it.value }
+		val firstPlace = sortedScores[0]
+		val secondPlace = sortedScores[1]
+
+		val primaryShape = firstPlace.key
+		var secondaryShape: FaceShape? = null
+
+		// 2순위 결정 (1순위가 압도적이지 않고, 2순위가 유의미한 점수일 때)
+		if (secondPlace.value >= 30f && secondPlace.value >= firstPlace.value * 0.5f) {
+			secondaryShape = secondPlace.key
+		}
+
+		// 디버깅용 정밀 로그 (임계값 조절 시 이 로그를 꼭 확인하세요!)
+		Log.v("얼굴여백분석", "상단볼살(Upper): ${"%.3f".format(upperFleshRatio)} | 하단볼살(Lower): ${"%.3f".format(lowerFleshRatio)}")
+		Log.v("얼굴살판별", "비만형(Chubby): $isChubby | 뼈부각(Bone): $isBoneProminent")
+		Log.v("얼굴형비율", "광대/턱: ${"%.2f".format(cheekToJaw)} | 가로/세로: ${"%.2f".format(widthToHeight)} | 턱각도: ${"%.1f".format(chinAngle)}")
+		Log.v("얼굴형최종결과", "1위: ${primaryShape.name}(${firstPlace.value}점) | 2위: ${secondaryShape?.name ?: "없음"}")
+		val ratios = mapOf(
+			"widthToHeight"   to widthToHeight,
+			"cheekToJaw"      to cheekToJaw,
+			"upperFlesh"      to upperFleshRatio,
+			"lowerFlesh"      to lowerFleshRatio,
+			"chinAngle"       to chinAngle
+		)
+		return FaceShapeResult(primaryShape, secondaryShape, ratios)
 	}
 
 	data class FacialAxisResult(
@@ -189,8 +226,8 @@ object ClassifyUtility {
 	): Pair<Float, Float> {
 		val lm = faceLandmarks
 
-		val leftJaw  = lm[172]
-		val rightJaw = lm[397]
+		val leftJaw  = lm[58]
+		val rightJaw = lm[288]
 		val chin     = lm[152]
 
 		// 왼쪽 기준선: leftJaw → chin
@@ -241,8 +278,8 @@ object ClassifyUtility {
 			}
 			.maxOrNull() ?: 0f
 
-		val leftCI  = ((leftMaxD  / leftLineLen)  * 100f).coerceAtLeast(0f)
-		val rightCI = ((rightMaxD / rightLineLen) * 100f).coerceAtLeast(0f)
+		val leftCI  = ((leftMaxD  / leftLineLen)  * 10f).coerceAtLeast(0f)
+		val rightCI = ((rightMaxD / rightLineLen) * 10f).coerceAtLeast(0f)
 
 		Log.v("처짐CI", "왼쪽 d: ${"%.4f".format(leftMaxD)} L: ${"%.4f".format(leftLineLen)} CI: ${"%.2f".format(leftCI)}")
 		Log.v("처짐CI", "오른쪽 d: ${"%.4f".format(rightMaxD)} L: ${"%.4f".format(rightLineLen)} CI: ${"%.2f".format(rightCI)}")
@@ -307,42 +344,64 @@ object ClassifyUtility {
 		return Pair(lengthAsymmetry, angleAsymmetry)
 	}
 
-	fun calculateVerticalRatio(
-		faceLandmarks: MutableList<Pair<Float, Float>>
-	): String {
-		val points = listOf(
-			faceLandmarks[234],   // 왼쪽 귓바퀴
-			faceLandmarks[33],    // 왼눈끝
-			faceLandmarks[133],   // 왼눈시작
-			faceLandmarks[362],   // 오른눈시작
-			faceLandmarks[263],   // 오른눈끝
-			faceLandmarks[454]    // 오른쪽 귓바퀴
-		)
-
-		val ratios = calculateRatios(points, isVertical = true)  // X좌표 기준
-		if (ratios.isEmpty()) return "0:0:0:0:0"
-
-		return ratios.joinToString(":") { "%.2f".format(it) }
-	}
-
+	// 가로 비율 (상:중:하 총합 3)
 	fun calculateHorizontalRatio(
 		faceLandmarks: MutableList<Pair<Float, Float>>,
 		hairLine3DCoordinates: MutableList<Triple<Float, Float, Float>>
 	): String {
-		val hairlineCenterY = hairLine3DCoordinates[3].second
+		if (faceLandmarks.isNotEmpty() && hairLine3DCoordinates.size > 3) {
+			val hairlineY = hairLine3DCoordinates[3].second
+			val eyesY = (faceLandmarks[55].second + faceLandmarks[285].second) / 2f
+			val noseY = faceLandmarks[2].second
+			val chinY = faceLandmarks[152].second
 
-		val points = listOf(
-			Pair(0f, hairlineCenterY),                                              // 헤어라인
-			Pair(0f, (faceLandmarks[55].second + faceLandmarks[285].second) / 2f), // 눈끝 라인
-			Pair(0f, faceLandmarks[2].second),                                      // 코끝
-			Pair(0f, faceLandmarks[152].second)                                     // 턱끝
-		)
+			val upper = eyesY - hairlineY
+			val mid = noseY - eyesY
+			val lower = chinY - noseY
 
-		val ratios = calculateRatios(points, isVertical = false)  // Y좌표 기준
-		if (ratios.isEmpty()) return "0:0:0"
+			val total = upper + mid + lower
+			if (total <= 0f) return "0:0:0"
 
-		return ratios.joinToString(":") { "%.2f".format(it) }
+			// 반올림하여 자연수(정수)로 변환
+			val pUpper = (upper / total * 100).roundToInt()
+			val pMid = (mid / total * 100).roundToInt()
+			val pLower = (lower / total * 100).roundToInt()
+
+			return "$pUpper:$pMid:$pLower"
+		}
+		return "0:0:0"
 	}
 
+	fun calculateVerticalRatio(
+		faceLandmarks: MutableList<Pair<Float, Float>>
+	): String {
+		if (faceLandmarks.isNotEmpty()) {
+			val leftEarX = faceLandmarks[234].first
+			val leftEyeOutX = faceLandmarks[33].first
+			val leftEyeInX = faceLandmarks[133].first
+			val rightEyeInX = faceLandmarks[362].first
+			val rightEyeOutX = faceLandmarks[263].first
+			val rightEarX = faceLandmarks[454].first
+
+			val m1 = leftEyeOutX - leftEarX
+			val m2 = leftEyeInX - leftEyeOutX
+			val m3 = rightEyeInX - leftEyeInX
+			val m4 = rightEyeOutX - rightEyeInX
+			val m5 = rightEarX - rightEyeOutX
+
+			val total = m1 + m2 + m3 + m4 + m5
+			if (total <= 0f) return "0:0:0:0:0"
+
+			// 100% 기준 자연수(정수)로 변환
+			val p1 = (m1 / total * 100).roundToInt()
+			val p2 = (m2 / total * 100).roundToInt()
+			val p3 = (m3 / total * 100).roundToInt()
+			val p4 = (m4 / total * 100).roundToInt()
+			val p5 = (m5 / total * 100).roundToInt()
+
+			return "$p1:$p2:$p3:$p4:$p5"
+		}
+		return "0:0:0:0:0"
+	}
 
 }

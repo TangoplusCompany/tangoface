@@ -138,27 +138,6 @@ class ChartViewModel : ViewModel() {
 		).filter { it.value > 0f } as ArrayList<PieEntry>
 	}
 
-//	fun countGender(data: List<PreCheckList>): ArrayList<PieEntry> {
-//		val maleCount = data.count { it.gender == 0 }
-//		val femaleCount = data.count { it.gender == 1 }
-//		val unknown = data.size - maleCount - femaleCount
-//
-//		return arrayListOf(
-//			PieEntry(maleCount.toFloat(), "남성"),
-//			PieEntry(femaleCount.toFloat(), "여성"),
-//			PieEntry(unknown.toFloat(), "기타")
-//		).filter { it.value > 0f } as ArrayList<PieEntry>
-//	}
-//
-//	fun countNationality(data: List<PreCheckList>): ArrayList<PieEntry> {
-//		return data.groupBy { it.nationality }
-//			.map { (nation, list) ->
-//				PieEntry(
-//					list.size.toFloat(),
-//					transNationalCode(nation).ifEmpty { "기타" }
-//				)
-//			} as ArrayList<PieEntry>
-//	}
 
 	fun countAgeGroup(data: List<PreCheckList>): ArrayList<PieEntry> {
 		val ageGroups = mutableMapOf(
@@ -171,21 +150,6 @@ class ChartViewModel : ViewModel() {
 			"50~60세 미만" to 0,
 			"60세 이상" to 0
 		)
-
-//		data.forEach {
-//			val age = getAge(it.birthday ?: return@forEach)
-//			when {
-//				age < 20 -> ageGroups["20세 미만"] = ageGroups["20세 미만"]!! + 1
-//				age < 25 -> ageGroups["20~25세 미만"] = ageGroups["20~25세 미만"]!! + 1
-//				age < 30 -> ageGroups["25~30세 미만"] = ageGroups["25~30세 미만"]!! + 1
-//				age < 35 -> ageGroups["30~35세 미만"] = ageGroups["30~35세 미만"]!! + 1
-//				age < 40 -> ageGroups["35~40세 미만"] = ageGroups["35~40세 미만"]!! + 1
-//				age < 50 -> ageGroups["40~50세 미만"] = ageGroups["40~50세 미만"]!! + 1
-//				age < 60 -> ageGroups["50~60세 미만"] = ageGroups["50~60세 미만"]!! + 1
-//				else -> ageGroups["60세 이상"] = ageGroups["60세 이상"]!! + 1
-//			}
-//		}
-
 		return ageGroups.map { (label, count) ->
 			PieEntry(
 				count.toFloat(),

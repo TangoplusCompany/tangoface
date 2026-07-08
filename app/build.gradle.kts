@@ -17,14 +17,18 @@ val obSignatureProp = Properties().apply {
 
 android {
     namespace = "com.tangoplus.facebeautyexpert"
-    compileSdk = 35
+    compileSdk = 36
 
+    buildFeatures {
+        buildConfig = true
+        viewBinding = true
+    }
     defaultConfig {
         applicationId = "com.tangoplus.facebeautyexpert"
         minSdk = 30
-        targetSdk = 35
-        versionCode = 4
-        versionName = "1.03"
+        targetSdk = 36
+        versionCode = 1
+        versionName = "1.00"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
@@ -52,7 +56,16 @@ android {
                 abiFilters += listOf("arm64-v8a", "armeabi-v7a")
             }
         }
+
+        // gemini local config에서 가져오기
+        // local.properties에서 키를 읽어와서 BuildConfig 변수로 만듭니다.
+        val properties = Properties()
+        properties.load(project.rootProject.file("local.properties").inputStream())
+        val geminiApiKey = properties.getProperty("GEMINI_API_KEY") ?: ""
+
+        buildConfigField("String", "GEMINI_API_KEY", "\"$geminiApiKey\"")
     }
+
     signingConfigs {
         getByName("debug") {
             storeFile = file("../keystore/debug.jks")
@@ -112,51 +125,48 @@ android {
     kotlinOptions {
         jvmTarget = "11"
     }
-    viewBinding {
-        enable = true
-    }
 }
 
 
 //noinspection UseTomlInstead
 dependencies {
     // 외부 라이브러리
-//    debugImplementation("com.squareup.leakcanary:leakcanary-android:2.10")
+
+//    // Ktor 서버 코어 및 Netty 엔진
+//    implementation("io.ktor:ktor-server-core:2.3.12")
+//    implementation("io.ktor:ktor-server-netty:2.3.12")
+//    implementation("io.ktor:ktor-server-cors:2.3.12")
+//    implementation("io.ktor:ktor-server-content-negotiation:2.3.12")
+//    implementation("io.ktor:ktor-serialization-kotlinx-json:2.3.12")
+//    implementation("com.github.mwiede:jsch:0.2.20")
 
     implementation("com.microsoft.onnxruntime:onnxruntime-android:1.17.0")
     implementation("com.hbb20:ccp:2.7.0")
     implementation("com.github.PhilJay:MPAndroidChart:v3.1.0")
+    implementation("com.davemorrissey.labs:subsampling-scale-image-view:3.10.0")
+    implementation("com.github.skydoves:progressview:1.1.3")
+    implementation("com.github.bumptech.glide:glide:4.12.0")
+    implementation("com.github.yalantis:ucrop:2.2.8")
+    implementation("com.github.skydoves:balloon:1.6.4")
+    implementation("com.facebook.shimmer:shimmer:0.5.0")
+    implementation("com.airbnb.android:lottie:6.4.0")
 
+    implementation("com.squareup.retrofit2:retrofit:2.9.0")
+    implementation("com.squareup.retrofit2:converter-gson:2.9.0")
+    implementation("com.squareup.okhttp3:logging-interceptor:4.12.0")
+    implementation("com.squareup.retrofit2:converter-scalars:2.3.0")
+
+    // google 제공
     implementation(platform("com.google.firebase:firebase-bom:34.1.0"))
     implementation("com.google.firebase:firebase-analytics")
     implementation("com.google.firebase:firebase-crashlytics-ndk")
-
-    implementation("com.davemorrissey.labs:subsampling-scale-image-view:3.10.0")
-    implementation("com.github.skydoves:progressview:1.1.3")
-
-    //noinspection Aligned16KB
-    implementation("com.google.mediapipe:tasks-vision:0.10.26")
-    implementation("com.github.bumptech.glide:glide:4.12.0")
-    implementation("com.github.yalantis:ucrop:2.2.8")
     implementation("com.google.code.gson:gson:2.11.0")
-    implementation("com.facebook.shimmer:shimmer:0.5.0")
-    implementation("com.github.skydoves:balloon:1.6.4")
-    implementation("com.airbnb.android:lottie:6.4.0")
-    implementation(libs.androidx.core.animation)
-    implementation(libs.androidx.recyclerview)
-    implementation(libs.androidx.cardview)
-    implementation(libs.androidx.ui)
-    implementation(libs.androidx.viewpager2)
-//    implementation(project(":obsensor_jni"))
-    if (findProject(":obsensor_jni") != null) {
-        implementation(project(":obsensor_jni"))
-        implementation(fileTree(mapOf("dir" to "libs", "include" to listOf("*.aar"), "exclude" to listOf("obsensor_*.aar"))))
-    } else {
-        implementation(fileTree(mapOf("dir" to "libs", "include" to listOf("*.aar"))))
-    }
 
+    implementation("com.google.ai.client.generativeai:generativeai:0.9.0")
+    implementation("com.google.mediapipe:tasks-vision:0.10.26")
+  implementation(libs.ads.mobile.sdk)
 
-    val camera_version = "1.5.0"
+  val camera_version = "1.5.0"
     implementation("androidx.camera:camera-core:$camera_version")
     implementation("androidx.camera:camera-camera2:$camera_version")
     implementation("androidx.camera:camera-lifecycle:$camera_version")
@@ -188,15 +198,12 @@ dependencies {
     kapt("androidx.room:room-compiler:$roomVersion")
     implementation("androidx.sqlite:sqlite:2.4.0")
 
-    implementation("com.squareup.retrofit2:retrofit:2.9.0")
-    implementation("com.squareup.retrofit2:converter-gson:2.9.0")
-    implementation("com.squareup.okhttp3:logging-interceptor:4.12.0")
-    implementation("com.squareup.retrofit2:converter-scalars:2.3.0")
 
     //noinspection Aligned16KB
     implementation("net.zetetic:android-database-sqlcipher:4.5.4")
-
-    implementation ("androidx.core:core-ktx:1.14.0")
+    androidTestImplementation("androidx.test.espresso:espresso-intents:3.5.1")
+    androidTestImplementation("androidx.test.uiautomator:uiautomator:2.2.0")
+    implementation("androidx.core:core-ktx:1.14.0")
     implementation("androidx.appcompat:appcompat:1.7.1")
     implementation("com.google.android.material:material:1.12.0")
     implementation("androidx.constraintlayout:constraintlayout:2.2.1")
@@ -211,4 +218,26 @@ dependencies {
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
+
+    //noinspection Aligned16KB
+    implementation(libs.androidx.core.animation)
+    implementation(libs.androidx.recyclerview)
+    implementation(libs.androidx.cardview)
+    implementation(libs.androidx.ui)
+    implementation(libs.androidx.viewpager2)
+//    implementation(project(":obsensor_jni"))
+    if (findProject(":obsensor_jni") != null) {
+        implementation(project(":obsensor_jni"))
+        implementation(
+            fileTree(
+                mapOf(
+                    "dir" to "libs",
+                    "include" to listOf("*.aar"),
+                    "exclude" to listOf("obsensor_*.aar")
+                )
+            )
+        )
+    } else {
+        implementation(fileTree(mapOf("dir" to "libs", "include" to listOf("*.aar"))))
+    }
 }

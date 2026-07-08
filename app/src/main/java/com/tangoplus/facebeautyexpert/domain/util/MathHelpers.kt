@@ -1,6 +1,8 @@
 package com.tangoplus.facebeautyexpert.domain.util
 
 import android.graphics.PointF
+import com.tangoplus.facebeautyexpert.domain.opencv.HsvColorTracker
+import com.tangoplus.facebeautyexpert.domain.opencv.TargetF
 import java.lang.Math.toDegrees
 import kotlin.math.abs
 import kotlin.math.acos
@@ -42,6 +44,22 @@ object MathHelpers {
 		return toDegrees(angleRadians.toDouble()).toFloat()
 	}
 
+	// 얼굴형 계산 목적/input이 Pair
+	fun calculateAngle(
+		p1: Pair<Float, Float>,
+		p2: Pair<Float, Float>, // 꼭짓점
+		p3: Pair<Float, Float>
+	): Float {
+		val v1x = p1.first - p2.first
+		val v1y = p1.second - p2.second
+		val v2x = p3.first - p2.first
+		val v2y = p3.second - p2.second
+
+		val dot = v1x * v2x + v1y * v2y
+		val cross = v1x * v2y - v1y * v2x
+		val angle = Math.toDegrees(atan2(cross.toDouble(), dot.toDouble())).toFloat()
+		return abs(angle)
+	}
 	fun calculatePolygonArea(points: List<Pair<Float, Float>>): Float {
 		if (points.size < 3) return 0.0f  // 다각형이 안 됨
 
@@ -62,26 +80,35 @@ object MathHelpers {
 	}
 
 	// ------! 선과 점의 X 각도 !------
-//    fun calculateAngleBySlope(x1: Float, y1: Float, x2: Float, y2: Float, x3: Float, y3: Float): Float {
-//        val x4 = (x1 + x2) / 2
-//        val y4 = (y1 + y2) / 2
-//        // 벡터1: (x1, y1) -> (x4, y4)
-//        val dx1 = x4 - x1
-//        val dy1 = y4 - y1
-//        // 벡터2: (x4, y4) -> (x3, y3)
-//        val dx2 = x3 - x4
-//        val dy2 = y3 - y4
-//        // 내적 계산
-//        val dotProduct = dx1 * dx2 + dy1 * dy2
-//        // 벡터 크기 계산
-//        val magnitude1 = sqrt(dx1.pow(2) + dy1.pow(2))
-//        val magnitude2 = sqrt(dx2.pow(2) + dy2.pow(2))
-//        // 코사인 값 계산
-//        val cosTheta = dotProduct / (magnitude1 * magnitude2)
-//        // 라디안 -> 도 변환
-//        val angleRadians = acos(cosTheta)
-//        return toDegrees(angleRadians.toDouble()).toFloat()
-//    }
+	fun toFloatTarget(
+		t: HsvColorTracker.Target,
+		baseW: Int,
+		baseH: Int,
+		outW: Int = 1280,
+		outH: Int = 720,
+		mirrorX: Boolean
+	): TargetF {
+		val sx = outW.toFloat() / baseW
+		val sy = outH.toFloat() / baseH
+
+		// 중심점
+		var cx = t.center.x.toFloat() * sx
+		val cy = t.center.y.toFloat() * sy
+		if (mirrorX) cx = outW - cx
+
+		// 박스
+		val x0 = t.bbox.x.toFloat() * sx
+		val y0 = t.bbox.y.toFloat() * sy
+		val x1 = (t.bbox.x + t.bbox.width).toFloat() * sx
+		val y1 = (t.bbox.y + t.bbox.height).toFloat() * sy
+
+		val left = if (mirrorX) outW - x1 else x0
+		val right = if (mirrorX) outW - x0 else x1
+		val top = y0
+		val bottom = y1
+
+		return TargetF(cx, cy, left, top, right, bottom)
+	}
 
 
 

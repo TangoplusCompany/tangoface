@@ -9,9 +9,13 @@ data class FaceResult(
 	val userName: String? = null,
 	val userMobile: String? = null,
 	val mediaUri: List<Uri?> = listOf(),
+	val moireUri: List<Uri?> = listOf(),
 	val results: JSONArray = JSONArray(),
 	val depthResult: Boolean = false,
 	val seqs: Set<Sequence>,
 	val factors: Factor,
-	var regDate: String? = null
+	var insight: String,
+	var regDate: String? = null,
+	var measureType : Int,
+	var bowSns : List<Int> = listOf()
 )

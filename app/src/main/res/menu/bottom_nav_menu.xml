@@ -4,16 +4,16 @@
     <item
         android:id="@+id/nav_main"
         android:icon="@drawable/ic_measure"
-        android:title="Measure" />
+        android:title="홈 화면" />
 
     <item
         android:id="@+id/nav_measure_history"
         android:icon="@drawable/ic_record"
-        android:title="History" />
+        android:title="결과 보기" />
 
     <item
         android:id="@+id/nav_statistics"
-        android:icon="@drawable/ic_stats"
-        android:title="Statistics" />
+        android:icon="@drawable/ic_settings"
+        android:title="설정" />
 
 </menu>

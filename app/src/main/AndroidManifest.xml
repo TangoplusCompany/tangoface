@@ -11,41 +11,45 @@
         android:name="android.permission.WRITE_EXTERNAL_STORAGE"
         android:maxSdkVersion="32"
         tools:ignore="ScopedStorage" /> <!-- Android 13 이상을 위한 미디어 권한 -->
+    <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
     <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" />
     <uses-permission android:name="android.permission.READ_MEDIA_AUDIO" /> <!-- Android 14 (SDK 34)를 위한 선택적 미디어 접근 권한 -->
     <uses-permission android:name="android.permission.READ_MEDIA_VISUAL_USER_SELECTED" />
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+
     <uses-feature android:name="android.hardware.usb.host" />
+
     <uses-permission
         android:name="android.permission.MANAGE_EXTERNAL_STORAGE"
         tools:ignore="ScopedStorage" />
+    <uses-permission android:name="android.permission.VIBRATE" />
 
     <application
-        android:name="com.tangoplus.facebeautyexpert.orbbec.application.MyApplication"
+        android:name=".orbbec.application.MyApplication"
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="@xml/backup_rules"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
+        android:largeHeap="true"
+        android:requestLegacyExternalStorage="true"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.FaceBeautyExpert"
-        android:largeHeap="true"
-
         tools:targetApi="31">
         <activity
             android:name="com.yalantis.ucrop.UCropActivity"
             android:screenOrientation="portrait"
-            android:theme="@style/Theme.AppCompat.Light.NoActionBar"/>
+            android:theme="@style/Theme.AppCompat.Light.NoActionBar" />
         <activity
-            android:name="com.tangoplus.facebeautyexpert.ui.main.MainActivity"
-            android:exported="true"
-            android:screenOrientation="portrait"
-            android:resizeableActivity="false"
+            android:name=".ui.main.MainActivity"
             android:excludeFromRecents="false"
-            tools:ignore="DiscouragedApi,NonResizeableActivity">
+            android:exported="true"
+            android:resizeableActivity="false"
+            android:screenOrientation="portrait"
+            tools:ignore="DiscouragedApi,LockedOrientationActivity,NonResizeableActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
@@ -53,11 +57,18 @@
             </intent-filter>
         </activity>
         <activity
-            android:name="com.tangoplus.facebeautyexpert.ui.measure.DepthCameraActivity"
-            android:exported="true"
-            android:screenOrientation="portrait"
-            android:resizeableActivity="false"
+            android:name=".ui.measure.NormalCameraActivity"
             android:excludeFromRecents="false"
+            android:exported="true"
+            android:resizeableActivity="false"
+            android:screenOrientation="portrait"
+            tools:ignore="DiscouragedApi,LockedOrientationActivity" />
+        <activity
+            android:name=".ui.measure.DepthCameraActivity"
+            android:excludeFromRecents="false"
+            android:exported="true"
+            android:resizeableActivity="false"
+            android:screenOrientation="portrait"
             tools:ignore="DiscouragedApi,LockedOrientationActivity">
 
             <!--

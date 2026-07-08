@@ -15,7 +15,6 @@ import android.os.Looper
 import android.provider.MediaStore
 import android.provider.Settings
 import android.util.Log
-import android.view.WindowManager
 import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.enableEdgeToEdge
@@ -37,12 +36,12 @@ import com.tangoplus.facebeautyexpert.databinding.ActivityMainBinding
 import com.tangoplus.facebeautyexpert.domain.util.FileUtility.backupUserData
 import com.tangoplus.facebeautyexpert.domain.util.PermissionUtility.getAllPermissions
 import com.tangoplus.facebeautyexpert.domain.util.PreferenceUtility
-import com.tangoplus.facebeautyexpert.domain.util.SoundManager
-import com.tangoplus.facebeautyexpert.ui.info.InformationFragment
+import com.tangoplus.facebeautyexpert.domain.util.UXUtility
+import com.tangoplus.facebeautyexpert.domain.util.UXUtility.startLongVibrate
+import com.tangoplus.facebeautyexpert.ui.info.InfoContainerFragment
 import com.tangoplus.facebeautyexpert.ui.info.MeasureHistoryFragment
 import com.tangoplus.facebeautyexpert.ui.main.vm.FragmentViewModel
 import com.tangoplus.facebeautyexpert.ui.main.vm.MainViewModel
-import com.tangoplus.facebeautyexpert.ui.measure.MeasureImageFragment
 import com.tangoplus.facebeautyexpert.ui.statistics.StatisticsFragment
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -76,15 +75,13 @@ class MainActivity : AppCompatActivity() {
 	}
 
 	fun requestAllFilesAccess(context: Context) {
-		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-			if (!Environment.isExternalStorageManager()) {
-				try {
-					val intent = Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION)
-					intent.data = Uri.parse("package:${context.packageName}")
-					context.startActivity(intent)
-				} catch (e: Exception) {
-					Log.e("PERMISSION", "설정 화면 열기 실패", e)
-				}
+		if (!Environment.isExternalStorageManager()) {
+			try {
+				val intent = Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION)
+				intent.data = Uri.parse("package:${context.packageName}")
+				context.startActivity(intent)
+			} catch (e: Exception) {
+				Log.e("PERMISSION", "설정 화면 열기 실패", e)
 			}
 		}
 	}
@@ -107,7 +104,7 @@ class MainActivity : AppCompatActivity() {
 			systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
 		}
 		checkMemoryUsage()
-		SoundManager.init(this@MainActivity)
+//		SoundManager.init(this@MainActivity)
 
 		onBackPressedDispatcher.addCallback(this, onBackPressedCallback)
 		if (savedInstanceState == null) {
@@ -117,6 +114,7 @@ class MainActivity : AppCompatActivity() {
 		}
 
 		bd.bnv.setOnItemSelectedListener {
+			startLongVibrate(this@MainActivity)
 			setCurrentFragment(it.itemId)
 			true
 		}
@@ -165,6 +163,24 @@ class MainActivity : AppCompatActivity() {
 			}
 		}
 		cacheDir.deleteRecursively()
+
+		// 측정하고 왔는지 확인하기
+		mvm.tempServerSnAfterMeasure = intent?.getIntExtra("serverSn", -1) ?: -1
+
+		// 측정이 완료되고 바로 결과를 볼 때
+		val fd = FaceDatabase.getDatabase(this)
+		fDao = fd.faceDao()
+
+		if (mvm.tempServerSnAfterMeasure != -1) {
+			lifecycleScope.launch(Dispatchers.IO) {
+				val result = mvm.convertToFaceResult(this@MainActivity, fDao, mvm.tempServerSnAfterMeasure)
+
+				withContext(Dispatchers.Main) {
+					mvm.currentResult.value = result
+					navigateToMeasureHistoryInformation(result.measureType)
+				}
+			}
+		}
 	}
 
 	private fun exportedMeasureSettings() {
@@ -256,7 +272,7 @@ class MainActivity : AppCompatActivity() {
 				if (backPressedOnce) {
 					FaceDatabase.closeDatabase()
 					finishAffinity()
-					SoundManager.release()
+					UXUtility.release()
 				} else {
 					backPressedOnce = true
 					Toast.makeText(this@MainActivity, "한 번 더 누르시면 앱이 종료됩니다.", Toast.LENGTH_SHORT).show()
@@ -514,7 +530,7 @@ class MainActivity : AppCompatActivity() {
 				setPositiveButton("예") { _, _ ->
 					FaceDatabase.closeDatabase()
 					finishAffinity()
-					SoundManager.release()
+					UXUtility.release()
 				}
 				setNegativeButton("아니오") { _, _ -> }
 			}
@@ -587,5 +603,30 @@ class MainActivity : AppCompatActivity() {
 		// 현재 상태 저장
 		previousTabId = itemId
 		selectedTabId = itemId
+	}
+
+	// informationFragment로 바로 가는 함수
+	fun navigateToMeasureHistoryInformation(measureType: Int) {
+		bd.bnv.selectedItemId = R.id.nav_measure_history
+
+		supportFragmentManager.executePendingTransactions()
+
+		supportFragmentManager.beginTransaction().apply {
+			setCustomAnimations(
+				android.R.anim.fade_in, android.R.anim.fade_out,
+				android.R.anim.fade_in, android.R.anim.fade_out
+			)
+			replace(R.id.flMain, InfoContainerFragment.newInstance(measureType))
+
+			addToBackStack(null)
+			commit()
+		}
+	}
+
+	// activity의 flMain 크기 가져오기 (포스터 비율 대응 목적)
+	fun getFlMainSize() : Pair<Int, Int>? {
+		return if (::bd.isInitialized) {
+			Pair(bd.flMain.width, bd.flMain.height)
+		} else null
 	}
 }

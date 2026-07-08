@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+                                                   android:layout_width="match_parent"
+                                                   android:layout_height="match_parent">
+    <LinearLayout
+            android:layout_width="match_parent"
+                  android:layout_height="wrap_content"
+                  android:orientation="vertical"
+                  android:padding="16dp"
+                  android:background="@drawable/bckgnd_12"> <RelativeLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="12dp">
+
+        <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="주관적 통증 정도 (VAS)"
+                android:textStyle="bold"
+                android:textColor="@color/accent100"
+                android:textSize="16sp" android:id="@+id/tvRSITitle"/>
+
+        <TextView
+                android:id="@+id/tvRSIScore"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_alignParentRight="true"
+                android:text="0 / 10"
+                android:textStyle="bold"
+                android:textColor="@color/accent"
+                android:textSize="18sp"/>
+    </RelativeLayout>
+
+        <SeekBar
+                android:id="@+id/sbRSIVas"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:max="10"
+                android:progress="0"
+                android:minHeight="20dp"
+                android:maxHeight="20dp"
+                android:progressDrawable="@drawable/vas_seekbar_background"
+                android:thumb="@drawable/vas_seekbar_thumb"
+                android:splitTrack="false"/>
+
+        <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginTop="4dp"
+                android:paddingHorizontal="12dp">
+
+            <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="통증 없음 (0)"
+                    android:textSize="12sp"
+                    android:textColor="@color/bg200"/>
+
+            <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="극심한 통증 (10)"
+                    android:textSize="12sp"
+                    android:textColor="@color/bg200"
+                    android:layout_gravity="end"/>
+        </LinearLayout>
+
+    </LinearLayout>
+</androidx.constraintlayout.widget.ConstraintLayout>

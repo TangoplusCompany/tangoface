@@ -10,6 +10,7 @@ import android.graphics.Paint
 import android.net.Uri
 import android.os.Build
 import android.provider.MediaStore
+import android.util.Log
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
@@ -24,16 +25,18 @@ class MeasureImageViewModel : ViewModel() {
 	var targetIndex: Int = 0 // 현재 작업 중인 인덱스 (0 또는 1)
 
 	fun setImage(index: Int, path: String) {
-		val current = _imagePaths.value ?: mutableListOf<String?>(null, null)
+		val current = _imagePaths.value?.toMutableList() ?: mutableListOf<String?>(null, null)
 		current[index] = path
 		_imagePaths.value = current
 	}
 
 	fun removeImage(index: Int) {
+
 		val current = _imagePaths.value ?: return
 		current[index]?.let { File(it).delete() }
 		current[index] = null
 		_imagePaths.value = current
+		Log.v("초기화!", "이미지 list: $index 번 이미지 삭제: current[index] : ${current[index]}")
 	}
 
 	fun make169WithPadding(context: Context, sourceUri: Uri): Uri? {

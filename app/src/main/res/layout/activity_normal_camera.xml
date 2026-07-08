@@ -2,7 +2,7 @@
 <androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
-    android:id="@+id/main"
+    android:id="@+id/NCmain"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@color/subColor900"
@@ -30,32 +30,27 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent">
 
-        <com.tangoplus.facebeautyexpert.ui.view.CircularGuideView
-            android:id="@+id/fdgv"
-            android:layout_width="0dp"
-            android:layout_height="0dp"
-            android:visibility="invisible"
-            app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="parent"
-            app:layout_constraintVertical_bias="0.33" />
-
         <TextView
             android:id="@+id/tvNCSeqGuide"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:background="@drawable/effect_20"
+            android:backgroundTint="@color/bg15"
             android:gravity="center"
             android:lineSpacingExtra="12dp"
+            android:paddingStart="12dp"
+            android:paddingTop="8dp"
+            android:paddingEnd="12dp"
+            android:paddingBottom="8dp"
             android:text="얼굴을 화면 중앙에 위치해주세요"
             android:textColor="@color/white"
-            android:textSize="22dp"
+            android:textSize="14sp"
             android:visibility="visible"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent"
-            app:layout_constraintVertical_bias="0.85" />
+            app:layout_constraintVertical_bias="0.75" />
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 
@@ -74,11 +69,45 @@
         android:layout_height="0dp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHeight_percent="0.8"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/constraintLayout5"
-        app:layout_constraintVertical_bias="0.45"
-        app:layout_constraintWidth_percent="1.3"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintVertical_bias="0.0"
+        app:layout_constraintWidth_percent="1.6"
         app:srcCompat="@drawable/drawable_seq_0" />
+    <LinearLayout
+        android:id="@+id/llNCLookUpContainer"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:elevation="10dp"
+        android:gravity="center"
+        android:orientation="vertical"
+        android:visibility="invisible"
+        app:layout_constraintBottom_toBottomOf="@+id/ivNCFrame"
+        app:layout_constraintEnd_toEndOf="@id/ivNCFrame"
+        app:layout_constraintHorizontal_bias="0.8"
+        app:layout_constraintStart_toStartOf="@id/ivNCFrame"
+        app:layout_constraintTop_toTopOf="@id/ivNCFrame"
+        app:layout_constraintVertical_bias="0.25">
+
+        <TextView
+            android:id="@+id/tvLookUpArrow"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:paddingTop="24dp"
+            android:text="↑"
+            android:textColor="#FFFFFF"
+            android:textSize="86sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/tvLookUpEyes"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="-12dp"
+            android:text="👀"
+            android:textSize="48sp" />
+    </LinearLayout>.
 
     <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/clNCCountDown"
@@ -108,152 +137,108 @@
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 
-    <LinearLayout
-        android:id="@+id/llNCbtn"
-        android:layout_width="0dp"
+    <TextView
+        android:id="@+id/tvNCGoGallery"
+        android:layout_width="wrap_content"
         android:layout_height="0dp"
-        android:orientation="horizontal"
-        android:visibility="visible"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHeight_percent="0.06"
-        app:layout_constraintHorizontal_bias="0.95"
+        android:layout_marginStart="10dp"
+        android:layout_marginTop="20dp"
+        android:gravity="center"
+        android:padding="5dp"
+        android:paddingStart="10dp"
+        android:paddingEnd="10dp"
+        android:text="← 기록으로 돌아가기"
+        android:textColor="@color/white"
+        android:textSize="16sp"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintVertical_bias="0.95"
-        app:layout_constraintWidth_percent="0.55">
+        app:layout_constraintTop_toTopOf="parent" />
 
-        <androidx.appcompat.widget.AppCompatButton
-            android:id="@+id/btnNCPrevious"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:layout_marginEnd="10dp"
-            android:layout_weight="1"
-            android:background="@drawable/effect_64"
-            android:backgroundTint="@color/black"
-            android:text="↩ 이전으로"
-            android:textColor="@color/white"
-            android:textSize="24dp"
-            android:visibility="invisible" />
-
-        <androidx.appcompat.widget.AppCompatButton
-            android:id="@+id/btnNCShooting"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:layout_marginStart="10dp"
-            android:layout_weight="1"
-            android:background="@drawable/effect_64"
-            android:backgroundTint="@color/black"
-            android:text="촬영 "
-            android:textColor="@color/white"
-            android:textSize="24dp"
-            android:visibility="visible" />
-    </LinearLayout>
-
-    <FrameLayout
-        android:id="@+id/flNCCameraShutter"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:background="@color/white"
+    <TextView
+        android:id="@+id/tvNCPrevious"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="20dp"
+        android:layout_marginEnd="10dp"
+        android:background="@drawable/effect_64"
+        android:backgroundTint="@color/bg15"
+        android:padding="5dp"
+        android:paddingEnd="5dp"
+        android:text="↩ 이전으로"
+        android:textColor="@color/white"
+        android:textSize="16sp"
         android:visibility="invisible"
-        app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent">
-
-    </FrameLayout>
+        app:layout_constraintTop_toTopOf="parent" />
 
     <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/constraintLayout5"
         android:layout_width="0dp"
-        android:layout_height="40dp"
+        android:layout_height="0dp"
         android:background="@color/black"
+        app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHeight_percent="0.2"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent">
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintVertical_bias="1.0">
 
-        <androidx.cardview.widget.CardView
-            android:id="@+id/cvNCRecordMark"
-            android:layout_width="16dp"
-            android:layout_height="16dp"
-            android:layout_marginTop="10dp"
-            android:layout_marginEnd="40dp"
-            android:visibility="gone"
-            app:cardBackgroundColor="@color/red"
-            app:cardCornerRadius="24dp"
-            app:cardElevation="0dp"
+        <androidx.appcompat.widget.AppCompatButton
+            android:id="@+id/btnNCShooting"
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:background="@drawable/effect_64"
+            android:backgroundTint="@color/accent"
+            android:text="촬영 "
+            android:textColor="@color/white"
+            android:textSize="32sp"
+            android:visibility="visible"
+            app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintTop_toTopOf="parent" />
+            app:layout_constraintHeight_percent="0.5"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintWidth_percent="0.6" />
 
         <TextView
             android:id="@+id/tvNCSeqCount"
             android:layout_width="wrap_content"
             android:layout_height="0dp"
-            android:layout_marginEnd="40dp"
+            android:layout_marginTop="10dp"
+            android:layout_marginEnd="10dp"
             android:gravity="center"
             android:paddingStart="10dp"
             android:paddingEnd="10dp"
             android:text="1 / 9"
             android:textColor="@color/white"
-            android:textSize="24dp"
-            app:layout_constraintBottom_toBottomOf="parent"
+            android:textSize="16sp"
             app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintTop_toTopOf="parent" />
-
-        <TextView
-            android:id="@+id/tvNCGoGallery"
-            android:layout_width="wrap_content"
-            android:layout_height="0dp"
-            android:layout_marginStart="20dp"
-            android:gravity="center"
-            android:paddingStart="10dp"
-            android:paddingEnd="10dp"
-            android:text="← 기록으로 돌아가기"
-            android:textColor="@color/white"
-            android:textSize="24dp"
-            app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="parent" />
-
-        <TextView
-            android:id="@+id/tvNCRetry"
-            android:layout_width="wrap_content"
-            android:layout_height="0dp"
-            android:layout_marginEnd="20dp"
-            android:gravity="center"
-            android:paddingStart="20dp"
-            android:paddingEnd="20dp"
-            android:text="초기화"
-            android:textColor="@color/white"
-            android:textSize="24dp"
-            app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintEnd_toStartOf="@+id/tvNCSeqCount"
             app:layout_constraintTop_toTopOf="parent" />
 
         <TextView
             android:id="@+id/tvNCCameraDirection"
             android:layout_width="wrap_content"
             android:layout_height="0dp"
-            android:layout_marginEnd="20dp"
+            android:layout_marginStart="10dp"
+            android:layout_marginBottom="10dp"
             android:gravity="center"
             android:text="카메라 방향 전환"
             android:textColor="@color/white"
-            android:textSize="24dp"
+            android:textSize="16sp"
             app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintEnd_toStartOf="@+id/tvNCRetry"
-            app:layout_constraintTop_toTopOf="parent" />
+            app:layout_constraintStart_toStartOf="parent" />
 
         <TextView
             android:id="@+id/tvNCGyro"
             android:layout_width="wrap_content"
             android:layout_height="0dp"
-            android:layout_marginEnd="20dp"
+            android:layout_marginStart="10dp"
+            android:layout_marginTop="10dp"
             android:gravity="center"
             android:text="수평계"
             android:textColor="@color/white"
-            android:textSize="24sp"
-            app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintEnd_toStartOf="@+id/tvNCCameraDirection"
+            android:textSize="16sp"
+            app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent" />
     </androidx.constraintlayout.widget.ConstraintLayout>
 

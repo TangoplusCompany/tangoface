@@ -9,7 +9,6 @@
         android:id="@+id/clMVI"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_margin="10dp"
         android:layout_marginTop="5dp"
         android:layout_marginBottom="5dp"
         android:background="@drawable/bckgnd_12"
@@ -21,16 +20,15 @@
 
         <TextView
             android:id="@+id/tvUICircle"
-            android:layout_width="48dp"
-            android:layout_height="48dp"
-            android:layout_marginStart="20dp"
-            android:layout_marginTop="15dp"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:layout_marginStart="10dp"
+            android:layout_marginTop="10dp"
             android:background="@drawable/effect_28"
-            android:backgroundTint="@color/subColor700"
             android:gravity="center"
             android:text="이"
             android:textColor="@color/subColor100"
-            android:textSize="20sp"
+            android:textSize="16sp"
             android:textStyle="bold"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent" />
@@ -44,7 +42,7 @@
             android:gravity="center"
             android:text="이*휘"
             android:textColor="@color/subColor100"
-            android:textSize="28sp"
+            android:textSize="18sp"
             android:textStyle="bold"
             app:layout_constraintBottom_toBottomOf="@+id/tvUICircle"
             app:layout_constraintStart_toEndOf="@+id/tvUICircle"
@@ -59,7 +57,7 @@
             android:gravity="center"
             android:text="만 30세"
             android:textColor="@color/subColor100"
-            android:textSize="18sp"
+            android:textSize="16sp"
             app:layout_constraintBottom_toBottomOf="@+id/tvMVIName"
             app:layout_constraintStart_toEndOf="@+id/tvMVIName"
             app:layout_constraintTop_toTopOf="@+id/tvMVIName" />
@@ -75,7 +73,7 @@
             android:maxLines="1"
             android:text="남성"
             android:textColor="@color/subColor100"
-            android:textSize="18sp"
+            android:textSize="16sp"
             app:layout_constraintBottom_toBottomOf="@+id/tvMVIAge"
             app:layout_constraintStart_toEndOf="@+id/tvMVIAge"
             app:layout_constraintTop_toTopOf="@+id/tvMVIAge" />
@@ -84,10 +82,10 @@
             android:id="@+id/linearLayout"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_marginStart="20dp"
+            android:layout_marginStart="10dp"
             android:layout_marginTop="10dp"
-            android:layout_marginEnd="20dp"
-            android:layout_marginBottom="20dp"
+            android:layout_marginEnd="10dp"
+            android:layout_marginBottom="15dp"
             android:orientation="horizontal"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
@@ -101,7 +99,7 @@
                 android:layout_weight="0.45"
                 android:text="🗓️: "
                 android:textColor="@color/subColor100"
-                android:textSize="16sp" />
+                android:textSize="14sp" />
 
             <TextView
                 android:id="@+id/tvMVIMobile"
@@ -110,7 +108,7 @@
                 android:layout_weight="0.55"
                 android:text="📱: "
                 android:textColor="@color/subColor100"
-                android:textSize="16sp" />
+                android:textSize="14sp" />
         </LinearLayout>
 
     </androidx.constraintlayout.widget.ConstraintLayout>

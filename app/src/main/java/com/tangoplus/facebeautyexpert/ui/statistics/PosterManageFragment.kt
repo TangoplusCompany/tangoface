@@ -9,16 +9,20 @@ import androidx.fragment.app.Fragment
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.fragment.app.activityViewModels
 import androidx.fragment.app.viewModels
 import androidx.recyclerview.widget.GridLayoutManager
 import com.tangoplus.facebeautyexpert.databinding.FragmentPosterManageBinding
+import com.tangoplus.facebeautyexpert.domain.util.AnimationUtility.setupGuideBanner
 import com.tangoplus.facebeautyexpert.domain.util.FileUtility.saveImageToInternalStorage
 import com.tangoplus.facebeautyexpert.domain.util.PreferenceUtility
+import com.tangoplus.facebeautyexpert.orbbec.application.MyApplication
 import com.tangoplus.facebeautyexpert.ui.adapter.PosterRVAdapter
 import com.tangoplus.facebeautyexpert.ui.listener.OnPosterClickListener
+import com.tangoplus.facebeautyexpert.ui.main.MainActivity
 import com.tangoplus.facebeautyexpert.ui.statistics.vm.PosterViewModel
 import com.tangoplus.facebeautyexpert.ui.statistics.vm.PosterViewModelFactory
 import com.yalantis.ucrop.UCrop
@@ -49,6 +53,15 @@ class PosterManageFragment : Fragment(), OnPosterClickListener {
 
 		setAdapter()
 		observeViewModel()
+
+		setupGuideBanner(
+			bannerView = bd.guideBanner0.root,
+			closeButton = bd.guideBanner0.btnCloseGuide,
+			textView = bd.guideBanner0.tvGuideText,
+			message = "슬라이드는 최대 6장 등록 가능합니다!\n슬라이드 번호대로 포스터를 수정해서 원하는 순서대로 메인 화면을 변경해보세요 🖼️", // 메인 전용 문구
+			prefKey = "posterManageGuide"
+		)
+		setVelocity()
 	}
 
 	private fun setAdapter() {
@@ -60,7 +73,7 @@ class PosterManageFragment : Fragment(), OnPosterClickListener {
 		}
 
 		bd.rvPM.apply {
-			layoutManager = GridLayoutManager(context, 3)
+			layoutManager = GridLayoutManager(context, if (MyApplication.isTablet()) 3 else 2)
 			adapter = pmAdapter
 		}
 	}
@@ -86,7 +99,7 @@ class PosterManageFragment : Fragment(), OnPosterClickListener {
 	}
 
 	private val pickImage = registerForActivityResult(ActivityResultContracts.GetContent()) { uri ->
-		uri?.let { sourceUri ->
+				uri?.let { sourceUri ->
 			val tempFile = File(requireContext().cacheDir, "temp_crop_${System.currentTimeMillis()}.jpg")
 			val destinationUri = Uri.fromFile(tempFile)
 
@@ -97,9 +110,12 @@ class PosterManageFragment : Fragment(), OnPosterClickListener {
 				setFreeStyleCropEnabled(false)
 				setToolbarTitle("포스터 영역 선택")
 			}
+			val ratio = (activity as MainActivity).getFlMainSize()?.let { (width, height) ->
+				if (MyApplication.isTablet()) Pair(25.6f, 38.9f) else Pair(width.toFloat(), height.toFloat())
+			} ?: Pair(1f, 1f)
 
 			UCrop.of(sourceUri, destinationUri)
-				.withAspectRatio(25.6f, 38.9f)
+				.withAspectRatio(ratio.first, ratio.second)
 				.withOptions(options)
 				.getIntent(requireContext())
 				.let { uCropActivityResult.launch(it) }
@@ -136,4 +152,30 @@ class PosterManageFragment : Fragment(), OnPosterClickListener {
 		// 삭제 로직도 VM이 알아서 파일 지우고 리스트 갱신하게 함
 		pvm.deletePoster(position)
 	}
+
+	private fun setVelocity() {
+		val prefs = PreferenceUtility(requireContext())
+		val defaultVelocity = prefs.getSlideVelocity()
+		bd.tvPMVelocity.text = defaultVelocity.toString()
+
+		bd.tvPMMinus.setOnClickListener {
+			updateVelocity(prefs, -0.5f)
+		}
+
+		bd.tvPMPlus.setOnClickListener {
+			updateVelocity(prefs, 0.5f)
+		}
+	}
+
+	private fun updateVelocity(prefs: PreferenceUtility, delta: Float) {
+		val currentVelocity = prefs.getSlideVelocity()
+		val newVelocity = (currentVelocity + delta).coerceIn(1.5f, 10.0f) // 범위 제한 예시
+
+		if (newVelocity != currentVelocity) {
+			prefs.setSlideVelocity(newVelocity)
+			bd.tvPMVelocity.text = newVelocity.toString()
+		}
+	}
+
+
 }

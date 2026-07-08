@@ -33,8 +33,13 @@ object SecurityUtility {
 //        return cipher.doFinal(encrypted)
 //    }
 
-	fun generateCustomUUID(name: String?, phone: String?, secretKey: String): String {
-		val input = "${name ?: "홍길동"}|${phone ?: "01000000000"}|$secretKey"
+	fun generateCustomUUID(name: String?, phone: String?, birthday: String?, gender: Int?, secretKey: String): String {
+		val input = "${name ?: "홍길동"}|${phone ?: "01000000000"}|${
+			when (birthday) {
+				"날짜 선택", null -> "0000-00-00"
+				else -> birthday
+			}
+		}|${if (gender == 0) "남성" else "여성"}|$secretKey"
 		val digest = MessageDigest.getInstance("SHA-256")
 		val hashBytes = digest.digest(input.toByteArray())
 		return hashBytes.joinToString("") { "%02x".format(it) }

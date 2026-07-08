@@ -3,6 +3,7 @@
     <color name="black">#000000</color>
     <color name="white">#FFFFFF</color>
     <color name="bg">#232323</color>
+    <color name="bg200">#9E9C9C</color>
     <color name="bg300">#30292B</color>
     <color name="bg500">#1C191A</color>
     <color name="bg700">#161214</color>
@@ -11,11 +12,18 @@
     <color name="bg15">#26121212</color>
 
     <color name="accent">#FF0055</color>
+    <color name="accent100">#FFF8F8</color>
     <color name="accent300">#FF8C98</color>
-    <color name="accent500">#FF0055</color>
+    <color name="accent500">#D00043</color>
     <color name="accent10">#19FF0055</color>
+    <color name="accent30">#4CFF0055</color>
+    <color name="accent300_80">#CDFF8C98</color>
     <color name="subAccent">#FF95A6</color>
     <color name="accent_foreground">#76696D</color>
+
+    <color name="accentContrast">#00FFCC</color>
+    <color name="accentContrast300">#96FFE9</color>
+    <color name="accentContrast500">#00BF99</color>
 
     <color name="subColor100">#FFFDFD</color>
     <color name="subColor300">#DCD9D9</color>

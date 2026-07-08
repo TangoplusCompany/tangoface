@@ -16,6 +16,7 @@ import android.view.animation.AccelerateDecelerateInterpolator
 import androidx.core.graphics.plus
 import androidx.core.graphics.times
 import androidx.core.graphics.toColorInt
+import com.tangoplus.facebeautyexpert.domain.opencv.HsvColorTracker
 import com.tangoplus.facebeautyexpert.domain.util.BitmapUtility.drawExtendedLine
 import com.tangoplus.facebeautyexpert.domain.vision.face.FaceLandmarkResult
 import com.tangoplus.facebeautyexpert.orbbec.vo.Point3D
@@ -169,7 +170,7 @@ class OverlayView(context: Context?, attrs: AttributeSet?) :
 		val offsetY = (height - scaledImageHeight) / 2f
 
 		results?.let { faceLandmarkerResult ->
-			drawFaceLandmarks(canvas, faceLandmarkerResult.landmarks, point3dResult, offsetX, offsetY)
+			drawFaceLandmarks(canvas, faceLandmarkerResult.landmarks, offsetX, offsetY) // point3dResult,
 		}
 
 		drawColorTrack(
@@ -214,12 +215,12 @@ class OverlayView(context: Context?, attrs: AttributeSet?) :
 	private fun drawFaceLandmarks(
 		canvas: Canvas,
 		faceLandmarks: List<FaceLandmarkResult.FaceLandmark>,
-		point3dResults: List<Point3D?>?,
+//		point3dResults: List<Point3D?>?,
 		offsetX: Float,
 		offsetY: Float
 	) {
-		if (faceLandmarks.isEmpty() && point3dResults == null) return
-		if (faceLandmarks.isNotEmpty() && point3dResults == null) {
+//		if (faceLandmarks.isEmpty() ) return
+		if (faceLandmarks.isNotEmpty()) {
 			when (currentRunningMode) {
 				RunningMode.LIVE_STREAM -> {
 // --------------------------# 10 - 1 - 152 양귓볼 - 코 #------------------------------
@@ -448,6 +449,75 @@ class OverlayView(context: Context?, attrs: AttributeSet?) :
 
 		invalidate()
 	}
+	private var targets: List<HsvColorTracker.Target> = emptyList()
+	// HSV 페이스 보우
+	fun updateColorTracks(
+		targets: List<HsvColorTracker.Target>,
+		srcW: Int,
+		srcH: Int,
+		scaleType: ScaleType = ScaleType.FIT,
+		rotateDeg: Int = 0,
+		mirrorX: Boolean = false
+	) {
+		this.targets = targets
+		this.srcW = srcW
+		this.srcH = srcH
+		this.scaleType = scaleType
+		this.rotateDeg = rotateDeg
+		this.mirrorX = mirrorX
+		this.visible = targets.isNotEmpty()
+		postInvalidateOnAnimation()
+	}
+
+	fun clearColorTrack() {
+		this.visible = false
+		this.targets = emptyList()
+		postInvalidateOnAnimation()
+	}
+
+	fun drawColorTrack(
+		canvas: Canvas,
+		circlePaint: Paint,
+		boxPaint: Paint,
+	) {
+		if (!visible || targets.isEmpty() || srcW <= 0 || srcH <= 0) return
+
+		val dstW = width
+		val dstH = height
+
+		// 콘텐츠 배치(레터박스/크롭) 계산
+		val (scale, offX, offY, effW, effH) = computePlacement(srcW, srcH, dstW, dstH, scaleType)
+
+		targets.forEach { t ->
+			// 1) 회전/미러 반영된 포인트/박스 얻기
+			val (cx, cy) = rotateMirrorPoint(t.center.x, t.center.y, srcW, srcH, rotateDeg, mirrorX)
+			val (bx0, by0) = rotateMirrorPoint(
+				t.bbox.x.toDouble(),
+				t.bbox.y.toDouble(),
+				srcW,
+				srcH,
+				rotateDeg,
+				mirrorX
+			)
+			val (bx1, by1) = rotateMirrorPoint(
+				(t.bbox.x + t.bbox.width).toDouble(),
+				(t.bbox.y + t.bbox.height).toDouble(),
+				srcW, srcH, rotateDeg, mirrorX
+			)
+
+			// 2) (src) → (dst) 스케일 & 오프셋 적용
+			val vx = (cx * scale + offX).toFloat()
+			val vy = (cy * scale + offY).toFloat()
+			val left = (minOf(bx0, bx1) * scale + offX).toFloat()
+			val top = (minOf(by0, by1) * scale + offY).toFloat()
+			val right = (maxOf(bx0, bx1) * scale + offX).toFloat()
+			val bottom = (maxOf(by0, by1) * scale + offY).toFloat()
+
+			// 3) 그리기
+			canvas.drawCircle(vx, vy, 20f, circlePaint)
+//            canvas.drawRect(RectF(left, top, right, bottom), boxPaint)
+		}
+	}
 
 	enum class ScaleType { FIT, FILL }
 
@@ -459,19 +529,6 @@ class OverlayView(context: Context?, attrs: AttributeSet?) :
 
 	private var visible: Boolean = false
 
-	fun drawColorTrack(
-		canvas: Canvas,
-		circlePaint: Paint,
-		boxPaint: Paint,
-	) {
-		if (!visible ||  srcW <= 0 || srcH <= 0) return
-
-		val dstW = width
-		val dstH = height
-
-		// 콘텐츠 배치(레터박스/크롭) 계산
-		val (scale, offX, offY, effW, effH) = computePlacement(srcW, srcH, dstW, dstH, scaleType)
-	}
 
 	companion object {
 		private const val LANDMARK_STROKE_WIDTH = 2F

@@ -1,9 +1,12 @@
 package com.tangoplus.facebeautyexpert.ui.main
 
 import android.Manifest
+import android.annotation.SuppressLint
+import android.app.Activity
+import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.content.res.ColorStateList
+import android.hardware.usb.UsbManager
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -13,26 +16,58 @@ import android.provider.Settings
 import android.util.Log
 import androidx.fragment.app.Fragment
 import android.view.LayoutInflater
+import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.activityViewModels
+import androidx.lifecycle.lifecycleScope
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
 import androidx.viewpager2.widget.ViewPager2
 import com.tangoplus.facebeautyexpert.databinding.FragmentMainBinding
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.tangoplus.facebeautyexpert.R
+import com.tangoplus.facebeautyexpert.data.db.FaceDatabase
 import com.tangoplus.facebeautyexpert.domain.util.FileUtility.setOnSingleClickListener
 import com.tangoplus.facebeautyexpert.domain.util.PreferenceUtility
+import com.tangoplus.facebeautyexpert.domain.vo.MeasureType
 import com.tangoplus.facebeautyexpert.ui.adapter.AdVPAdapter
+import com.tangoplus.facebeautyexpert.ui.adapter.MainTabRVAdapter
+import com.tangoplus.facebeautyexpert.ui.listener.OnMainTabClickListener
 import com.tangoplus.facebeautyexpert.ui.measure.DepthCameraActivity
 import com.tangoplus.facebeautyexpert.ui.main.vm.MainViewModel
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlin.math.abs
 
 
-class MainFragment : Fragment() {
+class MainFragment : Fragment(), OnMainTabClickListener {
 	private lateinit var bd: FragmentMainBinding
 	private val mvm: MainViewModel by activityViewModels()
+	private var selectedMeasureType : MeasureType = MeasureType.NORMAL
+	private val cameraResultLauncher = registerForActivityResult(
+		ActivityResultContracts.StartActivityForResult()
+	) { result ->
+		if (result.resultCode == Activity.RESULT_OK) {
+			val serverSn = result.data?.getIntExtra("EXTRA_MEASURE_SN", -1) ?: -1
+			if (serverSn != -1) {
+				// DB 작업 실행
+				lifecycleScope.launch(Dispatchers.IO) {
+					val fd = FaceDatabase.getDatabase(requireContext())
+					val result = mvm.convertToFaceResult(requireContext(), fd.faceDao(), serverSn)
+
+					withContext(Dispatchers.Main) {
+						mvm.currentResult.value = result
+						// 2. 작업이 끝나면 MainActivity의 함수를 호출해서 화면/탭 전환!
+						(requireActivity() as MainActivity).navigateToMeasureHistoryInformation(result.measureType)
+					}
+				}
+			}
+		}
+	}
 
 	override fun onCreateView(
 		inflater: LayoutInflater, container: ViewGroup?,
@@ -41,16 +76,36 @@ class MainFragment : Fragment() {
 		bd = FragmentMainBinding.inflate(layoutInflater)
 		return bd.root
 	}
+	private fun checkAndLogUsbDevices() {
+		val usbManager = requireContext().getSystemService(Context.USB_SERVICE) as UsbManager
+		val deviceList = usbManager.deviceList
 
+		if (deviceList.isEmpty()) {
+			Log.d("USB_CHECK", "연결된 USB 장치가 없습니다.")
+			return
+		}
+
+		Log.d("USB_CHECK", "--- 연결된 USB 장치 목록 (${deviceList.size}개) ---")
+		for ((key, device) in deviceList) {
+			Log.d("USB_CHECK", "Device Key: $key")
+			Log.d("USB_CHECK", "Device Name (경로): ${device.deviceName}")
+			Log.d("USB_CHECK", "Vendor ID: ${device.vendorId} (Hex: 0x${Integer.toHexString(device.vendorId)})")
+			Log.d("USB_CHECK", "Product ID: ${device.productId} (Hex: 0x${Integer.toHexString(device.productId)})")
+			Log.d("USB_CHECK", "Manufacturer Name: ${device.manufacturerName}")
+			Log.d("USB_CHECK", "Product Name: ${device.productName}")
+			Log.d("USB_CHECK", "-----------------------------------------")
+		}
+	}
 	override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
 		super.onViewCreated(view, savedInstanceState)
-
+		checkAndLogUsbDevices()
 		// seq Select를 위한
+		setAdapter()
+
 		bd.btnMainStart.setOnSingleClickListener {
 			checkStoragePermission()
 		}
 		setupViewPager()
-
 	}
 
 	private fun checkStoragePermission() {
@@ -71,7 +126,7 @@ class MainFragment : Fragment() {
 		}
 
 		if (allGranted) {
-			navigateToDepthCamera()
+			navigateToCamera()
 		} else {
 			storagePermissionLauncher.launch(permissions)
 		}
@@ -84,16 +139,26 @@ class MainFragment : Fragment() {
 
 		if (allGranted) {
 			Log.d("MainFragment", "저장소 권한 허용됨")
-			navigateToDepthCamera()
+			navigateToCamera()
 		} else {
 			Log.e("MainFragment", "저장소 권한 거부됨")
 			showPermissionDeniedDialog()
 		}
 	}
 
-	private fun navigateToDepthCamera() {
-		val intent = Intent(context, DepthCameraActivity::class.java)
-		startActivity(intent)
+	private fun navigateToCamera() {
+		val intent = Intent(requireContext(), DepthCameraActivity::class.java)
+		intent.putExtra("selectedMeasureType", selectedMeasureType)
+//		val usbManager = requireContext().getSystemService(Context.USB_SERVICE) as UsbManager
+//		val deviceList = usbManager.deviceList
+//
+//		val isGeminiCameraConnected = deviceList.values.any { it.productName?.contains("Gemini 336") == true }
+//		val intent = if (isGeminiCameraConnected) {
+//			Intent(requireContext(), DepthCameraActivity::class.java)
+//		} else {
+//			Intent(requireContext(), NormalCameraActivity::class.java)
+//		}
+		cameraResultLauncher.launch(intent)
 		requireActivity().finishAffinity()
 	}
 
@@ -116,21 +181,42 @@ class MainFragment : Fragment() {
 	private val promoImages = listOf(
 		R.drawable.poster_main_0,
 		R.drawable.poster_main_1,
+		R.drawable.poster_main_2,
 	)
 	private val autoScrollHandler = Handler(Looper.getMainLooper())
 	private var autoScrollRunnable: Runnable? = null
-
-	private fun setupViewPager() {
-
+	var startX = 0f
+	var startY = 0f
+	@SuppressLint("ClickableViewAccessibility")
+  private fun setupViewPager() {
+		bd.clM.post {
+			bd.vpM.layoutParams = bd.vpM.layoutParams.apply {
+				height = bd.clM.height
+			}
+		}
+		val viewPagerChild = bd.vpM.getChildAt(0) as? RecyclerView
+		viewPagerChild?.setOnTouchListener { v, event ->
+			when (event.action) {
+				MotionEvent.ACTION_DOWN -> {
+					startX = event.x
+					startY = event.y
+				}
+				MotionEvent.ACTION_MOVE -> {
+					val dx = abs(event.x - startX)
+					val dy = abs(event.y - startY)
+					v.parent.requestDisallowInterceptTouchEvent(dx > dy)
+				}
+			}
+			false
+		}
 		val pPrefs = PreferenceUtility(requireContext())
-		val savedPosters = pPrefs.getPosters()
+		var savedPosters = pPrefs.getPosters()
 
 		// 2. 데이터가 없을 경우를 대비한 예외 처리
 		if (savedPosters.isEmpty()) {
-			// 데이터가 없으면 ViewPager를 숨기거나 기본 이미지를 띄우는 처리가 필요해
-			return
+			pPrefs.initDefaultPosters(requireContext())
 		}
-
+		savedPosters = pPrefs.getPosters()
 		// 3. 어댑터 연결 (String 리스트를 받도록 AdVPAdapter가 수정되었다고 가정)
 		val adapter = AdVPAdapter(savedPosters)
 		bd.vpM.adapter = adapter
@@ -164,31 +250,40 @@ class MainFragment : Fragment() {
 	}
 
 	private fun updateButtonState(position: Int) {
+		bd.btnMainStart.text = tabs[position]
 		when (position) {
-			0 -> {
-				bd.btnMainStart.text = "얼굴 부위 분석 시작 →"
+			0 -> { selectedMeasureType = MeasureType.NORMAL
 //				bd.btnMainStart.backgroundTintList = ColorStateList.valueOf(
 //					ContextCompat.getColor(requireContext(), R.color.bg15)
 //				)
 			}
-			1 -> {
-				bd.btnMainStart.text = "얼굴 밸런스 스캔 하기 →"
-//				bd.btnMainStart.backgroundTintList = ColorStateList.valueOf(
-//					ContextCompat.getColor(requireContext(), R.color.bg30)
-//				)
-			}
+			1 -> { selectedMeasureType = MeasureType.EXPERT }
+			2 -> { selectedMeasureType = MeasureType.BOW }
+		}
+	}
+	private val tabs = listOf("내 얼굴 분석", "비대칭 진단", "페이스 보우")
+	private fun setAdapter() {
+
+		val mAdapter = MainTabRVAdapter(tabs)
+		mAdapter.onMainTabClickListener = this@MainFragment
+		val vLayoutManager = LinearLayoutManager(requireContext(), LinearLayoutManager.HORIZONTAL , false)
+		bd.rvM.apply {
+			adapter= mAdapter
+			layoutManager = vLayoutManager
 		}
 	}
 	private fun startAutoScroll() {
 		stopAutoScroll() // 기존 것 제거
-
+		val prefs = PreferenceUtility(requireContext())
+		val setedVelo = prefs.getSlideVelocity()
 		autoScrollRunnable = object : Runnable {
 			override fun run() {
-				bd.vpM.currentItem = bd.vpM.currentItem + 1
-				autoScrollHandler.postDelayed(this, 6500) // 5초마다
+				bd.vpM.currentItem += 1
+
+				autoScrollHandler.postDelayed(this, (setedVelo * 1000).toLong()) // 5초마다
 			}
 		}
-		autoScrollHandler.postDelayed(autoScrollRunnable!!, 6500)
+		autoScrollHandler.postDelayed(autoScrollRunnable!!, (setedVelo * 1000).toLong())
 	}
 
 	private fun stopAutoScroll() {
@@ -210,6 +305,10 @@ class MainFragment : Fragment() {
 	override fun onDestroyView() {
 		super.onDestroyView()
 		stopAutoScroll()
+	}
+
+	override fun onMainTabClick(tab: String) {
+
 	}
 
 }

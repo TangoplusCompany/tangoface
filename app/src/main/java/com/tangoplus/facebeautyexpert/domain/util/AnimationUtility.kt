@@ -5,6 +5,7 @@ import android.animation.AnimatorListenerAdapter
 import android.animation.AnimatorSet
 import android.animation.ObjectAnimator
 import android.animation.ValueAnimator
+import android.content.Context
 import android.os.Handler
 import android.os.Looper
 import android.view.View
@@ -19,12 +20,20 @@ import android.widget.TextView
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.constraintlayout.widget.ConstraintSet
 import androidx.core.widget.NestedScrollView
+import androidx.fragment.app.Fragment
+import androidx.lifecycle.LifecycleOwner
 import androidx.transition.ChangeBounds
 import androidx.transition.TransitionManager
+import com.skydoves.balloon.ArrowPositionRules
+import com.skydoves.balloon.Balloon
+import com.skydoves.balloon.BalloonAnimation
+import com.skydoves.balloon.BalloonSizeSpec
+import com.tangoplus.facebeautyexpert.R
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import kotlin.math.hypot
+import androidx.core.content.edit
 
 object AnimationUtility {
 	fun startDismissWithRipple(
@@ -151,4 +160,53 @@ object AnimationUtility {
 			animation = animationSet
 		}
 	}
+
+	// fragment에서 쓰는 상단 가이드 배너 include로 붙은 xml 텍스트 대응하기
+	fun Fragment.setupGuideBanner(
+		bannerView: View,
+		closeButton: View,
+		textView: TextView,
+		message: String,
+		prefKey: String
+	) {
+		val prefs = requireContext().getSharedPreferences("AppPrefs", Context.MODE_PRIVATE)
+
+		val dismissedTime = prefs.getLong(prefKey, 0L)
+		val currentTime = System.currentTimeMillis()
+
+		val oneMonthInMillis = 30L * 24 * 60 * 60 * 1000
+
+		if (dismissedTime > 0 && (currentTime - dismissedTime) < oneMonthInMillis) {
+			bannerView.visibility = View.GONE
+			return
+		}
+
+		textView.text = message
+
+		closeButton.setOnClickListener {
+			bannerView.visibility = View.GONE
+			prefs.edit { putLong(prefKey, System.currentTimeMillis()) }
+		}
+	}
+
+	fun crossFadeViews(oldView: View, newView: View) {
+		// 기존 리사이클러뷰 페이드 아웃
+		oldView.animate()
+			.alpha(0f)
+			.setDuration(400)
+			.withEndAction { oldView.visibility = View.GONE }
+
+		// 새로운 결과창 페이드 인 + 아래에서 위로 살짝 올라오는 효과
+		newView.alpha = 0f
+		newView.translationY = 50f // 밑으로 50포인트 내려놓은 상태에서
+		newView.visibility = View.VISIBLE
+
+		newView.animate()
+			.alpha(1f)
+			.translationY(0f) // 제자리로 올리면서 나타나기
+			.setDuration(500)
+			.start()
+	}
+
+
 }
