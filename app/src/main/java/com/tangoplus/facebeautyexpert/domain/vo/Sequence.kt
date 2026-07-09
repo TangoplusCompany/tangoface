@@ -14,8 +14,6 @@ enum class Sequence(val id: Int, val displayName: String) : Parcelable {
 	NECK_EXTENTION(6, "목폄 상태"),
 	BOW(5, "페이스 보우");
 
-
-
 	override fun toString(): String = displayName
 
 	companion object {

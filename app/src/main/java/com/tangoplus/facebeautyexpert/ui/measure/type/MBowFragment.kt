@@ -13,7 +13,6 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
-import androidx.activity.viewModels
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.lifecycleScope
@@ -23,18 +22,14 @@ import com.tangoplus.facebeautyexpert.data.db.FaceDatabase
 import com.tangoplus.facebeautyexpert.data.db.FaceStatic.Companion.getCurrentDateTime
 import com.tangoplus.facebeautyexpert.databinding.FragmentMBowBinding
 import com.tangoplus.facebeautyexpert.domain.util.AnimationUtility.startFadeIn
-import com.tangoplus.facebeautyexpert.domain.util.ClassifyUtility.calculateHorizontalRatio
 import com.tangoplus.facebeautyexpert.domain.util.FileUtility.setOnSingleClickListener
 import com.tangoplus.facebeautyexpert.domain.util.FileUtility.toFaceStatic
 import com.tangoplus.facebeautyexpert.domain.util.FileUtility.toJsonString
-import com.tangoplus.facebeautyexpert.domain.util.LandmarkUtility.calculateScreenX
-import com.tangoplus.facebeautyexpert.domain.util.LandmarkUtility.calculateScreenY
 import com.tangoplus.facebeautyexpert.domain.util.MeasureUtility.animationSet
 import com.tangoplus.facebeautyexpert.domain.util.MeasureUtility.getGuideText
 import com.tangoplus.facebeautyexpert.domain.util.MeasureUtility.showPreviousDialog
 import com.tangoplus.facebeautyexpert.domain.util.PreferenceUtility
 import com.tangoplus.facebeautyexpert.domain.util.UXUtility.playSound
-import com.tangoplus.facebeautyexpert.domain.util.UXUtility.startLongVibrate
 import com.tangoplus.facebeautyexpert.domain.vo.Sequence
 import com.tangoplus.facebeautyexpert.ui.main.MainActivity
 import com.tangoplus.facebeautyexpert.ui.main.vm.MainViewModel
@@ -305,7 +300,7 @@ class MBowFragment : Fragment() {
         requireActivity(),
         when (mvm.currentSeq) {
           Sequence.COMFORT -> R.drawable.drawable_seq_0
-          else -> R.drawable.drawable_seq_1
+          else -> R.drawable.drawable_seq_6
         }
       )
     )
@@ -387,7 +382,7 @@ class MBowFragment : Fragment() {
       bd.ivMBFrame.visibility = View.VISIBLE
       startFadeIn(bd.ivMBFrame)
       bd.ivMBFrame.setImageDrawable(
-        ContextCompat.getDrawable(requireContext(), R.drawable.drawable_seq_1)
+        ContextCompat.getDrawable(requireContext(), R.drawable.drawable_seq_6)
       )
       startLookUpAnimation()
     }

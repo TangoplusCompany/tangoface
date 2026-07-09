@@ -26,38 +26,60 @@
             <androidx.viewpager2.widget.ViewPager2
                     android:id="@+id/vpM"
                     android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
+                    android:layout_height="match_parent"
                     app:layout_constraintEnd_toEndOf="parent"
                     app:layout_constraintStart_toStartOf="parent"
-                    app:layout_constraintTop_toTopOf="parent"/>
+                    app:layout_constraintTop_toTopOf="parent" app:layout_constraintBottom_toBottomOf="parent"/>
 
-            <androidx.appcompat.widget.AppCompatButton
-                    android:id="@+id/btnMainStart"
-                    android:layout_width="0dp"
-                    android:layout_height="0dp"
-                    android:background="@drawable/color_gradation_accent_64"
-                    android:paddingStart="15dp"
-                    android:paddingTop="5dp"
-                    android:paddingEnd="15dp"
-                    android:paddingBottom="5dp"
-                    android:text="얼굴 부위 분석 시작 →"
-                    android:textColor="@color/subColor100"
-                    android:textSize="32sp"
-                    android:textStyle="bold"
-                    app:layout_constraintBottom_toBottomOf="@+id/vpM"
-                    app:layout_constraintEnd_toEndOf="parent"
-                    app:layout_constraintHeight_percent="0.08"
-                    app:layout_constraintStart_toStartOf="parent"
-                    app:layout_constraintTop_toTopOf="parent"
-                    app:layout_constraintVertical_bias="0.97"
-                    app:layout_constraintWidth_percent="0.5"/>
+
             <androidx.recyclerview.widget.RecyclerView
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content" app:layout_constraintTop_toBottomOf="@+id/vpM"
-                    app:layout_constraintStart_toStartOf="parent" app:layout_constraintEnd_toEndOf="parent"
-                    android:id="@+id/rvM" android:layout_marginStart="20dp" android:layout_marginTop="20dp"
-                    app:layout_constraintBottom_toBottomOf="parent" app:layout_constraintVertical_bias="0.0"
-                    android:layout_marginBottom="20dp"/>
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    app:layout_constraintEnd_toEndOf="@+id/clMStart"
+                    android:id="@+id/rvM"
+                    android:visibility="gone"
+                    app:layout_constraintBottom_toTopOf="@+id/clMStart"
+                    android:layout_marginBottom="20dp" tools:visibility="visible"/>
+
+            <androidx.constraintlayout.widget.ConstraintLayout android:layout_width="wrap_content"
+                                                               android:layout_height="wrap_content"
+                                                               android:background="@drawable/color_gradation_accent_64"
+                                                               android:paddingStart="40dp"
+                                                               android:paddingTop="20dp"
+                                                               android:paddingEnd="40dp"
+                                                               android:paddingBottom="20dp"
+                                                               app:layout_constraintBottom_toBottomOf="parent"
+                                                               app:layout_constraintEnd_toEndOf="parent"
+                                                               android:layout_marginBottom="30dp"
+                                                               android:layout_marginEnd="30dp"
+                                                               android:id="@+id/clMStart"
+            >
+                <com.facebook.shimmer.ShimmerFrameLayout android:layout_width="wrap_content"
+                                                         android:layout_height="wrap_content"
+                                                         android:id="@+id/sflM"
+                                                         app:layout_constraintStart_toStartOf="parent"
+                                                         app:layout_constraintTop_toTopOf="parent"
+                                                         app:layout_constraintBottom_toBottomOf="parent"
+                                                         app:layout_constraintEnd_toEndOf="parent"
+                                                         app:shimmer_base_alpha="1.0" app:shimmer_highlight_alpha="0.7"
+                                                         app:shimmer_dropoff="0.7" app:shimmer_duration="2000"
+                                                         app:shimmer_repeat_delay="2000">
+
+                    <TextView
+                            android:id="@+id/btnMStart"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="측정 🔎"
+                            android:textColor="@color/subColor100"
+                            android:textSize="32sp"
+                            android:textStyle="bold"
+                            app:layout_constraintEnd_toEndOf="parent"
+                            app:layout_constraintStart_toStartOf="parent"
+                            app:layout_constraintTop_toTopOf="parent"
+                            app:layout_constraintBottom_toBottomOf="parent"/>
+                </com.facebook.shimmer.ShimmerFrameLayout>
+
+            </androidx.constraintlayout.widget.ConstraintLayout>
         </androidx.constraintlayout.widget.ConstraintLayout>
     </androidx.core.widget.NestedScrollView>
 

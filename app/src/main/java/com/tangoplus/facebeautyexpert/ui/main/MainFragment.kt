@@ -13,12 +13,17 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.provider.Settings
+import android.transition.Slide
+import android.transition.TransitionManager
 import android.util.Log
+import android.view.Gravity
 import androidx.fragment.app.Fragment
 import android.view.LayoutInflater
 import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
+import android.view.animation.AccelerateInterpolator
+import android.view.animation.DecelerateInterpolator
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.activityViewModels
@@ -42,6 +47,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlin.math.abs
+import androidx.core.view.isVisible
+import androidx.core.view.isGone
+import com.tangoplus.facebeautyexpert.ui.measure.MeasureImageFragment
 
 
 class MainFragment : Fragment(), OnMainTabClickListener {
@@ -102,8 +110,27 @@ class MainFragment : Fragment(), OnMainTabClickListener {
 		// seq Select를 위한
 		setAdapter()
 
-		bd.btnMainStart.setOnSingleClickListener {
-			checkStoragePermission()
+		bd.clMStart.setOnSingleClickListener {
+			val recyclerView = bd.rvM
+			if (recyclerView.isGone) {
+				// 1. 나타나기 (Fade-in + 부드럽게 위로 차오름)
+				recyclerView.visibility = View.VISIBLE
+				recyclerView.animate()
+					.translationY(0f)
+					.alpha(1f)
+					.setDuration(250) // React의 0.25초 감성
+					.setInterpolator(DecelerateInterpolator()) // 끝으로 갈수록 부드럽게 감속
+					.start()
+			} else {
+				// 2. 사라지기 (Fade-out + 아래로 자연스럽게 가라앉음)
+				recyclerView.animate()
+					.translationY(30f)
+					.alpha(0f)
+					.setDuration(200)
+					.setInterpolator(AccelerateInterpolator()) // 시작할 때 빠르게 가속
+					.withEndAction { recyclerView.visibility = View.GONE }
+					.start()
+			}
 		}
 		setupViewPager()
 	}
@@ -239,34 +266,16 @@ class MainFragment : Fragment(), OnMainTabClickListener {
 					ViewPager2.SCROLL_STATE_IDLE -> startAutoScroll()
 				}
 			}
-
-			override fun onPageSelected(position: Int) {
-				super.onPageSelected(position)
-				// 실제 이미지 인덱스 계산 (0 또는 1)
-				val actualPosition = position % promoImages.size
-				updateButtonState(actualPosition)
-			}
 		})
 	}
 
-	private fun updateButtonState(position: Int) {
-		bd.btnMainStart.text = tabs[position]
-		when (position) {
-			0 -> { selectedMeasureType = MeasureType.NORMAL
-//				bd.btnMainStart.backgroundTintList = ColorStateList.valueOf(
-//					ContextCompat.getColor(requireContext(), R.color.bg15)
-//				)
-			}
-			1 -> { selectedMeasureType = MeasureType.EXPERT }
-			2 -> { selectedMeasureType = MeasureType.BOW }
-		}
-	}
-	private val tabs = listOf("내 얼굴 분석", "비대칭 진단", "페이스 보우")
-	private fun setAdapter() {
 
+
+	private fun setAdapter() {
+		bd.rvM.visibility = View.GONE
 		val mAdapter = MainTabRVAdapter(tabs)
 		mAdapter.onMainTabClickListener = this@MainFragment
-		val vLayoutManager = LinearLayoutManager(requireContext(), LinearLayoutManager.HORIZONTAL , false)
+		val vLayoutManager = LinearLayoutManager(requireContext(), LinearLayoutManager.VERTICAL , false)
 		bd.rvM.apply {
 			adapter= mAdapter
 			layoutManager = vLayoutManager
@@ -306,9 +315,18 @@ class MainFragment : Fragment(), OnMainTabClickListener {
 		super.onDestroyView()
 		stopAutoScroll()
 	}
-
+	private val tabs = listOf(   "내 사진 분석", "페이스 보우", "비대칭 진단","얼굴 밸런스",)
 	override fun onMainTabClick(tab: String) {
-
+		when (tab) {
+			tabs[3] -> { selectedMeasureType = MeasureType.NORMAL }
+			tabs[2] -> { selectedMeasureType = MeasureType.EXPERT }
+			tabs[1] -> { selectedMeasureType = MeasureType.BOW }
+			tabs[0] -> {
+				(requireActivity() as MainActivity).navigateToSubFragment(MeasureImageFragment())
+				return
+			}
+		}
+		checkStoragePermission()
 	}
 
 }

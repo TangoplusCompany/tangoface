@@ -43,6 +43,7 @@ import com.tangoplus.facebeautyexpert.ui.statistics.GyroDialogFragment
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import org.json.JSONArray
 import org.json.JSONObject
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
@@ -84,35 +85,64 @@ class MExpertFragment : Fragment() {
           lifecycleScope.launch {
             viewModel.setContourSave(true)
 
-            val success = mvm.captureImage(mvm.currentSeq, requireActivity())  // 여기서 saveMediaStorage까지 전부 완료
-            if (success) {
-              // hairline, pose 전부 끝난 시점
-              mvm.resultBundleToJson(mvm.currentSeq)
-              if (mvm.currentHairLine3DCoordinate.size == 7) {
-                val absoluteLandmarkPairs = mvm.face2DResult?.landmarks?.map {
-                  Pair(calculateScreenX( it.x), calculateScreenY( it.y))
-                }?.toMutableList()
-                // 🕊️🕊️🕊️🕊️ 여기서 vertical 비율 넣기
-                absoluteLandmarkPairs?.let { pairs ->
-                  val horizontalRatio = calculateHorizontalRatio(pairs, mvm.currentHairLine3DCoordinate)
-                  if (mvm.staticJA.length() > 0) {
-                    // 2. 첫 번째(인덱스 0) JSONObject를 꺼내서 값을 추가(또는 덮어쓰기)
-                    val firstJsonObject = mvm.staticJA.getJSONObject(0)
-                    firstJsonObject.put("horizontal_ratio", horizontalRatio)
-                  } else {
-                    // 3. 만약 배열이 비어있다면 새로 만들어서 첫 번째로 넣어줌
-                    mvm.staticJA.put(JSONObject().apply {
-                      put("horizontal_ratio", horizontalRatio)
-                    })
-                  }
-//									Log.v("스태틱", "${mvm.staticJA}")
+            when (mvm.currentSeq) {
+              Sequence.JAW_LEFT_TILT, Sequence.JAW_RIGHT_TILT -> {
+                val tiltDrawable = if (mvm.currentSeq == Sequence.JAW_LEFT_TILT) R.drawable.drawable_seq_2 else R.drawable.drawable_seq_3
+                bd.ivMEFrame.setFramesAndStart(
+                  drawableResIds = listOf(R.drawable.drawable_seq_1, tiltDrawable, R.drawable.drawable_seq_4, R.drawable.drawable_seq_23_done),
+                  accentColor = ContextCompat.getColor(requireActivity(), R.color.accent),
+                  onFinished = { } // bd.ivMEFrame.setImageDrawable(ContextCompat.getDrawable(requireContext(), R.drawable.drawable_seq_1))
+                )
+                mvm.startVideoRecording(requireActivity()) {
+                  mvm.tempStaticJo = null
+                  // 좌표 초기화
+                  Log.v("녹화 완료", "좌표값: ${mvm.videoTempCoordinatesJA.length()}")
+                  mvm.coordinatesJA.put(mvm.videoTempCoordinatesJA)
+                  mvm.videoTempCoordinatesJA = JSONArray()
+                  Log.v("동적 저장완료", "${mvm.coordinatesJA.length()}, 현재 seq: ${mvm.currentSeq}")
+                  updateUI()
+
+                  // updateUI 후 담아놨던 JAW OPENING을
+                  mvm.resultBundleToJson(Sequence.JAW_OPENING, mvm.maxJawOpeningFace2D, mvm.maxJawOpening3D)
                 }
               }
-              mvm.currentHairLine3DCoordinate.clear()
-              startLongVibrate(requireContext())
-              // 이 블록 안의 코드는 애니메이션이 왕복을 마치고 완전히 멈췄을 때 실행됩니다.
-              viewModel.finishSequence()
-              updateUI()
+
+              else -> {
+                playSound(R.raw.camera_shutter)
+                lifecycleScope.launch {
+                  viewModel.setContourSave(true) // 컨투어를 위한 shortArray 추출 및 저장
+                  val success = mvm.captureImage(mvm.currentSeq, requireActivity())  // 여기서 saveMediaStorage까지 전부 완료
+                  if (success) {
+                    // hairline, pose 전부 끝난 시점
+                    mvm.resultBundleToJson(mvm.currentSeq)
+                    if (mvm.currentHairLine3DCoordinate.size == 7) {
+                      val absoluteLandmarkPairs = mvm.face2DResult?.landmarks?.map {
+                        Pair(calculateScreenX( it.x), calculateScreenY( it.y))
+                      }?.toMutableList()
+                      // 🕊️🕊️🕊️🕊️ 여기서 vertical 비율 넣기
+                      absoluteLandmarkPairs?.let { pairs ->
+                        val horizontalRatio = calculateHorizontalRatio(pairs, mvm.currentHairLine3DCoordinate)
+                        if (mvm.staticJA.length() > 0) {
+                          // 2. 첫 번째(인덱스 0) JSONObject를 꺼내서 값을 추가(또는 덮어쓰기)
+                          val firstJsonObject = mvm.staticJA.getJSONObject(0)
+                          firstJsonObject.put("horizontal_ratio", horizontalRatio)
+                        } else {
+                          // 3. 만약 배열이 비어있다면 새로 만들어서 첫 번째로 넣어줌
+                          mvm.staticJA.put(JSONObject().apply {
+                            put("horizontal_ratio", horizontalRatio)
+                          })
+                        }
+//									Log.v("스태틱", "${mvm.staticJA}")
+                      }
+                    }
+                    mvm.currentHairLine3DCoordinate.clear()
+                    startLongVibrate(requireContext())
+                    // 이 블록 안의 코드는 애니메이션이 왕복을 마치고 완전히 멈췄을 때 실행됩니다.
+                    viewModel.finishSequence()
+                    updateUI()
+                  }
+                }
+              }
             }
           }
         } else {
@@ -177,10 +207,8 @@ class MExpertFragment : Fragment() {
           Log.v("mvm.plrJA", "${mvm.plrJA.length()}")
           val mergedJOBeforeFileName = mutableListOf<JSONObject>()
           for (i in 0 until staticJos.size) {
-            val currentStatic = transStatics[i]
             val mergedJSON = JSONObject().apply {
               put("data", JSONObject(transStatics[i].toJsonString()))
-
               Log.v("LEN", "i=$i, coordinatesLen=${mvm.coordinatesJA.length()}, plrLen=${mvm.plrJA.length()}, mediaNames=${mvm.mediaFileNames.size}")
               put("face_landmark", mvm.coordinatesJA.optJSONArray(i))
               put("pose_landmark", mvm.plrJA.optJSONArray(i))
@@ -227,9 +255,6 @@ class MExpertFragment : Fragment() {
     bd.tvMEPrevious.setOnSingleClickListener {
       showPreviousDialog(requireActivity(), { setPreviousStep() })
     }
-
-
-
     bd.tvMEGyro.setOnSingleClickListener {
       val gyro = GyroDialogFragment()
       gyro.show(requireActivity().supportFragmentManager, "gyroDialogFragment")
@@ -293,8 +318,10 @@ class MExpertFragment : Fragment() {
       ContextCompat.getDrawable(
         requireActivity(),
         when (mvm.currentSeq) {
-          com.tangoplus.facebeautyexpert.domain.vo.Sequence.COMFORT -> R.drawable.drawable_seq_0
-          else -> R.drawable.drawable_seq_1
+          Sequence.COMFORT -> R.drawable.drawable_seq_0
+          Sequence.JAW_LEFT_TILT, Sequence.JAW_RIGHT_TILT -> R.drawable.drawable_seq_1
+          Sequence.NECK_EXTENTION -> R.drawable.drawable_seq_6
+          else -> R.drawable.drawable_seq_6
         }
       )
     )
@@ -375,8 +402,41 @@ class MExpertFragment : Fragment() {
       viewModel.setCountDownFlag(false)
       bd.ivMEFrame.visibility = View.VISIBLE
       startFadeIn(bd.ivMEFrame)
+      when (mvm.currentSeq) {
+        Sequence.JAW_LEFT_TILT, Sequence.JAW_RIGHT_TILT -> bd.ivMEFrame.setImageDrawable(
+          ContextCompat.getDrawable(
+            requireActivity(),
+            R.drawable.drawable_seq_1
+          )
+        )
+        Sequence.COMFORT -> bd.ivMEFrame.setImageDrawable(
+          ContextCompat.getDrawable(
+            requireActivity(),
+            R.drawable.drawable_seq_0
+          )
+        )
+//        Sequence.OCCLUSAL -> bd.ivMEFrame.setImageDrawable(
+//          ContextCompat.getDrawable(
+//            requireActivity(),
+//            R.drawable.drawable_seq_1
+//          )
+//        )
+        Sequence.NECK_EXTENTION -> bd.ivMEFrame.setImageDrawable(
+          ContextCompat.getDrawable(
+            requireActivity(),
+            R.drawable.drawable_seq_6
+          )
+        )
+//        Sequence.JAW_OPENING -> bd.ivMEFrame.setImageDrawable(
+//          ContextCompat.getDrawable(
+//            requireActivity(),
+//            R.drawable.drawable_seq_4
+//          )
+//        )
+        else -> {}
+      }
       bd.ivMEFrame.setImageDrawable(
-        ContextCompat.getDrawable(requireContext(), R.drawable.drawable_seq_1)
+        ContextCompat.getDrawable(requireContext(), R.drawable.drawable_seq_6)
       )
       startLookUpAnimation()
     }
@@ -395,4 +455,5 @@ class MExpertFragment : Fragment() {
 //    bd.tvGoGallery.isEnabled = true
     Log.v("업데이트UI", "${mvm.plrJA.length()}")
   }
+
 }

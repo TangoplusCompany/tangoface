@@ -17,6 +17,7 @@
     <color name="accent500">#D00043</color>
     <color name="accent10">#19FF0055</color>
     <color name="accent30">#4CFF0055</color>
+    <color name="accent50">#7FFF0055</color>
     <color name="accent300_80">#CDFF8C98</color>
     <color name="subAccent">#FF95A6</color>
     <color name="accent_foreground">#76696D</color>

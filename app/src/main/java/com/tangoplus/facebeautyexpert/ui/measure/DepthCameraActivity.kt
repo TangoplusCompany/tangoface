@@ -1,39 +1,20 @@
 package com.tangoplus.facebeautyexpert.ui.measure
 
-import android.animation.AnimatorSet
-import android.animation.ValueAnimator
-import android.annotation.SuppressLint
-import android.content.ContentValues
-import android.content.Intent
 import android.content.pm.ActivityInfo
 import android.graphics.Bitmap
-import android.graphics.Color
-import android.graphics.Paint
-import android.media.MediaCodec
-import android.media.MediaCodecInfo
-import android.media.MediaFormat
-import android.media.MediaMuxer
-import android.net.Uri
 import android.os.Bundle
-import android.os.CountDownTimer
 import android.os.Handler
 import android.os.Looper
-import android.provider.MediaStore
 import android.util.Log
-import android.view.Surface
-import android.view.View
 import android.view.WindowManager
 import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
-import androidx.camera.video.Recording
-import androidx.core.content.ContextCompat
 import androidx.core.content.IntentCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
-import androidx.lifecycle.lifecycleScope
 import com.google.mediapipe.framework.image.BitmapImageBuilder
 import com.google.mediapipe.framework.image.MPImage
 import com.google.mediapipe.tasks.vision.core.RunningMode
@@ -45,98 +26,47 @@ import com.orbbec.obsensor.DeviceList
 import com.orbbec.obsensor.HoleFillingFilter
 import com.orbbec.obsensor.Pipeline
 import com.orbbec.obsensor.property.DeviceProperty
-import com.orbbec.obsensor.types.AlignMode
-import com.orbbec.obsensor.types.CameraDistortion
 import com.orbbec.obsensor.types.Format
 import com.orbbec.obsensor.types.FrameType
 import com.orbbec.obsensor.types.SensorType
 import com.orbbec.obsensor.types.StreamType
 import com.tangoplus.facebeautyexpert.R
-import com.tangoplus.facebeautyexpert.data.db.FaceDao
-import com.tangoplus.facebeautyexpert.data.db.FaceDatabase
-import com.tangoplus.facebeautyexpert.data.db.FaceStatic.Companion.getCurrentDateTime
 import com.tangoplus.facebeautyexpert.databinding.ActivityDepthCameraBinding
-import com.tangoplus.facebeautyexpert.domain.util.AnimationUtility.startFadeIn
-import com.tangoplus.facebeautyexpert.domain.util.AnimationUtility.startFadeOut
-import com.tangoplus.facebeautyexpert.domain.util.FileUtility.getFileName
 import com.tangoplus.facebeautyexpert.ui.view.OverlayView
 import com.tangoplus.facebeautyexpert.domain.util.FileUtility.setOnSingleClickListener
 import com.tangoplus.facebeautyexpert.domain.util.MathHelpers.calculateScaleFromPart
 import com.tangoplus.facebeautyexpert.domain.util.MathHelpers.calculateSlope
-import com.tangoplus.facebeautyexpert.domain.util.UXUtility.playSound
 import com.tangoplus.facebeautyexpert.domain.vision.face.FaceBlendshapesResultAdapter
 import com.tangoplus.facebeautyexpert.domain.vision.face.FaceLandmarkerHelper
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-import org.json.JSONObject
-import java.io.File
-import java.time.LocalDateTime
-import java.time.format.DateTimeFormatter
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
-import kotlin.math.roundToInt
 import kotlin.math.sqrt
-import com.tangoplus.facebeautyexpert.domain.util.FileUtility.toFaceStatic
-import com.tangoplus.facebeautyexpert.domain.util.FileUtility.toJsonString
 import com.tangoplus.facebeautyexpert.domain.util.MathHelpers.calculateAngle
 import com.tangoplus.facebeautyexpert.domain.util.MathHelpers.getNormalizedDistance
 import com.tangoplus.facebeautyexpert.domain.util.MathHelpers.setScaleFactor
-import com.tangoplus.facebeautyexpert.domain.util.MeasureUtility
-import com.tangoplus.facebeautyexpert.domain.util.MeasureUtility.animationSet
-import com.tangoplus.facebeautyexpert.domain.util.MeasureUtility.getGuideText
 import com.tangoplus.facebeautyexpert.domain.util.MeasureUtility.showGoMainDialog
-import com.tangoplus.facebeautyexpert.domain.util.MeasureUtility.showPreviousDialog
 import com.tangoplus.facebeautyexpert.domain.util.PreferenceUtility
 import com.tangoplus.facebeautyexpert.domain.util.SecurityUtility.generateCustomUUID
 import com.tangoplus.facebeautyexpert.domain.vision.face.FaceLandmarkAdapter
 import com.tangoplus.facebeautyexpert.domain.vision.pose.PoseLandmarkerHelper
 import com.tangoplus.facebeautyexpert.domain.vo.Sequence
-import com.tangoplus.facebeautyexpert.orbbec.vo.ScaledIntrinsic
 import com.tangoplus.facebeautyexpert.orbbec.BaseActivity
-import com.tangoplus.facebeautyexpert.ui.main.MainActivity
 import com.tangoplus.facebeautyexpert.ui.measure.vm.InputViewModel
 import com.tangoplus.facebeautyexpert.ui.measure.vm.MeasureViewModel
-import java.io.FileOutputStream
 import java.nio.ByteBuffer
 import kotlin.lazy
 import kotlin.math.abs
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.orbbec.obsensor.VideoStreamProfile
-import com.orbbec.obsensor.property.PropertyType
-import com.orbbec.obsensor.types.CameraIntrinsic
-import com.orbbec.obsensor.types.Extrinsic
 import com.tangoplus.facebeautyexpert.domain.opencv.HsvColorTracker
-import com.tangoplus.facebeautyexpert.domain.util.BitmapUtility.faceOutLineIndexes
-import com.tangoplus.facebeautyexpert.domain.util.ClassifyUtility.calculateHorizontalRatio
-import com.tangoplus.facebeautyexpert.domain.util.FileUtility.getMoireFileName
-import com.tangoplus.facebeautyexpert.domain.util.LandmarkUtility.buildFaceMaskPath
-import com.tangoplus.facebeautyexpert.domain.util.LandmarkUtility.buildFaceMaskPathFromPoints
-import com.tangoplus.facebeautyexpert.domain.util.LandmarkUtility.calculateScreenX
-import com.tangoplus.facebeautyexpert.domain.util.LandmarkUtility.calculateScreenY
 import com.tangoplus.facebeautyexpert.domain.util.LandmarkUtility.colorFrameToBitmapSafe
-import com.tangoplus.facebeautyexpert.domain.util.LandmarkUtility.convertFaceLandmarksTo3D
-import com.tangoplus.facebeautyexpert.domain.util.LandmarkUtility.k1
-import com.tangoplus.facebeautyexpert.domain.util.LandmarkUtility.k2
-import com.tangoplus.facebeautyexpert.domain.util.LandmarkUtility.k3
-import com.tangoplus.facebeautyexpert.domain.util.LandmarkUtility.p1
-import com.tangoplus.facebeautyexpert.domain.util.LandmarkUtility.p2
-import com.tangoplus.facebeautyexpert.domain.util.LandmarkUtility.rotArray
 import com.tangoplus.facebeautyexpert.domain.util.LandmarkUtility.scaleAndCropIntrinsicCenterCrop
-import com.tangoplus.facebeautyexpert.domain.util.LandmarkUtility.toScaledIntrinsic
-import com.tangoplus.facebeautyexpert.domain.util.LandmarkUtility.transArray
-import com.tangoplus.facebeautyexpert.domain.util.LandmarkUtility.undistortLandmarks
-import com.tangoplus.facebeautyexpert.domain.util.UXUtility.startLongVibrate
 import com.tangoplus.facebeautyexpert.domain.util.clearAll
 import com.tangoplus.facebeautyexpert.domain.vo.MeasureType
 import com.tangoplus.facebeautyexpert.ui.main.vm.MainViewModel
 import com.tangoplus.facebeautyexpert.ui.measure.type.MBowFragment
 import com.tangoplus.facebeautyexpert.ui.measure.type.MExpertFragment
 import com.tangoplus.facebeautyexpert.ui.measure.type.MNormalFragment
-import com.tangoplus.facebeautyexpert.ui.statistics.GyroDialogFragment
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
 import kotlin.use
 
 class DepthCameraActivity : BaseActivity(), FaceLandmarkerHelper.LandmarkerListener {
@@ -157,7 +87,7 @@ class DepthCameraActivity : BaseActivity(), FaceLandmarkerHelper.LandmarkerListe
 	private lateinit var trackerExecutor: ExecutorService
 	// landmarker helper
 	private lateinit var backgroundExecutor: ExecutorService
-	private var timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"))
+
 	private lateinit var prefsUtil: PreferenceUtility
 
 	private var isInit = false
@@ -218,17 +148,17 @@ class DepthCameraActivity : BaseActivity(), FaceLandmarkerHelper.LandmarkerListe
 					// 3. Create Device and initialize Pipeline through Device
 					mvm.mPipeline = Pipeline(mvm.mDevice)
 
-					Log.v("리스트", "${mvm.mDevice?.getSupportedPropertyList()?.map { "${it.propertyName}, ${it.property.value()}, ${it.propertyType}" }}")
+//					Log.v("리스트", "${mvm.mDevice?.getSupportedPropertyList()?.map { "${it.propertyName}, ${it.property.value()}, ${it.propertyType}" }}")
 
 					val config = Config()
 //					mDevice?.setPropertyValueB(DeviceProperty.OB_PROP_DEPTH_ALIGN_HARDWARE_BOOL, true)
 					mvm.mPipeline!!.getStreamProfileList(SensorType.COLOR).use { colorProfileList ->
 						for (i in 0 until colorProfileList.count) {
 							val p = colorProfileList.getProfile(i)
-							Log.v("Profiles", "type=${p.type}")
+//							Log.v("Profiles", "type=${p.type}")
 							val vp = p.`as`(StreamType.COLOR) as? VideoStreamProfile
-							Log.v("Profiles", "${vp?.width}x${vp?.height}")
-							Log.v("ColorProfiles", "color: ${vp?.width}x${vp?.height} fmt=${vp?.format} fps=${vp?.fps}")
+//							Log.v("Profiles", "${vp?.width}x${vp?.height}")
+//							Log.v("ColorProfiles", "color: ${vp?.width}x${vp?.height} fmt=${vp?.format} fps=${vp?.fps}")
 						}
 						val colorProfile = colorProfileList.getVideoStreamProfile(1920, 1080, Format.RGB, 30)
 						config.enableStream(colorProfile)
@@ -238,10 +168,10 @@ class DepthCameraActivity : BaseActivity(), FaceLandmarkerHelper.LandmarkerListe
 					mvm.mPipeline!!.getStreamProfileList(SensorType.DEPTH).use { depthProfileList ->
 						for (i in 0 until depthProfileList.count) {
 							val p = depthProfileList.getProfile(i)
-							Log.v("Profiles", "type=${p.type}")
+//							Log.v("Profiles", "type=${p.type}")
 							val vp = p.`as`(StreamType.DEPTH) as? VideoStreamProfile
-							Log.v("Profiles", "${vp?.width}x${vp?.height}")
-							Log.v("DepthProfiles", "depth: ${vp?.width}x${vp?.height} fmt=${vp?.format} fps=${vp?.fps}")
+//							Log.v("Profiles", "${vp?.width}x${vp?.height}")
+//							Log.v("DepthProfiles", "depth: ${vp?.width}x${vp?.height} fmt=${vp?.format} fps=${vp?.fps}")
 						}
 						val depthProfile = depthProfileList.getVideoStreamProfile(1280, 720, Format.Y16, 30)
 						config.enableStream(depthProfile)
@@ -440,41 +370,41 @@ class DepthCameraActivity : BaseActivity(), FaceLandmarkerHelper.LandmarkerListe
 								1.0f
 							)
 
-							// ✅ Bitmap 생성 (한 번만!)
-							if (mvm.scaledIntrinsic != null && mvm.colorDistortion != null) {
-								bitmap = colorFrameToBitmapSafe(frame, 0)
+							bitmap = colorFrameToBitmapSafe(frame, 0)
 
-								bitmap?.let { bmp ->
-									// 1️⃣ MPImage 생성 (Face Detection용)
-									mpImage = BitmapImageBuilder(bmp).build()
+							bitmap?.let { bmp ->
+								// 1️⃣ MPImage 생성 (Face Detection용)
 
-									val timestamp = System.currentTimeMillis()
-									mainHandler.post {
-										if (mvm.flh != null && !mvm.flh?.isClose()!!) {
-											mvm.flh!!.detectAsync(mpImage!!, timestamp)
-										}
+								mpImage = BitmapImageBuilder(bmp).build()
+
+
+								val timestamp = System.currentTimeMillis()
+								mainHandler.post {
+									Log.v("결과가 나오긴함?", "${bitmap} | ${mvm.flh} ")
+									if (mvm.flh != null && !mvm.flh?.isClose()!!) {
+										mvm.flh!!.detectAsync(mpImage!!, timestamp)
 									}
-
-									if (mvm.currentSeq == Sequence.BOW) {
-										val result = hsvTracker.process(bmp, makeDebugMask = false)
-										trackerExecutor.execute {
-											if (result.targets.isEmpty()) {
-												bd.overlay.clearColorTrack()
-											} else {
-												bd.overlay.updateColorTracks(
-													targets = result.targets,
-													srcW = 1920,
-													srcH = 1080,
-													scaleType = OverlayView.ScaleType.FIT,
-													rotateDeg = 0,
-													mirrorX = true
-												)
-												mvm.currentTarget = result.targets
-											}
-										}
-									}
-
 								}
+
+								if (mvm.currentSeq == Sequence.BOW) {
+									val result = hsvTracker.process(bmp, makeDebugMask = false)
+									trackerExecutor.execute {
+										if (result.targets.isEmpty()) {
+											bd.overlay.clearColorTrack()
+										} else {
+											bd.overlay.updateColorTracks(
+												targets = result.targets,
+												srcW = 1920,
+												srcH = 1080,
+												scaleType = OverlayView.ScaleType.FIT,
+												rotateDeg = 0,
+												mirrorX = true
+											)
+											mvm.currentTarget = result.targets
+										}
+									}
+								}
+
 							}
 						}
 					} finally {
@@ -534,7 +464,6 @@ class DepthCameraActivity : BaseActivity(), FaceLandmarkerHelper.LandmarkerListe
 			}
 		}
 	}
-
 	private fun stopAndJoinFrameLoop(timeoutMs: Long = 1500L): Boolean {
 		// 1) 루프 종료 플래그
 		mvm.mIsStreamRunning = false
@@ -722,8 +651,6 @@ class DepthCameraActivity : BaseActivity(), FaceLandmarkerHelper.LandmarkerListe
 				}
 
 				bd.overlay.setHorizon(horizonBoolean)
-				//                Log.v("얼굴 중앙", "$isFaceCenter")
-				//                Log.v("라인벡터", "코: ${faceLandmarks[0].x()}, ${faceLandmarks[0].y()}, 왼쪽눈: ${faceLandmarks[33].x()}, ${faceLandmarks[33].x()}, 오른쪽 눈: ${faceLandmarks[263].x()}, ${faceLandmarks[263].x()}")
 
 				// verti state 설정
 				val vertiBoolean = when (mvm.currentSeq) {
@@ -740,13 +667,6 @@ class DepthCameraActivity : BaseActivity(), FaceLandmarkerHelper.LandmarkerListe
 				val vertiMediator = vertiBoolean && eyeParallel
 
 				bd.overlay.setVerti(vertiMediator)
-
-				// 입이 열리거나 아직 2초가 안 지났으면 타이머 리셋
-				if (mouseClosedTime != null) {
-					Log.v("입술감지", "입 열림 - 타이머 리셋")
-				}
-				mouseClosedTime = null
-
 			}
 			// Force a redraw
 			bd.overlay.invalidate()
@@ -784,32 +704,31 @@ class DepthCameraActivity : BaseActivity(), FaceLandmarkerHelper.LandmarkerListe
 
 	// --------------------------------------# init #-----------------------------------------------
 	private fun initFace() {
-		try {
-			Log.d("이닛", "initializing FaceLandmarker resources...")
-			// 이제 this가 완전히 초기화된 상태
+		Log.d("이닛", "initializing FaceLandmarker resources...")
+
+		if (!::backgroundExecutor.isInitialized || backgroundExecutor.isShutdown) {
+			backgroundExecutor = Executors.newSingleThreadExecutor()
+		}
+
+		backgroundExecutor.execute {
 			try {
-				if (!::backgroundExecutor.isInitialized || backgroundExecutor.isShutdown) {
-					backgroundExecutor = Executors.newSingleThreadExecutor()
-				}
-				backgroundExecutor.execute {
-					mvm.flh = FaceLandmarkerHelper(
-						context = this@DepthCameraActivity,
-						runningMode = RunningMode.LIVE_STREAM,
-						minFaceDetectionConfidence = viewModel.currentMinFaceDetectionConfidence,
-						minFaceTrackingConfidence = viewModel.currentMinFaceTrackingConfidence,
-						minFacePresenceConfidence = viewModel.currentMinFacePresenceConfidence,
-						maxNumFaces = viewModel.currentMaxFaces,
-						currentDelegate = viewModel.currentDelegate,
-						faceLandmarkerHelperListener = this
-					)
-				}
-				Log.d("FaceLandmarker", "Initialization successful!")
+				// 1. 메모리 누수 방지를 위해 applicationContext 사용
+				mvm.flh = FaceLandmarkerHelper(
+					context = applicationContext,
+					runningMode = RunningMode.LIVE_STREAM,
+					minFaceDetectionConfidence = viewModel.currentMinFaceDetectionConfidence,
+					minFaceTrackingConfidence = viewModel.currentMinFaceTrackingConfidence,
+					minFacePresenceConfidence = viewModel.currentMinFacePresenceConfidence,
+					maxNumFaces = viewModel.currentMaxFaces,
+					currentDelegate = viewModel.currentDelegate,
+					faceLandmarkerHelperListener = this@DepthCameraActivity
+				)
+				// 2. 생성이 완전히 완료된 시점에 백그라운드에서 로그 확인
+				Log.d("이닛", "FaceLandmarker 실제 생성 완료: ${mvm.flh}")
 			} catch (e: Exception) {
-				Log.e("FaceLandmarker", "Failed to initialize: ${e.message}", e)
+				// 3. 백그라운드 내부 에러를 여기서 잡아야 왜 null인지 원인이 나옵니다.
+				Log.e("이닛", "FaceLandmarker 실제 생성 실패 원인: ${e.message}", e)
 			}
-			Log.d("이닛", "FaceLandmarker initialized.")
-		} catch (e: Exception) {
-			Log.e("이닛", "Failed to initialze pose landmarker: ${e.message}", e)
 		}
 	}
 
@@ -901,314 +820,9 @@ class DepthCameraActivity : BaseActivity(), FaceLandmarkerHelper.LandmarkerListe
 		super.finish()
 	}
 
-	//  🎥🎥🎥🎥🎥🎥🎥 video 🎥🎥🎥🎥🎥🎥🎥
-	private var recordingJob: Job? = null
-	private var recording: Recording? = null
-	private var startRecording = false
-	private var isRecording = false
-	private var videoEncoder: MediaCodec? = null
-	private var mediaMuxer: MediaMuxer? = null
-	private var videoTrackIndex = -1
-	private var mouseClosedTime: Long? = null
-	private var recordingStartTime: Long? = null
-
-	@SuppressLint("SuspiciousIndentation")
-	private fun stopVideoRecording() {
-		recordingJob?.cancel()
-		isRecording = false
-		cleanup()
-		releaseVideoRecording()
-	}
-
-	private fun startRecordingMaxTimer() {
-		lifecycleScope.launch(Dispatchers.Main) {
-			delay(6000) // 6초가 max 영상 길이
-			stopVideoRecording()
-		}
-	}
-
-	private fun startVideoRecording(callback: () -> Unit) {
-		startDepthCameraRecording(callback)
-	}
-
-	@SuppressLint("SuspiciousIndentation")
-	private fun releaseVideoRecording() {
-		// 1) 타이머/잡 정리 (이미 있는 변수만 사용)
-		try {
-			recordingJob?.cancel()
-		} catch (_: Throwable) {
-		}
-		recordingJob = null
-		isRecording = false
-		startRecording = false
-		recordingStartTime = null
-
-		// 2) 메인 루퍼에 걸어둔 지연 콜백들 제거
-		//    (Start에서 Handler(Looper.getMainLooper()).postDelayed(...) 사용)
-		try {
-			Handler(Looper.getMainLooper()).removeCallbacksAndMessages(null)
-		} catch (_: Throwable) {
-		}
-
-		// 3) CameraX Recording 자원 해제
-		recording?.let { r ->
-			runCatching { r.stop() }
-			runCatching { r.close() }
-		}
-		recording = null
-
-		runCatching { cleanup() }
-
-		// 5) 변환 중 남은 임시 파일들 중 ‘빈 파일/부분 파일’만 정리 (안전 범위)
-		runCatching {
-			cacheDir?.listFiles()
-				?.filter { it.isFile && it.extension.equals("mp4", ignoreCase = true) }
-				// 0바이트 또는 아주 작은 부분 파일(예: 64KB 미만)만 제거
-				?.filter { it.length() in 0..65535 }
-				?.forEach { runCatching { it.delete() } }
-		}
-	}
 
 
-	private fun cleanup() {
-		try {
-			videoEncoder?.let { encoder ->
-				try {
-					encoder.stop()
-				} catch (e: Exception) {
-					Log.e("cleanup", "Error stopping encoder: ${e.message}")
-				}
-				encoder.release()
-				videoEncoder = null
-			}
 
-			if (::inputSurface.isInitialized) {
-				try {
-					inputSurface.release()
-				} catch (e: Exception) {
-					Log.e("cleanup", "Error releasing surface: ${e.message}")
-				}
-			}
-
-			mediaMuxer?.let { muxer ->
-				try {
-					muxer.stop()
-				} catch (e: Exception) {
-					Log.e("cleanup", "Error stopping muxer: ${e.message}")
-				}
-				muxer.release()
-				mediaMuxer = null
-			}
-
-			videoTrackIndex = -1
-			isRecording = false
-
-			Log.d("cleanup", "Video recording cleanup completed")
-		} catch (e: Exception) {
-			Log.e("cleanup", "Cleanup failed: ${e.message}")
-		}
-	}
-
-	private lateinit var inputSurface: Surface
-
-	private fun startDepthCameraRecording(callback: () -> Unit) {
-		recordingJob = CoroutineScope(Dispatchers.IO).launch {
-			try {
-				val outputFile = File(cacheDir, "$timestamp.mp4")
-				val width = 1920
-				val height = 1080
-				val fps = 30
-				val bitRate = 6_000_000
-
-				val format =
-					MediaFormat.createVideoFormat(MediaFormat.MIMETYPE_VIDEO_AVC, width, height).apply {
-						setInteger(
-							MediaFormat.KEY_COLOR_FORMAT,
-							MediaCodecInfo.CodecCapabilities.COLOR_FormatSurface
-						)
-						setInteger(MediaFormat.KEY_BIT_RATE, bitRate)
-						setInteger(MediaFormat.KEY_FRAME_RATE, fps)
-						setInteger(MediaFormat.KEY_I_FRAME_INTERVAL, 1)
-					}
-
-				videoEncoder = MediaCodec.createEncoderByType(MediaFormat.MIMETYPE_VIDEO_AVC)
-				videoEncoder?.configure(format, null, null, MediaCodec.CONFIGURE_FLAG_ENCODE)
-				inputSurface = videoEncoder!!.createInputSurface()
-
-				mediaMuxer =
-					MediaMuxer(outputFile.absolutePath, MediaMuxer.OutputFormat.MUXER_OUTPUT_MPEG_4)
-				videoEncoder?.start()
-				isRecording = true
-
-				withContext(Dispatchers.Main) {
-					startRecording = true
-					startRecordingMaxTimer()
-					Log.v("startRecording", "startRecording $startRecording")
-				}
-
-				val frameInterval = 1000L / fps
-				var frameCount = 0
-				val bufferInfo = MediaCodec.BufferInfo()
-				var trackIndex = -1
-				var muxerStarted = false
-				val canvasPaint = Paint()
-
-				while (isRecording) {
-					val frameStart = System.currentTimeMillis()
-
-					mvm.mPipeline?.waitForFrameSet(1000)?.use { frameSet ->
-						val colorFrame = frameSet.getColorFrame() ?: return@use
-
-						val dataSize = colorFrame.getDataSize()
-						val byteBuffer = ByteBuffer.allocateDirect(dataSize)
-						colorFrame.getData(byteBuffer)
-						byteBuffer.rewind()
-
-						val pixels = IntArray(width * height)
-						for (i in pixels.indices) {
-							if (byteBuffer.remaining() >= 3) {
-								val r = byteBuffer.get().toInt() and 0xFF
-								val g = byteBuffer.get().toInt() and 0xFF
-								val b = byteBuffer.get().toInt() and 0xFF
-								pixels[i] = (0xFF shl 24) or (r shl 16) or (g shl 8) or b
-							}
-						}
-
-						val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
-						bitmap.setPixels(pixels, 0, width, 0, 0, width, height)
-
-						if (!isRecording || !::inputSurface.isInitialized) return@use
-
-						try {
-							val canvas = inputSurface.lockCanvas(null)
-							canvas.drawBitmap(bitmap, 0f, 0f, canvasPaint)
-							inputSurface.unlockCanvasAndPost(canvas)
-						} catch (e: Exception) {
-							Log.e("startRecording", "Surface draw failed: ${e.message}")
-							isRecording = false
-							return@use
-						}
-					}
-
-					// ✅ encoder 상태 확인 후 dequeue
-					val encoder = videoEncoder
-					if (encoder == null || !isRecording) break
-
-					try {
-						var outputBufferIndex = encoder.dequeueOutputBuffer(bufferInfo, 0)
-						while (outputBufferIndex >= 0) {
-							val encodedData = encoder.getOutputBuffer(outputBufferIndex)
-
-							if (encodedData != null) {
-								if (bufferInfo.flags and MediaCodec.BUFFER_FLAG_CODEC_CONFIG != 0) {
-									bufferInfo.size = 0
-								}
-
-								if (bufferInfo.size != 0) {
-									encodedData.position(bufferInfo.offset)
-									encodedData.limit(bufferInfo.offset + bufferInfo.size)
-
-									if (!muxerStarted) {
-										trackIndex = mediaMuxer!!.addTrack(encoder.outputFormat)
-										mediaMuxer!!.start()
-										muxerStarted = true
-									}
-
-									mediaMuxer?.writeSampleData(trackIndex, encodedData, bufferInfo)
-								}
-							}
-
-							encoder.releaseOutputBuffer(outputBufferIndex, false)
-							outputBufferIndex = encoder.dequeueOutputBuffer(bufferInfo, 0)
-						}
-					} catch (e: IllegalStateException) {
-						Log.e("startRecording", "Encoder already released: ${e.message}")
-						break
-					}
-
-					frameCount++
-
-					val elapsed = System.currentTimeMillis() - frameStart
-					val delay = frameInterval - elapsed
-					if (delay > 0) delay(delay)
-				}
-
-				stopDepthCameraRecording(outputFile, callback)
-
-			} catch (e: Exception) {
-				Log.e("startRecording", "Recording failed: ${e.message}", e)
-				withContext(Dispatchers.Main) {
-					isRecording = false
-					startRecording = false
-				}
-				// cleanup 호출하지 않음 - stopDepthCameraRecording에서 처리
-			}
-		}
-	}
-
-	private fun stopDepthCameraRecording(outputFile: File, callback: () -> Unit) {
-		isRecording = false
-		startRecording = false
-		Log.v("stopDepthRecording", "stopDepthCameraRecording")
-
-		try {
-			// ✅ 순서 중요: encoder -> surface -> muxer
-			videoEncoder?.let { encoder ->
-				try {
-					encoder.stop()
-				} catch (e: Exception) {
-					Log.e("stopRecording", "Error stopping encoder: ${e.message}")
-				}
-				encoder.release()
-				videoEncoder = null
-			}
-
-			if (::inputSurface.isInitialized) {
-				try {
-					inputSurface.release()
-				} catch (e: Exception) {
-					Log.e("stopRecording", "Error releasing surface: ${e.message}")
-				}
-			}
-
-			mediaMuxer?.let { muxer ->
-				try {
-					muxer.stop()
-				} catch (e: Exception) {
-					Log.e("stopRecording", "Error stopping muxer: ${e.message}")
-				}
-				muxer.release()
-				mediaMuxer = null
-			}
-
-			Log.v("startRecording", "finish Recording")
-
-			// 좌우 반전 적용
-			val inputPath = outputFile.absolutePath
-			val outputPath = File(cacheDir, "mirrored_video.mp4").absolutePath
-
-			mvm.flipVideoHorizontally(this@DepthCameraActivity, inputPath, outputPath) { success ->
-				if (success) {
-					lifecycleScope.launch {
-						mvm.saveMediaToStorage(
-							this@DepthCameraActivity,
-							Uri.fromFile(File(outputPath)),
-							getFileName(mvm.currentSeq),
-							mvm.flh!!,
-							mvm.plh!!,
-							false
-						)
-						callback()
-					}
-				} else {
-					Log.e(TAG, "Failed to apply mirror effect to video.")
-				}
-			}
-
-		} catch (e: Exception) {
-			Log.e("stopRecording", "Error stopping recording: ${e.message}", e)
-		}
-	}
 
 	private fun initSettings() {
 

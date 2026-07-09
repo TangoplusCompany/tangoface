@@ -539,7 +539,7 @@ object LandmarkUtility {
 			val ucalcX = undistorted.first
 			val ucalcY = undistorted.second
 
-			Log.d("Undistort", "raw=($calcX,$calcY) -> undist=($ucalcX,$ucalcY)")
+//			Log.d("Undistort", "raw=($calcX,$calcY) -> undist=($ucalcX,$ucalcY)")
 			if (depthX in 0 until depthWidth && depthY in 0 until depthHeight) {
 				val idx = depthY * depthWidth + depthX
 				val depthMm = depthData[idx].toInt() and 0xFFFF

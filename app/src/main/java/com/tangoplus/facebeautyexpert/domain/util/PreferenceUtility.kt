@@ -59,16 +59,16 @@ class PreferenceUtility(context: Context) {
 
 
 	// -----------# 마지막 측정 방식 #-------------
-	fun setLastMeasureSeqs(seqs: Set<Sequence>) {
-		mPrefs.edit {
-			putStringSet("sequences", seqs.map { it.displayName }.toSet())
-		}
-	}
-
-	fun getLastMeasureSeqs(): Set<Sequence> {
-		val savedDisplayNames = mPrefs.getStringSet("sequences", emptySet()) ?: emptySet()
-		return savedDisplayNames.mapNotNull { Sequence.fromDisplayName(it) }.toSet()
-	}
+//	fun setLastMeasureSeqs(seqs: Set<Sequence>) {
+//		mPrefs.edit {
+//			putStringSet("sequences", seqs.map { it.displayName }.toSet())
+//		}
+//	}
+//
+//	fun getLastMeasureSeqs(): Set<Sequence> {
+//		val savedDisplayNames = mPrefs.getStringSet("sequences", emptySet()) ?: emptySet()
+//		return savedDisplayNames.mapNotNull { Sequence.fromDisplayName(it) }.toSet()
+//	}
 	/* ObTypes.h 라는 파일에 정의
 		typedef enum {
 		    OB_POWER_LINE_FREQ_MODE_CLOSE = 0,  ///< Close

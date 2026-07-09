@@ -30,7 +30,6 @@ import com.tangoplus.facebeautyexpert.domain.util.LandmarkUtility.calculateScree
 import com.tangoplus.facebeautyexpert.domain.util.LandmarkUtility.calculateScreenY
 import com.tangoplus.facebeautyexpert.domain.util.MeasureUtility.animationSet
 import com.tangoplus.facebeautyexpert.domain.util.MeasureUtility.getGuideText
-import com.tangoplus.facebeautyexpert.domain.util.MeasureUtility.showPreviousDialog
 import com.tangoplus.facebeautyexpert.domain.util.PreferenceUtility
 import com.tangoplus.facebeautyexpert.domain.util.UXUtility.playSound
 import com.tangoplus.facebeautyexpert.domain.util.UXUtility.startLongVibrate
@@ -287,7 +286,7 @@ class MNormalFragment : Fragment() {
         requireActivity(),
         when (mvm.currentSeq) {
           com.tangoplus.facebeautyexpert.domain.vo.Sequence.COMFORT -> R.drawable.drawable_seq_0
-          else -> R.drawable.drawable_seq_1
+          else -> R.drawable.drawable_seq_6
         }
       )
     )
@@ -359,7 +358,7 @@ class MNormalFragment : Fragment() {
       bd.ivMNFrame.visibility = View.VISIBLE
       startFadeIn(bd.ivMNFrame)
       bd.ivMNFrame.setImageDrawable(
-        ContextCompat.getDrawable(requireContext(), R.drawable.drawable_seq_1)
+        ContextCompat.getDrawable(requireContext(), R.drawable.drawable_seq_6)
       )
       startLookUpAnimation()
     }

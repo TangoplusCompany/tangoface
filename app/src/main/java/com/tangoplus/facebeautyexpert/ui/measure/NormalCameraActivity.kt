@@ -407,7 +407,7 @@ class NormalCameraActivity : AppCompatActivity(), FaceLandmarkerHelper.Landmarke
 				this@NormalCameraActivity,
 				when (mvm.currentSeq) {
 					Sequence.COMFORT -> R.drawable.drawable_seq_0
-					else -> R.drawable.drawable_seq_1
+					else -> R.drawable.drawable_seq_6
 				}
 			)
 		)
@@ -470,7 +470,7 @@ class NormalCameraActivity : AppCompatActivity(), FaceLandmarkerHelper.Landmarke
 			bd.ivNCFrame.visibility = View.VISIBLE
 			startFadeIn(bd.ivNCFrame)
 			bd.ivNCFrame.setImageDrawable(
-				ContextCompat.getDrawable(this@NormalCameraActivity, R.drawable.drawable_seq_1)
+				ContextCompat.getDrawable(this@NormalCameraActivity, R.drawable.drawable_seq_6)
 			)
 			startLookUpAnimation()
 		}
