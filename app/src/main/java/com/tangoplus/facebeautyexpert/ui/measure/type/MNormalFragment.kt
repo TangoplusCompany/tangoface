@@ -134,6 +134,7 @@ class MNormalFragment : Fragment() {
   override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
     super.onViewCreated(view, savedInstanceState)
 
+    prefsUtil = PreferenceUtility(requireContext())
     bd.btnMNShooting.setOnSingleClickListener {
       if (bd.btnMNShooting.text == "결과보기") {
         // ---------------# 데이터 갈무리해서 gallery DialogFragment로 넘기기 #-----------------

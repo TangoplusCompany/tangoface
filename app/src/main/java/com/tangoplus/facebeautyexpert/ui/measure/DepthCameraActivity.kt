@@ -2,6 +2,9 @@ package com.tangoplus.facebeautyexpert.ui.measure
 
 import android.content.pm.ActivityInfo
 import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.graphics.Matrix
+import android.graphics.Paint
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -299,7 +302,6 @@ class DepthCameraActivity : BaseActivity(), FaceLandmarkerHelper.LandmarkerListe
 		}
 	}
 
-
 	private var isIntrinsicInitialized = false
 	private val mainHandler = Handler(Looper.getMainLooper())
 	private val mStreamRunnable = Runnable {
@@ -360,7 +362,7 @@ class DepthCameraActivity : BaseActivity(), FaceLandmarkerHelper.LandmarkerListe
 							buffer?.clear()
 							frame.getData(buffer)
 							bd.obglvC.setCenterCrop(true)
-							bd.obglvC.setRotation(0)
+							bd.obglvC.setRotation(90)
 							bd.obglvC.update(
 								frame.getWidth(),
 								frame.getHeight(),
@@ -370,19 +372,18 @@ class DepthCameraActivity : BaseActivity(), FaceLandmarkerHelper.LandmarkerListe
 								1.0f
 							)
 
-							bitmap = colorFrameToBitmapSafe(frame, 0)
+							bitmap = colorFrameToBitmapSafe(frame, 90)
 
 							bitmap?.let { bmp ->
 								// 1️⃣ MPImage 생성 (Face Detection용)
 
 								mpImage = BitmapImageBuilder(bmp).build()
 
-
 								val timestamp = System.currentTimeMillis()
 								mainHandler.post {
-									Log.v("결과가 나오긴함?", "${bitmap} | ${mvm.flh} ")
+//									Log.v("결과가 나오긴함?", "${bitmap} | ${mvm.flh} ")
 									if (mvm.flh != null && !mvm.flh?.isClose()!!) {
-										mvm.flh!!.detectAsync(mpImage!!, timestamp)
+										mvm.flh!!.detectAsync(mpImage!!, timestamp) // 270도 각도 전달 안 함!
 									}
 								}
 
@@ -394,8 +395,8 @@ class DepthCameraActivity : BaseActivity(), FaceLandmarkerHelper.LandmarkerListe
 										} else {
 											bd.overlay.updateColorTracks(
 												targets = result.targets,
-												srcW = 1920,
-												srcH = 1080,
+												srcW = 1080,
+												srcH = 1920,
 												scaleType = OverlayView.ScaleType.FIT,
 												rotateDeg = 0,
 												mirrorX = true
@@ -588,7 +589,6 @@ class DepthCameraActivity : BaseActivity(), FaceLandmarkerHelper.LandmarkerListe
 					landmark.copy(x = 1.0f - landmark.x)
 				}
 				val overlayResult = mvm.face2DResult!!.copy(landmarks = flippedLandmarks)
-
 				bd.overlay.setResults(
 					overlayResult,
 					resultBundle.inputImageWidth,
@@ -712,8 +712,7 @@ class DepthCameraActivity : BaseActivity(), FaceLandmarkerHelper.LandmarkerListe
 
 		backgroundExecutor.execute {
 			try {
-				// 1. 메모리 누수 방지를 위해 applicationContext 사용
-				mvm.flh = FaceLandmarkerHelper(
+				val initFLH = FaceLandmarkerHelper(
 					context = applicationContext,
 					runningMode = RunningMode.LIVE_STREAM,
 					minFaceDetectionConfidence = viewModel.currentMinFaceDetectionConfidence,
@@ -723,10 +722,9 @@ class DepthCameraActivity : BaseActivity(), FaceLandmarkerHelper.LandmarkerListe
 					currentDelegate = viewModel.currentDelegate,
 					faceLandmarkerHelperListener = this@DepthCameraActivity
 				)
-				// 2. 생성이 완전히 완료된 시점에 백그라운드에서 로그 확인
+				mvm.flh = initFLH
 				Log.d("이닛", "FaceLandmarker 실제 생성 완료: ${mvm.flh}")
 			} catch (e: Exception) {
-				// 3. 백그라운드 내부 에러를 여기서 잡아야 왜 null인지 원인이 나옵니다.
 				Log.e("이닛", "FaceLandmarker 실제 생성 실패 원인: ${e.message}", e)
 			}
 		}
@@ -737,7 +735,7 @@ class DepthCameraActivity : BaseActivity(), FaceLandmarkerHelper.LandmarkerListe
 			Log.d("이닛", "initializing PoseLandmarker resources...")
 			// 이제 this가 완전히 초기화된 상태
 			try {
-				mvm.plh = PoseLandmarkerHelper(
+				val initPLH = PoseLandmarkerHelper(
 					context = this@DepthCameraActivity,
 					runningMode = RunningMode.IMAGE,
 					minPoseDetectionConfidence = PoseLandmarkerHelper.DEFAULT_POSE_DETECTION_CONFIDENCE,
@@ -746,7 +744,8 @@ class DepthCameraActivity : BaseActivity(), FaceLandmarkerHelper.LandmarkerListe
 					currentDelegate = PoseLandmarkerHelper.DELEGATE_CPU,
 					poseLandmarkerHelperListener = poseLandmarkListener
 				)
-				Log.d("PoseLandmarker", "Initialization successful!")
+				mvm.plh = initPLH
+				Log.d("PoseLandmarker", "Initialization successful! ${mvm.plh}")
 			} catch (e: Exception) {
 				Log.e("PoseLandmarker", "Failed to initialize: ${e.message}", e)
 			}

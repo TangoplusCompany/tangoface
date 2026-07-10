@@ -16,6 +16,7 @@ import android.widget.ArrayAdapter
 import android.widget.Toast
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
+import androidx.fragment.app.viewModels
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
@@ -38,6 +39,7 @@ import com.tangoplus.facebeautyexpert.ui.main.vm.MainViewModel
 import kotlinx.coroutines.launch
 import com.tangoplus.facebeautyexpert.domain.util.BitmapUtility.setSSIV
 import com.tangoplus.facebeautyexpert.domain.util.LLMUtility.getGeminiInsight
+import com.tangoplus.facebeautyexpert.domain.vo.MeasureType
 import com.tangoplus.facebeautyexpert.orbbec.application.MyApplication
 import com.tangoplus.facebeautyexpert.ui.adapter.FactorRVAdapter
 import com.tangoplus.facebeautyexpert.ui.adapter.PartSelectRVAdapter
@@ -47,6 +49,7 @@ import com.tangoplus.facebeautyexpert.ui.info.vo.DrawLine
 import com.tangoplus.facebeautyexpert.ui.info.vo.FacialPart
 import com.tangoplus.facebeautyexpert.ui.info.vo.Factor
 import com.tangoplus.facebeautyexpert.ui.listener.OnFacialPartClickListener
+import com.tangoplus.facebeautyexpert.ui.measure.vm.MeasureViewModel
 import com.tangoplus.facebeautyexpert.ui.view.TextBoxOverlayView
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -60,6 +63,8 @@ class INormalFragment : Fragment(), OnFacialPartClickListener {
 	private val svm: SelectViewModel by activityViewModels()
 	private val ivm: InformationViewModel by activityViewModels()
 	private val mvm: MainViewModel by activityViewModels()
+
+	private val msvm : MeasureViewModel by viewModels()
 	private lateinit var fDao: FaceDao
 
 	override fun onCreateView(
@@ -157,6 +162,7 @@ class INormalFragment : Fragment(), OnFacialPartClickListener {
 				coroutineScope {
 					val deferred = async { getCombineBitmap(this@INormalFragment, result, currentSeq, ivm) }
 					val awaitedResult = deferred.await()
+					bd.ssivIN.setMinimumScaleType(2)
 					awaitedResult.first?.let { setSSIV(it, bd.ssivIN) }
 
 					val drawInfos = awaitedResult.second
@@ -267,7 +273,8 @@ class INormalFragment : Fragment(), OnFacialPartClickListener {
 
 	private fun setupSequenceDropdown() {
 		// 1. 어댑터 설정 (표시할 이름들을 리스트로 추출)
-		val displayNames = svm.sequenceEntries.map { it.displayName }
+		msvm.measureType = MeasureType.NORMAL
+		val displayNames = msvm.progressSeqs.map { it.displayName }
 		val adapter = ArrayAdapter(requireContext(), R.layout.list_item_dropdown, displayNames)
 		bd.actvINSeq.setAdapter(adapter)
 

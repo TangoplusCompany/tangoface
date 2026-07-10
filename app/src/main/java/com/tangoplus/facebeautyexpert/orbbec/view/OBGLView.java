@@ -128,6 +128,8 @@ public class OBGLView extends GLSurfaceView {
 	 * @param frameW frame width
 	 * @param frameH frame height
 	 */
+	public static float yCorrectionOffset = 0f;
+
 	private void updateGLSurfaceViewSize(int frameW, int frameH) {
 		ViewGroup parent = (ViewGroup) this.getParent();
 		if (null == parent || parent.getWidth() <= 0 || parent.getHeight() <= 0
@@ -154,7 +156,6 @@ public class OBGLView extends GLSurfaceView {
 		Log.d("DEBUG_SIZE", "mCenterCrop = " + mCenterCrop);
 
 		if (!mCenterCrop) {
-			// 기존 로직(맞춰 넣기, Fit Center) — 부모 안에 "들어가도록" 선택
 			if (h1 <= parent.getHeight()) {
 				targetWidth = w1;
 				targetHeight = h1;
@@ -163,35 +164,27 @@ public class OBGLView extends GLSurfaceView {
 				targetHeight = h2;
 			}
 		} else {
-			// Center-Crop(Aspect Fill) — 부모를 "가득 채우도록" 선택
-			// => 한쪽 변은 부모보다 커져서 넘침(잘림)
 			if (h1 >= parent.getHeight()) {
-				// 너비 기준으로 맞추면 높이가 더 커짐 → 세로로 넘쳐 크롭
 				targetWidth = w1;
 				targetHeight = h1;
 			} else {
-				// 높이 기준으로 맞추면 너비가 더 커짐 → 가로로 넘쳐 크롭(원하시는 상황)
 				targetWidth = w2;
 				targetHeight = h2;
 			}
 		}
 		Log.d("DEBUG_SIZE", "Target size = " + targetWidth + "x" + targetHeight);
+		yCorrectionOffset = (float)(targetHeight - parent.getHeight()) / 4f;
 		ViewGroup.LayoutParams params = this.getLayoutParams();
 		params.width = targetWidth;
 		params.height = targetHeight;
-		this.setLayoutParams(params);
 
-		// 부모 중앙에 놓여야 예쁘게 “센터 크롭”이 됩니다.
-		// 부모가 FrameLayout이면 layout_gravity를 쓰고, 아니면 아래와 같이 마진으로 중앙 정렬:
 		if (params instanceof ViewGroup.MarginLayoutParams) {
 			ViewGroup.MarginLayoutParams mlp = (ViewGroup.MarginLayoutParams) params;
-			int dx = (parent.getWidth() - targetWidth) / 2;
-			int dy = (parent.getHeight() - targetHeight) / 2;
-			mlp.leftMargin = Math.abs(dx / 2);
-			mlp.rightMargin = Math.abs(dx / 2);
-			mlp.topMargin = dy;
-			this.setLayoutParams(mlp);
-			Log.d("DEBUG_SIZE", "Margins = left:" + dx + ", top:" + dy);
+			mlp.leftMargin = 0;
+			mlp.rightMargin = 0;
+			mlp.topMargin = 0;
+			mlp.bottomMargin = 0;
 		}
+		this.setLayoutParams(params);
 	}
 }

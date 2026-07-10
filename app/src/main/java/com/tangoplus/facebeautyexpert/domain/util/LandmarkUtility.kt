@@ -5,6 +5,7 @@ import android.graphics.Color
 import android.graphics.Matrix
 import android.graphics.Path
 import android.graphics.PointF
+import android.graphics.Rect
 import android.util.Log
 import com.orbbec.obsensor.ColorFrame
 import com.orbbec.obsensor.types.CameraDistortion
@@ -21,15 +22,6 @@ import kotlin.math.atan
 import kotlin.math.cos
 
 object LandmarkUtility {
-	fun flipDepthHorizontally(depthData: ShortArray, width: Int, height: Int): ShortArray {
-		val flipped = ShortArray(depthData.size)
-		for (y in 0 until height) {
-			for (x in 0 until width) {
-				flipped[y * width + x] = depthData[y * width + (width - 1 - x)]
-			}
-		}
-		return flipped
-	}
 
 	fun generateGradientLayer(
 		filledDepth: FloatArray,
@@ -195,10 +187,10 @@ object LandmarkUtility {
 
 	fun scaleHsvToFHD(
 		originalHsv: List<Pair<Float, Float>>?,
-		originalWidth: Int = 1280,
-		originalHeight: Int = 720,
-		targetWidth: Int = 1920,
-		targetHeight: Int = 1080
+		originalWidth: Int = 720,
+		originalHeight: Int = 1280,
+		targetWidth: Int = 1080,
+		targetHeight: Int = 1920
 	): List<Pair<Float, Float>> {
 		val scaleX = targetWidth.toFloat() / originalWidth
 		val scaleY = targetHeight.toFloat() / originalHeight
@@ -215,10 +207,10 @@ object LandmarkUtility {
 		faceLandmarks: FaceLandmarkResult?,
 		poseLandmarks: PoseLandmarkResult?,
 		hairLineLandmarks: List<Pair<Float, Float>>?,
-		originalWidth: Int = 1280,
-		originalHeight: Int = 720,
-		targetWidth: Int = 1920,
-		targetHeight: Int = 1080
+		originalWidth: Int = 720,
+		originalHeight: Int = 1280,
+		targetWidth: Int = 1080,
+		targetHeight: Int = 1920
 	): Triple<FaceLandmarkResult?, PoseLandmarkResult?, List<Pair<Float,Float>>?> {
 		val scaleX = targetWidth.toFloat() / originalWidth
 		val scaleY = targetHeight.toFloat() / originalHeight
@@ -363,10 +355,10 @@ object LandmarkUtility {
 //		return y
 //	}
 	// X 좌표: 0.0 ~ 1.0 값을 1920 픽셀 비율로 변환
-	fun calculateScreenX(xx: Float): Float = xx * 1920f
+	fun calculateScreenX(xx: Float): Float = xx * 1080f
 
 	// Y 좌표: 0.0 ~ 1.0 값을 1080 픽셀 비율로 변환
-	fun calculateScreenY(yy: Float): Float = yy * 1080f
+	fun calculateScreenY(yy: Float): Float = yy * 1920f
 
 	fun colorFrameToBitmapSafe(frame: ColorFrame, rotationDegrees: Int = 0): Bitmap? {
 		val w = frame.getWidth()
@@ -642,42 +634,5 @@ object LandmarkUtility {
 		)
 	}
 
-	fun detectJawKeyPoints(
-		points: List<PointF>,
-		isLeft: Boolean,
-		seq: Int, // 0: 좌측(x값 감소), 1: 우측(x값 증가)
-		trimPercent: Float = 0.10f,      // 전후 15% 제거
-
-	): List<Int> {
-		if (points.size < 10) return emptyList()
-
-		// 1. 전후 15% 제거
-		val trimCount = (points.size * trimPercent).toInt()
-		val workingPoints = points.subList(trimCount, points.size - trimCount)
-		val startOffset = trimCount
-
-		val keyPoints = mutableListOf<Int>()
-
-
-		val extremeXIndex = when (seq) {
-			2 -> {
-				if (isLeft) workingPoints.indices.minByOrNull { workingPoints[it].x }
-				else workingPoints.indices.maxByOrNull { workingPoints[it].x }
-			}
-
-			3 -> workingPoints.indices.minByOrNull { workingPoints[it].x }
-			4 -> workingPoints.indices.maxByOrNull { workingPoints[it].x }
-			else -> workingPoints.indices.maxByOrNull { workingPoints[it].x }
-		}
-
-		if (extremeXIndex != null) keyPoints.add(extremeXIndex + startOffset)
-
-		val maxYIndex = workingPoints.indices.maxByOrNull { workingPoints[it].y }
-		if (maxYIndex != null) {
-			keyPoints.add(maxYIndex + startOffset)
-		}
-
-		return keyPoints.sorted()
-	}
 
 }

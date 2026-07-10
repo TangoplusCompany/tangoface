@@ -109,30 +109,30 @@ class MainFragment : Fragment(), OnMainTabClickListener {
 		checkAndLogUsbDevices()
 		// seq Select를 위한
 		setAdapter()
-
+		setupViewPager()
 		bd.clMStart.setOnSingleClickListener {
 			val recyclerView = bd.rvM
 			if (recyclerView.isGone) {
-				// 1. 나타나기 (Fade-in + 부드럽게 위로 차오름)
+				recyclerView.alpha = 0f
+				recyclerView.translationY = 30f
 				recyclerView.visibility = View.VISIBLE
 				recyclerView.animate()
 					.translationY(0f)
 					.alpha(1f)
-					.setDuration(250) // React의 0.25초 감성
-					.setInterpolator(DecelerateInterpolator()) // 끝으로 갈수록 부드럽게 감속
+					.setDuration(250)
+					.setInterpolator(DecelerateInterpolator())
 					.start()
 			} else {
-				// 2. 사라지기 (Fade-out + 아래로 자연스럽게 가라앉음)
 				recyclerView.animate()
 					.translationY(30f)
 					.alpha(0f)
 					.setDuration(200)
-					.setInterpolator(AccelerateInterpolator()) // 시작할 때 빠르게 가속
+					.setInterpolator(AccelerateInterpolator())
 					.withEndAction { recyclerView.visibility = View.GONE }
 					.start()
 			}
 		}
-		setupViewPager()
+
 	}
 
 	private fun checkStoragePermission() {

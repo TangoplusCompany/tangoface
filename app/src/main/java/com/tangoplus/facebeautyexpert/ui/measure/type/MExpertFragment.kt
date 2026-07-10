@@ -397,7 +397,8 @@ class MExpertFragment : Fragment() {
       Log.v("몇단계?", "Max repeats reached, stopping the loop")
     } else {
       setGuideAnimation(mvm.currentSeq, false)
-      val seqCount = "${mvm.getSeqIndex() + 1}. ${mvm.currentSeq.displayName} / ${mvm.allSeqs.size}"
+
+      val seqCount = "${mvm.getSeqIndex() + 1}. ${mvm.currentSeq.displayName} / ${mvm.progressSeqs.size}"
       bd.tvMESeqCount.text = seqCount
       viewModel.setCountDownFlag(false)
       bd.ivMEFrame.visibility = View.VISIBLE

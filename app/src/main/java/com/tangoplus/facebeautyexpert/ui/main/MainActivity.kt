@@ -174,7 +174,7 @@ class MainActivity : AppCompatActivity() {
 		if (mvm.tempServerSnAfterMeasure != -1) {
 			lifecycleScope.launch(Dispatchers.IO) {
 				val result = mvm.convertToFaceResult(this@MainActivity, fDao, mvm.tempServerSnAfterMeasure)
-
+				Log.v("메저타입", "${result.measureType}")
 				withContext(Dispatchers.Main) {
 					mvm.currentResult.value = result
 					navigateToMeasureHistoryInformation(result.measureType)

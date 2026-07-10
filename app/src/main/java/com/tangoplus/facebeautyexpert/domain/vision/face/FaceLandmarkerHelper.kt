@@ -12,6 +12,7 @@ import com.google.mediapipe.framework.image.BitmapImageBuilder
 import com.google.mediapipe.framework.image.MPImage
 import com.google.mediapipe.tasks.core.BaseOptions
 import com.google.mediapipe.tasks.core.Delegate
+import com.google.mediapipe.tasks.vision.core.ImageProcessingOptions
 import com.google.mediapipe.tasks.vision.core.RunningMode
 import com.google.mediapipe.tasks.vision.facelandmarker.FaceLandmarker
 import com.google.mediapipe.tasks.vision.facelandmarker.FaceLandmarkerResult
@@ -176,7 +177,7 @@ class FaceLandmarkerHelper(
 		// Convert the input Bitmap object to an MPImage object to run inference
 		val mpImage = BitmapImageBuilder(rotatedBitmap).build()
 
-		detectAsync(mpImage, frameTime)
+		detectAsync(mpImage, 0, )
 	}
 
 	// Run face face landmark using MediaPipe Face Landmarker API

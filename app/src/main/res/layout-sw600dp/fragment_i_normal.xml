@@ -31,7 +31,7 @@
                     app:cardElevation="0dp"
                     app:layout_constraintEnd_toEndOf="parent"
                     app:layout_constraintStart_toStartOf="parent"
-                    app:layout_constraintTop_toTopOf="parent">
+                    app:layout_constraintTop_toTopOf="parent" android:layout_margin="10dp">
 
                 <androidx.constraintlayout.widget.ConstraintLayout
                         android:layout_width="match_parent"
@@ -40,11 +40,12 @@
                     <com.davemorrissey.labs.subscaleview.SubsamplingScaleImageView
                             android:id="@+id/ssivIN"
                             android:layout_width="0dp"
-                            android:layout_height="wrap_content"
+                            android:layout_height="0dp"
                             android:visibility="visible"
                             app:layout_constraintEnd_toEndOf="parent"
                             app:layout_constraintStart_toStartOf="parent"
-                            app:layout_constraintTop_toTopOf="parent" />
+                            app:layout_constraintTop_toTopOf="parent" app:layout_constraintDimensionRatio="3:4"
+                            android:layout_marginBottom="10dp" app:layout_constraintBottom_toBottomOf="parent"/>
 
                     <com.tangoplus.facebeautyexpert.ui.view.TextBoxOverlayView
                             android:id="@+id/ovIN"
@@ -53,7 +54,7 @@
                             app:layout_constraintBottom_toBottomOf="@id/ssivIN"
                             app:layout_constraintEnd_toEndOf="@id/ssivIN"
                             app:layout_constraintStart_toStartOf="@id/ssivIN"
-                            app:layout_constraintTop_toTopOf="@id/ssivIN" />
+                            app:layout_constraintTop_toTopOf="@id/ssivIN"/>
 
                     <com.tangoplus.facebeautyexpert.ui.view.AngleMeasureView
                             android:id="@+id/amvIN"
@@ -62,7 +63,7 @@
                             app:layout_constraintBottom_toBottomOf="@id/ssivIN"
                             app:layout_constraintEnd_toEndOf="@id/ssivIN"
                             app:layout_constraintStart_toStartOf="@id/ssivIN"
-                            app:layout_constraintTop_toTopOf="@id/ssivIN" />
+                            app:layout_constraintTop_toTopOf="@id/ssivIN"/>
 
 
                     <TextView
@@ -77,9 +78,9 @@
                             android:padding="5dp"
                             android:text="이강휘, 010-4544-9999"
                             android:textColor="@color/white"
-                            android:textSize="14sp"
+                            android:textSize="18sp"
                             app:layout_constraintStart_toStartOf="parent"
-                            app:layout_constraintTop_toTopOf="parent" />
+                            app:layout_constraintTop_toTopOf="parent"/>
 
                     <com.google.android.material.textfield.TextInputLayout
                             android:id="@+id/tilINSeq"
@@ -87,7 +88,7 @@
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
                             android:layout_margin="16dp"
-                            app:boxBackgroundColor="@color/bg_dropdown_fixed"
+                            app:boxBackgroundColor="#08140000"
                             app:boxCornerRadiusBottomEnd="12dp"
                             app:boxCornerRadiusBottomStart="12dp"
                             app:boxCornerRadiusTopEnd="12dp"
@@ -100,7 +101,7 @@
                             app:layout_constraintHorizontal_bias="1.0"
                             app:layout_constraintStart_toStartOf="parent"
                             app:layout_constraintTop_toTopOf="parent"
-                            app:layout_constraintWidth_percent="0.4">
+                            app:layout_constraintWidth_percent="0.2">
 
                         <AutoCompleteTextView
                                 android:id="@+id/actvINSeq"
@@ -109,8 +110,9 @@
                                 android:background="@null"
                                 android:inputType="none"
                                 android:textColor="@color/subColor100"
-                                android:textSize="14sp"
-                                app:dropDownBackgroundTint="@color/transparent" />
+                                android:textSize="18sp"
+                                app:dropDownBackgroundTint="@color/transparent"
+                                android:popupBackground="@drawable/bckgnd_20_black_20" android:popupElevation="0dp"/>
                     </com.google.android.material.textfield.TextInputLayout>
 
 
@@ -124,28 +126,21 @@
                     android:layout_height="wrap_content"
                     android:layout_gravity="bottom|end"
                     android:layout_margin="10dp"
-                    android:layout_marginTop="10dp"
-                    android:orientation="horizontal"
+                    android:orientation="vertical"
                     app:layout_constraintEnd_toEndOf="parent"
-                    app:layout_constraintStart_toStartOf="parent"
-                    app:layout_constraintTop_toBottomOf="@+id/cardView2">
+                    app:layout_constraintBottom_toBottomOf="@+id/cardView2">
 
                 <TextView
                         android:id="@+id/btnINMoire"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_gravity="bottom|end"
-                        android:layout_marginBottom="5dp"
                         android:background="@drawable/effect_20"
                         android:backgroundTint="#1A140000"
                         android:gravity="center"
-                        android:paddingStart="16dp"
-                        android:paddingTop="8dp"
-                        android:paddingEnd="16dp"
-                        android:paddingBottom="8dp"
                         android:text="🏳️‍🌈 Moire 보기"
                         android:textColor="@color/white"
-                        android:textSize="18dp" />
+                        android:textSize="18sp" android:padding="10dp"/>
                 <TextView
                         android:id="@+id/btnINClean"
                         android:layout_width="match_parent"
@@ -155,13 +150,9 @@
                         android:background="@drawable/effect_20"
                         android:backgroundTint="#1A140000"
                         android:gravity="center"
-                        android:paddingStart="6dp"
-                        android:paddingTop="4dp"
-                        android:paddingEnd="6dp"
-                        android:paddingBottom="4dp"
                         android:text="🔍 가이드라인 끄기"
                         android:textColor="@color/white"
-                        android:textSize="12sp" />
+                        android:textSize="18sp" android:padding="10dp"/>
 
 
                 <TextView
@@ -173,13 +164,9 @@
                         android:background="@drawable/effect_20"
                         android:backgroundTint="#1A140000"
                         android:gravity="center"
-                        android:paddingStart="6dp"
-                        android:paddingTop="4dp"
-                        android:paddingEnd="6dp"
-                        android:paddingBottom="4dp"
                         android:text="ꖛ 그리드 끄기 "
                         android:textColor="@color/white"
-                        android:textSize="12sp" />
+                        android:textSize="18sp" android:padding="10dp"/>
 
                 <TextView
                         android:id="@+id/btnINAngle"
@@ -190,13 +177,9 @@
                         android:background="@drawable/effect_20"
                         android:backgroundTint="#1A140000"
                         android:gravity="center"
-                        android:paddingStart="6dp"
-                        android:paddingTop="4dp"
-                        android:paddingEnd="6dp"
-                        android:paddingBottom="4dp"
                         android:text="📐 각도계산 켜기"
                         android:textColor="@color/white"
-                        android:textSize="12sp" />
+                        android:textSize="18sp" android:padding="10dp"/>
 
             </LinearLayout>
 
@@ -211,7 +194,7 @@
                     android:backgroundTint="@color/bg700"
                     app:layout_constraintEnd_toEndOf="parent"
                     app:layout_constraintStart_toStartOf="parent"
-                    app:layout_constraintTop_toBottomOf="@id/linearLayout3">
+                    app:layout_constraintTop_toBottomOf="@+id/cardView2">
 
             </androidx.recyclerview.widget.RecyclerView>
 

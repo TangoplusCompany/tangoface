@@ -174,8 +174,12 @@ object BitmapUtility {
 			} else {
 				upscaledBitmap
 			}
+			val targetWidth = upscaledBitmap.width // 1080
+			val targetHeight = (targetWidth * 4) / 3 // 1440
+			val startY = (upscaledBitmap.height - targetHeight) / 2
+			val centerCroppedBitmap = Bitmap.createBitmap(upscaledBitmap, 0, startY, targetWidth, targetHeight)
 
-			Triple(finalBitmap.copy(finalBitmap.config ?: Bitmap.Config.ARGB_8888, true), textBoxes, faceRect)
+			Triple(centerCroppedBitmap.copy(centerCroppedBitmap.config ?: Bitmap.Config.ARGB_8888, true), textBoxes, faceRect)
 
 		} catch (e: Exception) {
 			Log.e("getCombineBitmap", "Error: ${e.message}", e)
@@ -1721,8 +1725,8 @@ object BitmapUtility {
 
 		// 2. Portrait 모드에서의 크롭 보정
 		// Logic: 가로(4320)가 세로(2430)보다 크면 3:4 비율로 가운데를 남기고 좌우를 자름
-		val upscaledW = 1920f * upscaleFactor // 4320
-		val upscaledH = 1080f * upscaleFactor // 2430
+		val upscaledW = 1080f * upscaleFactor // 4320
+		val upscaledH = 1920f * upscaleFactor // 2430
 
 		var finalX = upscaledX
 		var finalY = upscaledY

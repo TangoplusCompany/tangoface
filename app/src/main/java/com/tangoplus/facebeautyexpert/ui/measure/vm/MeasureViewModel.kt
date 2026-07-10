@@ -141,12 +141,11 @@ class MeasureViewModel : ViewModel() {
 		get() = progressSeqMap[measureType] ?: emptyList()
 	var currentSeq = Sequence.COMFORT
 
-
-
 	fun moveToNextSeq(): Boolean {
 		val currentIndex = progressSeqs.indexOf(currentSeq)
-		return if (currentIndex != -1 && currentIndex + 1 < allSeqs.size) {
-			currentSeq = allSeqs[currentIndex + 1]
+		Log.v("progressSeqs", "$progressSeqs")
+		return if (currentIndex != -1 && currentIndex + 1 < progressSeqs.size) {
+			currentSeq = progressSeqs[currentIndex + 1]
 			true
 		} else {
 			false
@@ -156,7 +155,7 @@ class MeasureViewModel : ViewModel() {
 	fun moveToPreviousSeq(): Boolean {
 		val currentIndex = progressSeqs.indexOf(currentSeq)
 		return if (currentIndex > 0) {
-			currentSeq = allSeqs[currentIndex - 1]
+			currentSeq = progressSeqs[currentIndex - 1]
 			true
 		} else {
 			false
@@ -164,7 +163,7 @@ class MeasureViewModel : ViewModel() {
 	}
 
 	fun getSeqIndex(): Int {
-		return allSeqs.indexOf(currentSeq)
+		return progressSeqs.indexOf(currentSeq)
 	}
 
 	// ----------# flag들 #-----------
@@ -880,8 +879,8 @@ class MeasureViewModel : ViewModel() {
 					val sourceWidth = options.outWidth
 					val sourceHeight = options.outHeight
 
-					val targetWidth = 1920
-					val targetHeight = 1080
+					val targetWidth = 1080
+					val targetHeight = 1920
 
 					// 이미지 스케일 계산
 					val widthRatio = sourceWidth.toFloat() / targetWidth
@@ -893,13 +892,13 @@ class MeasureViewModel : ViewModel() {
 
 					var bitmap = BitmapFactory.decodeFile(tempFile.absolutePath, options)
 					val matrix = Matrix()
-
-					// 회전 적용
-					when (orientation) {
-						ExifInterface.ORIENTATION_ROTATE_90 -> matrix.postRotate(90f)   // 시계 방향 90도
-						ExifInterface.ORIENTATION_ROTATE_180 -> matrix.postRotate(180f) // 시계 방향 180도
-						ExifInterface.ORIENTATION_ROTATE_270 -> matrix.postRotate(270f) // 시계 방향 270도
-					}
+					matrix.postRotate(90f)
+//					// 회전 적용
+//					when (orientation) {
+//						ExifInterface.ORIENTATION_ROTATE_90 -> matrix.postRotate(90f)   // 시계 방향 90도
+//						ExifInterface.ORIENTATION_ROTATE_180 -> matrix.postRotate(180f) // 시계 방향 180도
+//						ExifInterface.ORIENTATION_ROTATE_270 -> matrix.postRotate(270f) // 시계 방향 270도
+//					}
 
 					// ★★★ 좌우반전 ★★★
 //					matrix.postScale(1f, 1f, bitmap.width / 2f, bitmap.height / 2f)
@@ -923,7 +922,7 @@ class MeasureViewModel : ViewModel() {
 						face2DResult = flResultBundle?.result?.let { FaceLandmarkAdapter.toCustomFaceLandmarkResult(it) }
 						Log.v("2d얼굴들어감", "$face2DResult")
 					}
-					Log.v("미디어스토리지", "start")
+					Log.v("미디어스토리지", "start ${currentSeq} ${face2DResult}")
 					if (currentSeq == Sequence.COMFORT) {
 						if (face2DResult == null) {
 							Log.w("saveMedia", "얼굴 랜드마크 검출 실패. 저장을 중단합니다.")
@@ -988,6 +987,7 @@ class MeasureViewModel : ViewModel() {
 
 					// --------------------------# poselandmark를 잡기 위한 detectAsync #-------------------------
 					val resultBundle = poseLandmarker.detectImage(bitmap)
+					Log.v("포즈검출", "${resultBundle?.results?.size}")
 					if (resultBundle?.results?.first()?.landmarks()?.isNotEmpty() == true) {
 						val plr = resultBundle.results.first().landmarks()[0]
 
@@ -1293,6 +1293,7 @@ class MeasureViewModel : ViewModel() {
 		intervalMm: Float = 2.5f,
 		strokeWidth: Float = 2f
 	): Bitmap {
+		// TODO 이제 이거 portrait에 맞게 margin안맞는 moire
 		val smoothed = smoothDepthByResample(rawDepthData, depthW, depthH, downscaleFactor = 2)
 		val filled = inpaintDepth(smoothed, depthW, depthH, iterations = 15)
 
@@ -1349,6 +1350,18 @@ class MeasureViewModel : ViewModel() {
 			}
 		}
 	}
+	fun rotateDepth90CW(src: ShortArray, w: Int, h: Int): ShortArray {
+		val dest = ShortArray(w * h)
+		for (y in 0 until h) {
+			for (x in 0 until w) {
+				val destX = h - 1 - y
+				val destY = x
+				dest[destY * h + destX] = src[y * w + x]
+			}
+		}
+		return dest
+	}
+
 	suspend fun scannedImage(
 		activity: AppCompatActivity,
 		imagePaths : List<String?>,
@@ -1362,7 +1375,7 @@ class MeasureViewModel : ViewModel() {
 		val imagePath = imagePaths.getOrNull(seq.ordinal)
 
 		if (imagePath.isNullOrEmpty()) {
-			Log.e("captureImage", "❌ 해당 순번($seq)에 저장된 이미지 경로가 없습니다.")
+			Log.e("scannedImage", "❌ 해당 순번($seq)에 저장된 이미지 경로가 없습니다.")
 			return false
 		}
 
@@ -1456,7 +1469,7 @@ class MeasureViewModel : ViewModel() {
 
 	suspend fun captureImage(seq: Sequence, activity: FragmentActivity): Boolean {
 		val name = getFileName(seq)
-		val moireName = getMoireFileName(seq)
+
 		return withContext(Dispatchers.IO) {
 			try {
 				mPipeline?.waitForFrameSet(1000)?.use { frameSet ->
@@ -1468,7 +1481,6 @@ class MeasureViewModel : ViewModel() {
 					val byteBuffer = ByteBuffer.allocateDirect(dataSize)
 					colorFrame.getData(byteBuffer)
 					byteBuffer.rewind() // 읽기 위치를 처음으로
-					Log.d("captureImage", "✅ colorFrame.getData 완료")
 
 					val width = colorFrame.width
 					val height = colorFrame.height
@@ -1506,15 +1518,19 @@ class MeasureViewModel : ViewModel() {
 						}
 
 						filteredFrame.use { df ->
-							depthW = df.width
-							depthH = df.height
-							val byteData = ByteArray(depthW * depthH * 2)
+							val rawW = df.width
+							val rawH = df.height
+							val byteData = ByteArray(rawW * rawH * 2)
 							df.getData(byteData)
-							depthData = ShortArray(depthW * depthH) { i ->
+
+							val rawDepthData = ShortArray(rawW * rawH) { i ->
 								val lo = byteData[i * 2].toInt() and 0xFF
 								val hi = byteData[i * 2 + 1].toInt() and 0xFF
 								(hi shl 8 or lo).toShort()
 							}
+							depthData = rotateDepth90CW(rawDepthData, rawW, rawH)
+							depthW = rawH  // 가로가 원래 세로 크기가 됨
+							depthH = rawW  // 세로가 원래 가로 크기가 됨
 							latestDepthData = depthData      // ✅ 추가
 							latestDepthWidth = depthW        // ✅ 추가
 							latestDepthHeight = depthH       // ✅ 추가
@@ -1530,14 +1546,15 @@ class MeasureViewModel : ViewModel() {
 					if (face2D != null && params != null && depthData != null) {
 						val paramsUnit = params.getCameraParam(0)
 						val base = paramsUnit.depthIntrinsic
-						latestIntrinsic = base
-						Log.d("Distortion", "k1=${depthDistortion?.k1()} k2=${depthDistortion?.k2()} k3=${depthDistortion?.k3()} p1=${depthDistortion?.p1()} p2=${depthDistortion?.p2()}")// ✅ VM에 저장
+						val rotatedIntrinsic = base.createRotated90()
+						latestIntrinsic = rotatedIntrinsic
+//						Log.d("Distortion", "k1=${depthDistortion?.k1()} k2=${depthDistortion?.k2()} k3=${depthDistortion?.k3()} p1=${depthDistortion?.p1()} p2=${depthDistortion?.p2()}")// ✅ VM에 저장
 						val landmarks3D = convertFaceLandmarksTo3D(
 							face2D,
 							depthData,
 							depthW,
 							depthH,
-							base,
+							rotatedIntrinsic,
 							depthDistortion!!
 						)
 
@@ -1575,19 +1592,25 @@ class MeasureViewModel : ViewModel() {
 					val faceMaskPath = undistortedPoints?.let { pts ->
 						buildFaceMaskPathFromPoints(pts, faceOutLineIndexes)
 					}
+					Log.d("faceMaskPath", "undistortedPoints ${undistortedPoints} | faceMaskPath=${faceMaskPath}")
 
-
-					val (minDepth, maxDepth) = computeFaceDepthRange(depthData!!, depthW, depthH, faceMaskPath!!)
-					val tempMoireBitmap = generateMoireBitmap(depthData, depthW, depthH, faceMaskPath, minDepth, maxDepth)
 					val tempFile = File.createTempFile("color_capture", ".webp", activity.cacheDir)
 					FileOutputStream(tempFile).use { fos ->
 						bitmap.compress(Bitmap.CompressFormat.WEBP_LOSSY, 100, fos)
 					}
 					val tempUri = Uri.fromFile(tempFile)
+					Log.d("captureImage", "flh=${flh}  plh=${plh}")
 
 					if (flh != null && plh!= null) {
-						saveMediaToStorage(activity, tempUri, name, flh!!, plh!!, false)
-						if (seq == Sequence.COMFORT) saveMoireToStorage(activity, tempMoireBitmap, moireName)
+						val success = saveMediaToStorage(activity, tempUri, name, flh!!, plh!!, true)
+						Log.v("saveMedia", "$success")
+						if (seq == Sequence.COMFORT) {
+							val moireName = getMoireFileName(seq)
+							val (minDepth, maxDepth) = computeFaceDepthRange(depthData!!, depthW, depthH, faceMaskPath!!)
+							val tempMoireBitmap = generateMoireBitmap(depthData, depthW, depthH, faceMaskPath, minDepth, maxDepth)
+							saveMoireToStorage(activity, tempMoireBitmap, moireName)
+						}
+						Log.v("saveMedia", "afterMoire $success")
 					}
 					return@withContext true
 				} ?: false
@@ -1789,8 +1812,8 @@ class MeasureViewModel : ViewModel() {
 		recordingJob = CoroutineScope(Dispatchers.IO).launch {
 			try {
 				val outputFile = File(activity.cacheDir, "$timestamp.mp4")
-				val width = 1920
-				val height = 1080
+				val width = 1080
+				val height = 1920
 				val fps = 30
 				val bitRate = 6_000_000
 
@@ -1822,6 +1845,9 @@ class MeasureViewModel : ViewModel() {
 				var trackIndex = -1
 				var muxerStarted = false
 				val canvasPaint = Paint()
+				val pixels = IntArray(width * height)
+				val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+				val byteBuffer = ByteBuffer.allocateDirect(width * height * 4) // 크기 넉넉하게 고정
 
 				while (isRecording) {
 					val frameStart = System.currentTimeMillis()
@@ -1829,12 +1855,11 @@ class MeasureViewModel : ViewModel() {
 					mPipeline?.waitForFrameSet(1000)?.use { frameSet ->
 						val colorFrame = frameSet.getColorFrame() ?: return@use
 
-						val dataSize = colorFrame.getDataSize()
-						val byteBuffer = ByteBuffer.allocateDirect(dataSize)
+						// 매번 새로 할당하지 말고 기존 버퍼 비우고 씀
+						byteBuffer.clear()
 						colorFrame.getData(byteBuffer)
 						byteBuffer.rewind()
 
-						val pixels = IntArray(width * height)
 						for (i in pixels.indices) {
 							if (byteBuffer.remaining() >= 3) {
 								val r = byteBuffer.get().toInt() and 0xFF
@@ -1844,7 +1869,6 @@ class MeasureViewModel : ViewModel() {
 							}
 						}
 
-						val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
 						bitmap.setPixels(pixels, 0, width, 0, 0, width, height)
 						if (frameCount == 0) {
 							// 즉시 Depth 추출

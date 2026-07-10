@@ -10,6 +10,7 @@ import android.graphics.Paint
 import android.graphics.Path
 import android.graphics.PointF
 import android.util.AttributeSet
+import android.util.Log
 import android.view.View
 import android.view.ViewGroup
 import android.view.animation.AccelerateDecelerateInterpolator
@@ -19,6 +20,7 @@ import androidx.core.graphics.toColorInt
 import com.tangoplus.facebeautyexpert.domain.opencv.HsvColorTracker
 import com.tangoplus.facebeautyexpert.domain.util.BitmapUtility.drawExtendedLine
 import com.tangoplus.facebeautyexpert.domain.vision.face.FaceLandmarkResult
+import com.tangoplus.facebeautyexpert.orbbec.view.OBGLView
 import com.tangoplus.facebeautyexpert.orbbec.vo.Point3D
 import kotlin.math.max
 import kotlin.math.min
@@ -168,7 +170,6 @@ class OverlayView(context: Context?, attrs: AttributeSet?) :
 		val scaledImageHeight = imageHeight * scaleFactor
 		val offsetX = (width - scaledImageWidth) / 2f
 		val offsetY = (height - scaledImageHeight) / 2f
-
 		results?.let { faceLandmarkerResult ->
 			drawFaceLandmarks(canvas, faceLandmarkerResult.landmarks, offsetX, offsetY) // point3dResult,
 		}
@@ -223,13 +224,18 @@ class OverlayView(context: Context?, attrs: AttributeSet?) :
 		if (faceLandmarks.isNotEmpty()) {
 			when (currentRunningMode) {
 				RunningMode.LIVE_STREAM -> {
-// --------------------------# 10 - 1 - 152 양귓볼 - 코 #------------------------------
+//					faceLandmarks.map { lm ->
+//						val x = lm.x * imageWidth * scaleFactor + offsetX
+//						val y = lm.y * imageHeight * scaleFactor + offsetY + OBGLView.yCorrectionOffset
+//						canvas.drawCircle(x, y, 4f, dotPaint)
+//					}
+					// --------------------------# 10 - 1 - 152 양귓볼 - 코 #------------------------------
 					val horizontalEarFlapIndexes = listOf(234, 1, 454)
 					val horizontalEarFlapLinePath = Path()
 					val horizontalPoints = horizontalEarFlapIndexes.map { landmarkIndex ->
 						val landmark = faceLandmarks[landmarkIndex]
 						val x = landmark.x * imageWidth * scaleFactor + offsetX
-						val y = landmark.y * imageHeight * scaleFactor + offsetY
+						val y = landmark.y * imageHeight * scaleFactor + offsetY + OBGLView.yCorrectionOffset
 						PointF(x, y)
 					}
 					if (horizontalPoints.isNotEmpty()) {
@@ -257,7 +263,7 @@ class OverlayView(context: Context?, attrs: AttributeSet?) :
 					val verticalPoints = verticalIndexes.map { landmarkIndex ->
 						val landmark = faceLandmarks[landmarkIndex]
 						val x = landmark.x * imageWidth * scaleFactor + offsetX
-						val y = landmark.y * imageHeight * scaleFactor + offsetY
+						val y = landmark.y * imageHeight * scaleFactor + offsetY + OBGLView.yCorrectionOffset
 						PointF(x, y)
 					}
 					if (verticalPoints.isNotEmpty()) {
@@ -352,7 +358,7 @@ class OverlayView(context: Context?, attrs: AttributeSet?) :
 					val horizontalPoints = horizontalEarFlapIndexes.map { landmarkIndex ->
 						val landmark = faceLandmarks[landmarkIndex]
 						val x = landmark.x * imageWidth * scaleFactor + offsetX
-						val y = landmark.y * imageHeight * scaleFactor + offsetY
+						val y = landmark.y * imageHeight * scaleFactor + offsetY + OBGLView.yCorrectionOffset
 						PointF(x, y)
 					}
 					if (horizontalPoints.isNotEmpty()) {
@@ -380,7 +386,7 @@ class OverlayView(context: Context?, attrs: AttributeSet?) :
 					val verticalPoints = verticalIndexes.map { landmarkIndex ->
 						val landmark = faceLandmarks[landmarkIndex]
 						val x = landmark.x * imageWidth * scaleFactor + offsetX
-						val y = landmark.y * imageHeight * scaleFactor + offsetY
+						val y = landmark.y * imageHeight * scaleFactor + offsetY + OBGLView.yCorrectionOffset
 						PointF(x, y)
 					}
 					if (verticalPoints.isNotEmpty()) {
