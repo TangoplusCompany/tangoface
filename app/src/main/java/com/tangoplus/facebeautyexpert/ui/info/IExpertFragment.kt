@@ -149,6 +149,7 @@ class IExpertFragment : Fragment(), OnSequenceClickListener  {
       setupSurveyAdapter()
     }
   }
+  // TODO IEXPERT, INORMAL 바텀시트 가리는 것 + afterSurvey + IEXPERT 좌표들 잘 들어갔는지 + IEXPERT json 5mb 1mb 대로 줄이기
 
   private fun setupSurveyAdapter() {
     val surveyAdapter = SurveyRVAdapter { pain, palpation, discomfort ->

@@ -18,6 +18,23 @@ import com.tangoplus.facebeautyexpert.ui.LoadingDialogFragment
 import com.tangoplus.facebeautyexpert.ui.main.MainActivity
 
 object MeasureUtility {
+
+	fun shiftDepthUp(src: ShortArray, w: Int, h: Int, offsetY: Int): ShortArray {
+		val dest = ShortArray(w * h) // 기본적으로 0으로 초기화됨
+
+		for (y in 0 until h) {
+			val targetY = y - offsetY // 위로 밀기 위해 Y값 감소
+
+			// 0보다 작은 영역(화면 위로 잘려 나간 영역)은 무시
+			if (targetY in 0 until h) {
+				// 원본의 (x, y) 데이터를 목적지의 (x, targetY)로 복사
+				System.arraycopy(src, y * w, dest, targetY * w, w)
+			}
+		}
+		return dest
+	}
+
+	
 	fun hasPermissions(context: Context): Boolean {
 		Log.d("PermissionCheck", "Context type: ${context::class.java.name}")
 		return getRequiredPermissions().all {

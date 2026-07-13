@@ -28,32 +28,32 @@ import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
 
 object FileUtility {
-	fun getFileName(seq: Sequence): String {
-		val timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"))
+	fun getFileName(seq: Sequence, time: String? = null): String {
+		val timestamp = time ?: LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"))
 		return when (seq) {
 			Sequence.COMFORT -> "0-$timestamp"
 //			Sequence.RESTING -> "2-$timestamp"
 			Sequence.OCCLUSAL -> "1-$timestamp"
 			Sequence.JAW_LEFT_TILT -> "2-$timestamp"
 			Sequence.JAW_RIGHT_TILT -> "3-$timestamp"
-			Sequence.NECK_EXTENTION -> "4-$timestamp"
+			Sequence.NECK_EXTENTION -> "6-$timestamp"
 			Sequence.BOW -> "5-$timestamp"
-			Sequence.JAW_OPENING -> "6-$timestamp"
+			Sequence.JAW_OPENING -> "4-$timestamp"
 //			Sequence.SIDE_LEFT -> "8-$timestamp"
 //			Sequence.SIDE_RIGHT -> "9-$timestamp"
 		}
 	}
-	fun getMoireFileName(seq: Sequence): String {
-		val timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"))
+	fun getMoireFileName(seq: Sequence, time: String? = null): String {
+		val timestamp = time ?: LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"))
 		return when (seq) {
 			Sequence.COMFORT -> "0-moire-$timestamp"
 //			Sequence.RESTING -> "2-$timestamp"
 			Sequence.OCCLUSAL -> "1-moire-$timestamp"
 			Sequence.JAW_LEFT_TILT -> "2-moire-$timestamp"
 			Sequence.JAW_RIGHT_TILT -> "3-moire-$timestamp"
-			Sequence.NECK_EXTENTION -> "4-moire-$timestamp"
+			Sequence.NECK_EXTENTION -> "6-moire-$timestamp"
 			Sequence.BOW -> "5-moire-$timestamp"
-			Sequence.JAW_OPENING -> "6-moire-$timestamp"
+			Sequence.JAW_OPENING -> "4-moire-$timestamp"
 //			Sequence.SIDE_LEFT -> "8-$timestamp"
 //			Sequence.SIDE_RIGHT -> "9-$timestamp"
 		}

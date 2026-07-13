@@ -153,8 +153,6 @@ object ClassifyUtility {
 		if (secondPlace.value >= 30f && secondPlace.value >= firstPlace.value * 0.5f) {
 			secondaryShape = secondPlace.key
 		}
-
-		// 디버깅용 정밀 로그 (임계값 조절 시 이 로그를 꼭 확인하세요!)
 		Log.v("얼굴여백분석", "상단볼살(Upper): ${"%.3f".format(upperFleshRatio)} | 하단볼살(Lower): ${"%.3f".format(lowerFleshRatio)}")
 		Log.v("얼굴살판별", "비만형(Chubby): $isChubby | 뼈부각(Bone): $isBoneProminent")
 		Log.v("얼굴형비율", "광대/턱: ${"%.2f".format(cheekToJaw)} | 가로/세로: ${"%.2f".format(widthToHeight)} | 턱각도: ${"%.1f".format(chinAngle)}")

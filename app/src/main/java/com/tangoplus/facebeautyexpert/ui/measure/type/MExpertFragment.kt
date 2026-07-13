@@ -31,6 +31,7 @@ import com.tangoplus.facebeautyexpert.domain.util.LandmarkUtility.calculateScree
 import com.tangoplus.facebeautyexpert.domain.util.MeasureUtility.animationSet
 import com.tangoplus.facebeautyexpert.domain.util.MeasureUtility.getGuideText
 import com.tangoplus.facebeautyexpert.domain.util.MeasureUtility.showPreviousDialog
+import com.tangoplus.facebeautyexpert.domain.util.MediaUtility.saveDebugBitmap
 import com.tangoplus.facebeautyexpert.domain.util.PreferenceUtility
 import com.tangoplus.facebeautyexpert.domain.util.UXUtility.playSound
 import com.tangoplus.facebeautyexpert.domain.util.UXUtility.startLongVibrate
@@ -59,6 +60,7 @@ class MExpertFragment : Fragment() {
   private lateinit var fDao: FaceDao
   private lateinit var prefsUtil: PreferenceUtility
   private var isCountDown = false
+  private var isJawOpeningSave = false
 
   private val mCountDown: CountDownTimer by lazy {
     object : CountDownTimer(3000, 1000) {
@@ -95,15 +97,30 @@ class MExpertFragment : Fragment() {
                 )
                 mvm.startVideoRecording(requireActivity()) {
                   mvm.tempStaticJo = null
-                  // 좌표 초기화
+
                   Log.v("녹화 완료", "좌표값: ${mvm.videoTempCoordinatesJA.length()}")
                   mvm.coordinatesJA.put(mvm.videoTempCoordinatesJA)
                   mvm.videoTempCoordinatesJA = JSONArray()
+//                  mvm.resultBundleToJson(mvm.currentSeq)
                   Log.v("동적 저장완료", "${mvm.coordinatesJA.length()}, 현재 seq: ${mvm.currentSeq}")
+                  Log.v("동적 저장완료", "jawOpening: ${isJawOpeningSave},bitmap: ${mvm.maxJawOpeningBitmap}")
+                  if (mvm.currentSeq == Sequence.JAW_RIGHT_TILT &&  !isJawOpeningSave && mvm.maxJawOpeningBitmap != null) {
+                    requireActivity().lifecycleScope.launch {
+                      saveDebugBitmap(requireContext(), mvm.maxJawOpeningBitmap!!, "JAWOPENING")
+                      mvm.processAndSaveFrameData(
+                        Sequence.JAW_OPENING,
+                        requireActivity(),
+                        mvm.maxJawOpeningBitmap!!,
+                        mvm.maxJawOpeningDepthData,
+                        mvm.maxJawOpeningDepthW,
+                        mvm.maxJawOpeningDepthH,
+                        mvm.maxJawOpeningFace2D
+                      )
+                      mvm.resultBundleToJson(Sequence.JAW_OPENING, mvm.maxJawOpeningFace2D, mvm.maxJawOpening3D)
+                    }
+                    isJawOpeningSave = true
+                  }
                   updateUI()
-
-                  // updateUI 후 담아놨던 JAW OPENING을
-                  mvm.resultBundleToJson(Sequence.JAW_OPENING, mvm.maxJawOpeningFace2D, mvm.maxJawOpening3D)
                 }
               }
 
@@ -153,6 +170,8 @@ class MExpertFragment : Fragment() {
       }
     }
   } //  ------! 카운트 다운 끝 !-------
+
+
   override fun onCreateView(
     inflater: LayoutInflater, container: ViewGroup?,
     savedInstanceState: Bundle?
@@ -168,7 +187,7 @@ class MExpertFragment : Fragment() {
     bd.btnMEShooting.setOnSingleClickListener {
       if (bd.btnMEShooting.text == "결과보기") {
         // ---------------# 데이터 갈무리해서 gallery DialogFragment로 넘기기 #-----------------
-        // 각각의 static에 사용자 정보 넣기
+        // 결과보기 눌렀을 떄 임시저장해놨던 jawOpening사용해서 저장
 
         // GUEST일 경우 초기화
         if (ivm.birthdayValue.value == "날짜 선택") {
@@ -182,6 +201,7 @@ class MExpertFragment : Fragment() {
           Log.v("userSn설정잘됐는지", "is init? = ${mvm.currentUserSn}, ${mvm.allSeqs}")
           val allSeqs = mvm.allSeqs
           val staticJos = mutableListOf<JSONObject>()
+          Log.v("userSn설정잘됐는지", "${mvm.staticJA.length()}")
 
           allSeqs.forEachIndexed { index, sequence ->
             val staticJSON = mvm.setJo(mvm.staticJA.getJSONObject(index), sequence, ivm, prefsUtil, true)
@@ -263,7 +283,6 @@ class MExpertFragment : Fragment() {
 
   private fun hideViews() {
     bd.clMECountDown.visibility = View.INVISIBLE
-
   }
 
   private var lookUpAnimator: ValueAnimator? = null
@@ -313,7 +332,7 @@ class MExpertFragment : Fragment() {
     mvm.moveToPreviousSeq()
 
     // -----------# frame -> fdgv 변경하기 #--------
-    Log.v("이전seq", "${mvm.allSeqs}/${mvm.currentSeq}")
+    Log.v("이전seq", "${mvm.progressSeqs}/${mvm.currentSeq} : ${mvm.allSeqs}")
     bd.ivMEFrame.setImageDrawable(
       ContextCompat.getDrawable(
         requireActivity(),
@@ -422,24 +441,14 @@ class MExpertFragment : Fragment() {
 //            R.drawable.drawable_seq_1
 //          )
 //        )
-        Sequence.NECK_EXTENTION -> bd.ivMEFrame.setImageDrawable(
-          ContextCompat.getDrawable(
-            requireActivity(),
-            R.drawable.drawable_seq_6
+        Sequence.NECK_EXTENTION -> {
+          bd.ivMEFrame.setImageDrawable(
+            ContextCompat.getDrawable(requireContext(), R.drawable.drawable_seq_6)
           )
-        )
-//        Sequence.JAW_OPENING -> bd.ivMEFrame.setImageDrawable(
-//          ContextCompat.getDrawable(
-//            requireActivity(),
-//            R.drawable.drawable_seq_4
-//          )
-//        )
+          startLookUpAnimation()
+        }
         else -> {}
       }
-      bd.ivMEFrame.setImageDrawable(
-        ContextCompat.getDrawable(requireContext(), R.drawable.drawable_seq_6)
-      )
-      startLookUpAnimation()
     }
 
     bd.btnMEShooting.apply {

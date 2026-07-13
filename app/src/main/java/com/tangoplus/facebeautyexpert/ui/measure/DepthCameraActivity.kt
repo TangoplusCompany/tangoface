@@ -602,6 +602,11 @@ class DepthCameraActivity : BaseActivity(), FaceLandmarkerHelper.LandmarkerListe
 			mvm.initOverlaySize(bd.overlay)
 			mvm.initScaleFactor(bd.overlay)
 			val landmarks = mvm.face2DResult?.landmarks
+			if (mvm.startRecording && mvm.face2DResult != null) {
+//				Log.v("동영상저장", "${mvm.currentSeq}")
+				mvm.resultBundleToJson(mvm.currentSeq)
+			}
+
 
 			if (!landmarks.isNullOrEmpty()) {
 				val point1 = landmarks.getOrNull(468)

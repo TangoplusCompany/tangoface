@@ -168,7 +168,7 @@ class INormalFragment : Fragment(), OnFacialPartClickListener {
 					val drawInfos = awaitedResult.second
 					val faceRect = awaitedResult.third
 					setBoxInfos(drawInfos, faceRect)
-					bd.ovIN.visibility = if (ivm.getLineOn()) View.VISIBLE else View.GONE
+					bd.tbovIN.visibility = if (ivm.getLineOn()) View.VISIBLE else View.GONE
 				}
 			}
 		}
@@ -198,10 +198,10 @@ class INormalFragment : Fragment(), OnFacialPartClickListener {
 
 	private fun setBoxInfos(textInfos: List<BitmapUtility.TextBoxData>, faceRect : TextBoxOverlayView.FaceRect?) {
 		val isTablet = MyApplication.isTablet()
-		if (isTablet) bd.ovIN.setTabletUI() else bd.ovIN.setMobileUI()
-		bd.ovIN.setFaceRect(faceRect)
-		bd.ovIN.attachToImageView(bd.ssivIN)
-		bd.ovIN.setTextBoxes(textInfos)
+		if (isTablet) bd.tbovIN.setTabletUI() else bd.tbovIN.setMobileUI()
+		bd.tbovIN.setFaceRect(faceRect)
+		bd.tbovIN.attachToImageView(bd.ssivIN)
+		bd.tbovIN.setTextBoxes(textInfos)
 	}
 
 	private fun initAngleTool() {

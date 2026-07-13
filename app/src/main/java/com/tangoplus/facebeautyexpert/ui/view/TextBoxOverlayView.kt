@@ -82,7 +82,6 @@ class TextBoxOverlayView @JvmOverloads constructor(
 	fun setTextBoxes(boxes: List<BitmapUtility.TextBoxData>) {
 		textBoxes.clear()
 		textBoxes.addAll(boxes)
-		// 리스트가 바뀌어도 animatedPositions를 유지하여 쫀득함을 유지
 		invalidate()
 	}
 
