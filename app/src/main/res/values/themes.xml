@@ -1,6 +1,6 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
     <!-- Base application theme. -->
-    <style name="Base.Theme.FaceBeautyExpert" parent="Theme.Material3.DayNight.NoActionBar">
+    <style name="Base.Theme.tangoface" parent="Theme.Material3.DayNight.NoActionBar">
         <!-- Customize your light theme here. -->
         <!-- <item name="colorPrimary">@color/my_light_primary</item> -->
         <item name="android:fontFamily">@font/font_style</item>
@@ -15,7 +15,7 @@
         <item name="android:windowLightNavigationBar">true</item>
     </style>
 
-    <style name="Theme.FaceBeautyExpert" parent="Base.Theme.FaceBeautyExpert" />
+    <style name="Theme.tangoface" parent="Base.Theme.tangoface" />
 
     <!--    alertdialog theme 적용 -->
     <style name="ThemeOverlay.App.MaterialAlertDialog" parent="ThemeOverlay.Material3.MaterialAlertDialog">

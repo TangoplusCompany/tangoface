@@ -59,7 +59,7 @@
 
                     </FrameLayout>
 
-                    <com.tangoplus.facebeautyexpert.ui.view.OverlayView
+                    <com.tangoplus.tangoface.ui.view.OverlayView
                             android:id="@+id/ovIE"
                             android:layout_width="0dp"
                             android:layout_height="0dp"
@@ -82,7 +82,7 @@
                             app:layout_constraintStart_toStartOf="parent"
                             app:layout_constraintTop_toTopOf="parent" app:layout_constraintDimensionRatio="3:4"/>
 
-                    <com.tangoplus.facebeautyexpert.ui.view.TextBoxOverlayView
+                    <com.tangoplus.tangoface.ui.view.TextBoxOverlayView
                             android:id="@+id/tbovIE"
                             android:layout_width="0dp"
                             android:layout_height="0dp"
@@ -91,7 +91,7 @@
                             app:layout_constraintStart_toStartOf="@id/ssivIE"
                             app:layout_constraintTop_toTopOf="@id/ssivIE"/>
 
-                    <com.tangoplus.facebeautyexpert.ui.view.AngleMeasureView
+                    <com.tangoplus.tangoface.ui.view.AngleMeasureView
                             android:id="@+id/amvIE"
                             android:layout_width="0dp"
                             android:layout_height="0dp"

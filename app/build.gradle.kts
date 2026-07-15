@@ -16,7 +16,7 @@ val obSignatureProp = Properties().apply {
 }
 
 android {
-    namespace = "com.tangoplus.facebeautyexpert"
+    namespace = "com.tangoplus.tangoface"
     compileSdk = 36
 
     buildFeatures {
@@ -24,7 +24,7 @@ android {
         viewBinding = true
     }
     defaultConfig {
-        applicationId = "com.tangoplus.facebeautyexpert"
+        applicationId = "com.tangoplus.tangoface"
         minSdk = 30
         targetSdk = 36
         versionCode = 1
@@ -74,7 +74,7 @@ android {
             keyPassword = "android"
         }
         create("release") {
-            storeFile = file("../keystore/facebeautyexpert.jks")
+            storeFile = file("../keystore/tangoface.jks")
             storePassword = obSignatureProp.getProperty("STORE_PASSWORD")
             keyAlias = obSignatureProp.getProperty("KEY_ALIAS")
             keyPassword = obSignatureProp.getProperty("KEY_PASSWORD")
@@ -99,8 +99,8 @@ android {
             val outputImpl = this as com.android.build.gradle.internal.api.BaseVariantOutputImpl
             val buildTypeName = buildType.name
             val fileName = when (buildTypeName) {
-                "release" -> "face_analyzer_expert_release.apk"
-                "debug" -> "FaceBeautyExpert_v${versionName}_${versionCode}_beta.apk"
+                "release" -> "tangoface_release.apk"
+                "debug" -> "Tangoface_v${versionName}_${versionCode}_beta.apk"
                 else -> outputImpl.outputFile.name
             }
             outputImpl.outputFileName = fileName

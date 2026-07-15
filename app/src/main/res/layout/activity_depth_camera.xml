@@ -8,7 +8,7 @@
     android:background="@color/subColor900"
     tools:context=".ui.measure.DepthCameraActivity">
 
-    <com.tangoplus.facebeautyexpert.orbbec.view.OBGLView
+    <com.tangoplus.tangoface.orbbec.view.OBGLView
         android:id="@+id/obglvC"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
@@ -17,7 +17,7 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
-    <com.tangoplus.facebeautyexpert.ui.view.OverlayView
+    <com.tangoplus.tangoface.ui.view.OverlayView
             android:id="@+id/overlay"
             android:layout_width="0dp"
             android:layout_height="0dp"

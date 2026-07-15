@@ -46,7 +46,7 @@
                         app:layout_constraintStart_toStartOf="parent"
                         app:layout_constraintTop_toTopOf="parent" />
 
-                    <com.tangoplus.facebeautyexpert.ui.view.TextBoxOverlayView
+                    <com.tangoplus.tangoface.ui.view.TextBoxOverlayView
                         android:id="@+id/tbovIN"
                         android:layout_width="0dp"
                         android:layout_height="0dp"
@@ -55,7 +55,7 @@
                         app:layout_constraintStart_toStartOf="@id/ssivIN"
                         app:layout_constraintTop_toTopOf="@id/ssivIN" />
 
-                    <com.tangoplus.facebeautyexpert.ui.view.AngleMeasureView
+                    <com.tangoplus.tangoface.ui.view.AngleMeasureView
                         android:id="@+id/amvIN"
                         android:layout_width="0dp"
                         android:layout_height="0dp"

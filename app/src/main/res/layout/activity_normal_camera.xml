@@ -54,7 +54,7 @@
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 
-    <com.tangoplus.facebeautyexpert.ui.view.OverlayView
+    <com.tangoplus.tangoface.ui.view.OverlayView
         android:id="@+id/overlay"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
