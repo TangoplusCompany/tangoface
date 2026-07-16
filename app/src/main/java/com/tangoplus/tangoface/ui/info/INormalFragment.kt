@@ -103,7 +103,7 @@ class INormalFragment : Fragment(), OnFacialPartClickListener {
 	private fun setAdapter() {
 		val selectCase = if (ivm.getSeq() == Sequence.COMFORT) 0 else 1
 		val vLayoutManager = GridLayoutManager(context, 5)
-		val sAdapter = PartSelectRVAdapter(svm, selectCase)
+		val sAdapter = PartSelectRVAdapter(svm)
 		sAdapter.onFacialPartClickListener = this@INormalFragment
 		bd.rvIN1.apply {
 			adapter = sAdapter

@@ -8,11 +8,20 @@ import kotlin.math.abs
 import kotlin.math.acos
 import kotlin.math.atan2
 import kotlin.math.pow
+import kotlin.math.roundToInt
 import kotlin.math.sqrt
 
 object MathHelpers {
 	private var SCALE_FACTOR = 1f
+	fun safeRound(value: Float, decimals: Int): Double {
+		if (value.isNaN() || value.isInfinite()) return 0.0
 
+		return if (decimals == 1) {
+			(value * 10f).roundToInt() / 10.0
+		} else {
+			(value * 10000f).roundToInt() / 10000.0
+		}
+	}
 	fun setScaleFactor(scale: Float) {
 		SCALE_FACTOR = scale
 	}

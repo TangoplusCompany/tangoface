@@ -23,6 +23,7 @@ import com.google.android.exoplayer2.Player
 import com.google.android.exoplayer2.SimpleExoPlayer
 import com.google.android.exoplayer2.source.ProgressiveMediaSource
 import com.google.android.exoplayer2.upstream.DefaultDataSourceFactory
+import com.google.android.exoplayer2.video.VideoSize
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.tangoplus.tangoface.R
 import com.tangoplus.tangoface.data.db.AfterSurvey
@@ -43,13 +44,17 @@ import com.tangoplus.tangoface.domain.vision.face.FaceLandmarkResult.Companion.f
 import com.tangoplus.tangoface.domain.vo.Sequence
 import com.tangoplus.tangoface.orbbec.application.MyApplication
 import com.tangoplus.tangoface.ui.adapter.FactorRVAdapter
+import com.tangoplus.tangoface.ui.adapter.PartSelectRVAdapter
 import com.tangoplus.tangoface.ui.adapter.SequenceSelectRVAdapter
 import com.tangoplus.tangoface.ui.adapter.SurveyFactorRVAdapter
 import com.tangoplus.tangoface.ui.adapter.SurveyRVAdapter
+import com.tangoplus.tangoface.ui.adapter.TrajectoryRVAdapter
 import com.tangoplus.tangoface.ui.info.vm.InformationViewModel
 import com.tangoplus.tangoface.ui.info.vm.SelectViewModel
 import com.tangoplus.tangoface.ui.info.vo.DrawLine
+import com.tangoplus.tangoface.ui.info.vo.FacialPart
 import com.tangoplus.tangoface.ui.info.vo.Factor
+import com.tangoplus.tangoface.ui.listener.OnFacialPartClickListener
 import com.tangoplus.tangoface.ui.listener.OnSequenceClickListener
 import com.tangoplus.tangoface.ui.main.vm.MainViewModel
 import com.tangoplus.tangoface.ui.view.OverlayView
@@ -61,9 +66,10 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlin.collections.get
 import kotlin.getValue
 
-class IExpertFragment : Fragment(), OnSequenceClickListener  {
+class IExpertFragment : Fragment(), OnFacialPartClickListener, OnSequenceClickListener  {
   private lateinit var bd : FragmentIExpertBinding
   private val svm: SelectViewModel by activityViewModels()
   private val ivm: InformationViewModel by activityViewModels()
@@ -82,7 +88,6 @@ class IExpertFragment : Fragment(), OnSequenceClickListener  {
     bd = FragmentIExpertBinding.inflate(inflater)
     return bd.root
   }
-
   override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
     super.onViewCreated(view, savedInstanceState)
 
@@ -95,6 +100,7 @@ class IExpertFragment : Fragment(), OnSequenceClickListener  {
     setRatioBtn()
     initAngleTool()
     setAdapter()
+    setInsightBottomSheet()
     bd.tvIEClose.setOnSingleClickListener {
       val behavior = BottomSheetBehavior.from(bd.bsIE)
       behavior.state = BottomSheetBehavior.STATE_HIDDEN
@@ -102,24 +108,47 @@ class IExpertFragment : Fragment(), OnSequenceClickListener  {
   }
 
   private fun setAdapter() {
-    val vLayoutManager = GridLayoutManager(context, 6)
+    val gLayoutManager6 = GridLayoutManager(context, 6)
     val sAdapter = SequenceSelectRVAdapter(svm)
     sAdapter.onSequenceClickListener = this@IExpertFragment
     bd.rvIE1.apply {
       adapter = sAdapter
-      layoutManager = vLayoutManager
+      layoutManager = gLayoutManager6
+    }
+
+    val currentSeq = ivm.getSeq()
+    when (currentSeq) {
+      Sequence.COMFORT -> {
+        val gLayoutManager5 = GridLayoutManager(context, 5)
+        val pAdapter = PartSelectRVAdapter(svm)
+        pAdapter.onFacialPartClickListener = this@IExpertFragment
+        bd.rvIE2.apply {
+          adapter = pAdapter
+          layoutManager = gLayoutManager5
+        }
+      }
+
+      Sequence.JAW_LEFT_TILT, Sequence.JAW_RIGHT_TILT -> {
+        val gLayoutManager2 = GridLayoutManager(context, 2)
+        val tAdapter = TrajectoryRVAdapter(ivm)
+        bd.rvIE2.apply {
+          adapter = tAdapter
+          layoutManager = gLayoutManager2
+        }
+      }
+      else -> {
+
+      }
     }
 
     val fAdapter = FactorRVAdapter(this@IExpertFragment, mvm.currentResult.value?.factors ?: Factor(
       FacialAxisShape.DEFAULT, FaceShape.DEFAULT, null,Pair(0f, 0f)))
     val fLayoutManager = LinearLayoutManager(requireContext(), LinearLayoutManager.VERTICAL, false)
-    bd.rvIE2.apply {
+    bd.rvIE3.apply {
       adapter = fAdapter
       layoutManager = fLayoutManager
     }
     startScrollHintAnimation()
-
-
 
     val serverSn = mvm.currentResult.value?.tempServerSn
 
@@ -141,7 +170,6 @@ class IExpertFragment : Fragment(), OnSequenceClickListener  {
       setupSurveyAdapter()
     }
   }
-  // TODO IEXPERT, INORMAL 바텀시트 가리는 것 + afterSurvey + IEXPERT 좌표들 잘 들어갔는지 + IEXPERT json 5mb 1mb 대로 줄이기
 
   private fun setupSurveyAdapter() {
     val surveyAdapter = SurveyRVAdapter { pain, palpation, discomfort ->
@@ -165,7 +193,7 @@ class IExpertFragment : Fragment(), OnSequenceClickListener  {
         .alpha(0f)
         .setDuration(200)
         .withEndAction {
-          bd.rvIE3.visibility = View.GONE
+          bd.rvIE4.visibility = View.GONE
 
           bd.ivCheckFeedback.visibility = View.VISIBLE
           bd.ivCheckFeedback.animate()
@@ -191,9 +219,8 @@ class IExpertFragment : Fragment(), OnSequenceClickListener  {
         }
         .start()
     }
-
-    bd.rvIE3.layoutManager = LinearLayoutManager(context)
-    bd.rvIE3.adapter = surveyAdapter
+    bd.rvIE4.layoutManager = LinearLayoutManager(context)
+    bd.rvIE4.adapter = surveyAdapter
   }
 
   // 3. 결과 팩터 어댑터 설정 함수 (중복 코드 방지 및 직행용)
@@ -201,12 +228,12 @@ class IExpertFragment : Fragment(), OnSequenceClickListener  {
     val scores = listOf(pain, palpation, discomfort)
     val factorAdapter = SurveyFactorRVAdapter(this@IExpertFragment, scores)
 
-    bd.rvIE3.layoutManager = GridLayoutManager(context, 3)
-    bd.rvIE3.adapter = factorAdapter
+    bd.rvIE4.layoutManager = GridLayoutManager(context, 3)
+    bd.rvIE4.adapter = factorAdapter
 
     // 만약 애니메이션 없이 바로 들어왔을 때를 위해 알파값과 가시성 초기화
-    bd.rvIE3.visibility = View.VISIBLE
-    bd.rvIE3.alpha = 1f
+    bd.rvIE4.visibility = View.VISIBLE
+    bd.rvIE4.alpha = 1f
   }
   private fun setRatioBtn() {
     bd.btnIEClean.setOnSingleClickListener {
@@ -231,7 +258,18 @@ class IExpertFragment : Fragment(), OnSequenceClickListener  {
     val seq = ivm.getSeq()
     if (seq == Sequence.JAW_LEFT_TILT || seq == Sequence.JAW_RIGHT_TILT) {
       val faceStaticJson = mvm.currentResult.value?.results
+      Log.v("길이", "${faceStaticJson?.length()} | video가 어디? object: ${
+        faceStaticJson?.getJSONObject(
+          3
+        )?.getJSONArray("face_landmark")
+      }")
       ivm.videoCoordinates = faceStaticJson?.optJSONObject(seq.id)?.let { extractVideoCoordinates(it) }
+
+      // trajectory를 그리기 위한 coordinates
+      ivm.coordinates1 =  faceStaticJson?.optJSONObject(2)?.let { extractVideoCoordinates(it) }
+      ivm.coordinates2 =  faceStaticJson?.optJSONObject(3)?.let { extractVideoCoordinates(it) }
+      ivm.leftTrajectory = ivm.coordinates1?.map { it[152] }
+      ivm.rightTrajectory = ivm.coordinates2?.map { it[152] }
       setVideoUI()
       setPlayer()
     } else {
@@ -244,9 +282,9 @@ class IExpertFragment : Fragment(), OnSequenceClickListener  {
       releasePlayer()
     }
 
-    bd.rvIE2.apply {
-      layoutManager = LinearLayoutManager(requireContext(), LinearLayoutManager.VERTICAL, false)
-    }
+//    bd.rvIE2.apply {
+//      layoutManager = LinearLayoutManager(requireContext(), LinearLayoutManager.VERTICAL, false)
+//    }
   }
 
   @SuppressLint("UseKtx")
@@ -343,58 +381,46 @@ class IExpertFragment : Fragment(), OnSequenceClickListener  {
 
 //  private val scrollHandler = Handler(Looper.getMainLooper())
 //  private var scrollRunnable: Runnable? = null
-  private fun setInsightBottomSheet() {
-    val behavior = BottomSheetBehavior.from(bd.bsIE)
-    behavior.isDraggable = false
-    behavior.state = BottomSheetBehavior.STATE_HIDDEN
-    behavior.peekHeight = 0
-    bd.clIEHint.setOnSingleClickListener {
-      if (behavior.state == BottomSheetBehavior.STATE_HIDDEN) {
-        tryInsight()
-        behavior.state = BottomSheetBehavior.STATE_EXPANDED
-      }
-    }
-//		bd.nsvI.setOnScrollChangeListener { _, _, scrollY, _, _ ->
-//			scrollRunnable?.let { scrollHandler.removeCallbacks(it) }
-//
-//			val child = bd.nsvI.getChildAt(0)
-//			if (child != null) {
-//				val contentHeight = child.measuredHeight
-//				val scrollViewHeight = bd.nsvI.measuredHeight
-//
-//				if (scrollY + scrollViewHeight >= contentHeight - 10) {
-//					scrollRunnable = Runnable {
-//						if (behavior.state == BottomSheetBehavior.STATE_HIDDEN) {
-//							tryInsight()
-//							behavior.state = BottomSheetBehavior.STATE_EXPANDED
-//						}
-//					}
-//
-//					scrollHandler.postDelayed(scrollRunnable!!, 200) // 200ms 대기시간
-//				}
-//			}
-//		}
+private fun setInsightBottomSheet() {
+  val behavior = BottomSheetBehavior.from(bd.bsIE)
 
-    behavior.addBottomSheetCallback(object : BottomSheetBehavior.BottomSheetCallback() {
-      override fun onStateChanged(bottomSheet: View, newState: Int) {
-        if (newState == BottomSheetBehavior.STATE_HIDDEN) {
-          bd.vIEim.visibility = View.GONE
-        } else {
-          bd.vIEim.visibility = View.VISIBLE
-        }
-      }
+  // 💡 1. 숨김 가능 옵션을 활성화해야 STATE_HIDDEN이 먹힙니다.
+  behavior.isHideable = true
+  behavior.isDraggable = false
+  behavior.state = BottomSheetBehavior.STATE_HIDDEN
+  behavior.peekHeight = 0
 
-      override fun onSlide(bottomSheet: View, slideOffset: Float) {
-        val alpha = slideOffset * 0.6f
-        bd.vIEim.alpha = if (alpha >= 0) alpha else 0f
-      }
-    })
+  // 💡 2. 초기 로딩 시 어두운 배경 뷰도 숨겨진 상태로 시작하게 만듭니다.
+  bd.vIEim.visibility = View.GONE
+  bd.vIEim.alpha = 0f
 
-// (선택사항) 어두운 영역을 터치하면 바텀시트 닫기
-    bd.vIEim.setOnClickListener {
-      behavior.state = BottomSheetBehavior.STATE_HIDDEN
+  bd.clIEHint.setOnSingleClickListener {
+    if (behavior.state == BottomSheetBehavior.STATE_HIDDEN) {
+      tryInsight()
+      behavior.state = BottomSheetBehavior.STATE_EXPANDED
     }
   }
+
+  behavior.addBottomSheetCallback(object : BottomSheetBehavior.BottomSheetCallback() {
+    override fun onStateChanged(bottomSheet: View, newState: Int) {
+      if (newState == BottomSheetBehavior.STATE_HIDDEN) {
+        bd.vIEim.visibility = View.GONE
+      } else {
+        bd.vIEim.visibility = View.VISIBLE
+      }
+    }
+
+    override fun onSlide(bottomSheet: View, slideOffset: Float) {
+      val alpha = slideOffset * 0.6f
+      bd.vIEim.alpha = if (alpha >= 0) alpha else 0f
+    }
+  })
+
+  // 어두운 영역을 터치하면 바텀시트 닫기
+  bd.vIEim.setOnClickListener {
+    behavior.state = BottomSheetBehavior.STATE_HIDDEN
+  }
+}
   private var typingJob: Job? = null
   private val typingList = listOf(
     "✨ Gemini에서 인사이트를 생성 중입니다.",
@@ -567,6 +593,10 @@ class IExpertFragment : Fragment(), OnSequenceClickListener  {
     bd.clIEImage.visibility = View.VISIBLE
     bd.clIEVideo.visibility = View.GONE
     bd.llIEBtns.visibility = View.VISIBLE
+    bd.ssivIE.apply {
+      visibility = View.VISIBLE
+    }
+
   }
 
   private var wasEnded = false
@@ -574,9 +604,8 @@ class IExpertFragment : Fragment(), OnSequenceClickListener  {
     simpleExoPlayer = SimpleExoPlayer.Builder(requireContext()).build()
     bd.pvIE.player = simpleExoPlayer
     bd.pvIE.controllerShowTimeoutMs = 1100
-
-    val leftUri = mvm.currentResult.value?.mediaUri?.getOrNull(3)
-    Log.v("leftURI", "결과: ${leftUri} ")
+    val uriIdx = if (ivm.getSeq() == Sequence.JAW_LEFT_TILT) 2 else 3
+    val leftUri = mvm.currentResult.value?.mediaUri?.getOrNull(uriIdx)
     val mediaItem = leftUri?.let { MediaItem.fromUri(it) }
     val mediaSource = mediaItem?.let {
       ProgressiveMediaSource.Factory(DefaultDataSourceFactory(requireContext()))
@@ -623,6 +652,11 @@ class IExpertFragment : Fragment(), OnSequenceClickListener  {
           }
         }
       }
+
+      override fun onVideoSizeChanged(videoSize: VideoSize) {
+        super.onVideoSizeChanged(videoSize)
+        Log.d("PlayerDebug", "🔍 [onVideoSizeChanged] width: ${videoSize.width}, height: ${videoSize.height}, rotation: ${videoSize.unappliedRotationDegrees}")
+      }
     })
   }
   private fun updateOverlay(videoDuration: Long) {
@@ -633,15 +667,25 @@ class IExpertFragment : Fragment(), OnSequenceClickListener  {
     if (frameIndex in 0 until totalFrames) {
       val faceLandmarkResult = fromFaceCoordinates(ivm.videoCoordinates?.get(frameIndex))
       val point152 = ivm.videoCoordinates?.get(frameIndex)?.get(152)
+
+      val videoFormat = simpleExoPlayer?.videoFormat
+      var videoW = videoFormat?.width ?: 0
+      var videoH = videoFormat?.height ?: 0
+      val rotation = videoFormat?.rotationDegrees ?: 0
+
+      if (rotation == 90 || rotation == 270) {
+        val temp = videoW
+        videoW = videoH
+        videoH = temp
+      }
+
       requireActivity().runOnUiThread {
-//                bd.ovID1.scaleX = -1f
         bd.ovIE.setResults(
           faceLandmarkResult,
-          simpleExoPlayer?.videoFormat?.width ?: 0,
-          simpleExoPlayer?.videoFormat?.height ?: 0,
-          OverlayView.RunningMode.VIDEO,
-
-          )
+          videoW,
+          videoH,
+          OverlayView.RunningMode.VIDEO
+        )
         bd.ovIE.addChinTrajectoryPoint(point152?.first ?: 0f, point152?.second ?: 0f)
         bd.ovIE.invalidate()
       }
@@ -670,12 +714,36 @@ class IExpertFragment : Fragment(), OnSequenceClickListener  {
 //    setImage()
 //  }
   override fun onSequenceClick(seq: Sequence) {
-
+    ivm.setSeq(seq)
+    // 편한상태에서 들어가는 FacialPart init
+    if (seq == Sequence.COMFORT) svm.updateFacialPart(FacialPart.DERIVE)
     svm.updateSequence(seq)
     setResult()
     setAdapter()
   }
 
+  override fun onFacialPartClick(part: FacialPart) {
+    ivm.currentCheckedLines.clear()
+    Log.v("클릭드", "${part}")
+    val drawLines = when (part) {
+      FacialPart.DERIVE -> listOf(DrawLine.NECK, DrawLine.FACE, DrawLine.A_SAGGING_FACE, DrawLine.A_FACIAL_AXIS, DrawLine.A_HORIZON,
+        DrawLine.A_SHOULDER)
+      FacialPart.RATIO -> listOf(DrawLine.A_RATIO_HORIZON, DrawLine.A_RATIO_VERTI)
+      FacialPart.TOP -> listOf(DrawLine.EYE,  DrawLine.EYEBROW,  DrawLine.L_CORNEA)
+      FacialPart.MIDDLE -> listOf(DrawLine.NOSE,DrawLine.A_ALAR_ORAL, DrawLine.A_SIDE_HEAD, DrawLine.E_CHEEKBONE, )
+      FacialPart.BOTTOM -> listOf(DrawLine.E_CHEEKS, DrawLine.A_CANTHUS_ORAL, DrawLine.MOUSE)
+    }
+
+    // item 클릭 후 facialPart, Adapter전부 확인
+    ivm.currentCheckedLines.addAll(drawLines)
+    svm.updateFacialPart(part)
+    if (ivm.isAngleModeActive.value) {
+      ivm.toggleAngleMode()
+      bd.btnIEAngle.text = "📐 각도계산 켜기"
+    }
+    bd.rvIE1.adapter?.notifyDataSetChanged()
+    setImage()
+  }
   private fun releasePlayer() {
     simpleExoPlayer?.let {
       it.stop()
@@ -684,6 +752,7 @@ class IExpertFragment : Fragment(), OnSequenceClickListener  {
     simpleExoPlayer = null
 
   }
+
 
 
 }

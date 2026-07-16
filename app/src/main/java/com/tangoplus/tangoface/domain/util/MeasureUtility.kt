@@ -59,6 +59,8 @@ object MeasureUtility {
 		return when (seq) {
 			Sequence.COMFORT -> "안녕하세요! 화면에 잘 보이게 위치해 주시고\n편한 상태로 입을 다물고 정면을 응시해주세요"
 			Sequence.NECK_EXTENTION -> "목을 편 상태입니다. 버튼을 누르고\n코 끝을 하늘을 향하게 턱을 들어주세요"
+			Sequence.JAW_LEFT_TILT -> "턱 가측 이동 측정입니다\n이를 맞물리고 이빨이 전부 보이게 미소 지은 상태로\n시작 버튼을 눌러주세요"
+			Sequence.JAW_RIGHT_TILT -> "턱 가측 이동 측정입니다\n이를 맞물리고 이빨이 전부 보이게 미소 지은 상태로\n시작 버튼을 눌러주세요"
 			else -> ""
 		}
 	}

@@ -140,7 +140,7 @@
                         android:gravity="center"
                         android:text="🏳️‍🌈 Moire 보기"
                         android:textColor="@color/white"
-                        android:textSize="18sp" android:padding="10dp"/>
+                        android:textSize="18sp" android:padding="10dp" android:layout_marginBottom="10dp"/>
                 <TextView
                         android:id="@+id/btnINClean"
                         android:layout_width="match_parent"
@@ -152,7 +152,7 @@
                         android:gravity="center"
                         android:text="🔍 가이드라인 끄기"
                         android:textColor="@color/white"
-                        android:textSize="18sp" android:padding="10dp"/>
+                        android:textSize="18sp" android:padding="10dp" android:layout_marginBottom="10dp"/>
 
 
                 <TextView
@@ -166,7 +166,7 @@
                         android:gravity="center"
                         android:text="ꖛ 그리드 끄기 "
                         android:textColor="@color/white"
-                        android:textSize="18sp" android:padding="10dp"/>
+                        android:textSize="18sp" android:padding="10dp" android:layout_marginBottom="10dp"/>
 
                 <TextView
                         android:id="@+id/btnINAngle"
@@ -179,7 +179,7 @@
                         android:gravity="center"
                         android:text="📐 각도계산 켜기"
                         android:textColor="@color/white"
-                        android:textSize="18sp" android:padding="10dp"/>
+                        android:textSize="18sp" android:padding="10dp" android:layout_marginBottom="10dp"/>
 
             </LinearLayout>
 

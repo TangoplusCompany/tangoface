@@ -14,6 +14,7 @@ class InformationViewModel : ViewModel() {
 	// 체크가 가능한 전체 데이터 VO 항목 담는 곳
 	var currentFaceStaticsItem = mutableListOf<FaceStaticItem>()
 
+	// mvm 과 다르게 information Fragment에서 현재 선택된 Sequence를 담는 변수
 	private var currentSeq = Sequence.COMFORT
 	fun setSeq(seq: Sequence) {
 		currentSeq = seq
@@ -22,6 +23,10 @@ class InformationViewModel : ViewModel() {
 	fun getSeq(): Sequence {
 		return currentSeq
 	}
+	var coordinates1: List<List<Pair<Float, Float>>>? = null
+	var coordinates2: List<List<Pair<Float, Float>>>? = null
+	var leftTrajectory: List<Pair<Float, Float>>? = null
+	var rightTrajectory: List<Pair<Float, Float>>? = null
 
 	private var isLineOn = true
 	fun switchedLineOn() { isLineOn = !isLineOn }

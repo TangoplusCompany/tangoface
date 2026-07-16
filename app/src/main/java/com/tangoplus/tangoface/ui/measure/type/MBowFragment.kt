@@ -79,52 +79,45 @@ class MBowFragment : Fragment() {
           viewModel.startSequence()
           viewModel.setContourSave(true)
 
-          if (mvm.currentSeq == Sequence.BOW) {
-            hideViews()
-            // 보우 측정 시 data가 3개 미만일 경우 혹은/ 1개의 y축 값이 튀었을 경우 다시 촬영
-            val yValues = mvm.currentTarget.map { it.center.y.toFloat() }
-            if (yValues.size < 3) {
-              Log.d("보우측정", "데이터가 3개 미만 → 다시 촬영")
-              Toast.makeText(requireContext(), "랜드마크가 3개 미만으로 추출됐습니다", Toast.LENGTH_LONG).show()
-              isCountDown = false
-              bd.btnMBShooting.apply {
-                isEnabled = true
-              }
-              return
-            } else {
-              val maxY = yValues.maxOrNull() ?: 0f
-              val minY = yValues.minOrNull() ?: 0f
-              val diff = maxY - minY
-              Log.v("diff 확인", "$diff")
-              if (diff > 50f) {
-                Log.d("보우측정", "Y값 차이 $diff → 튄 값 있음, 다시 촬영")
-                Toast.makeText(requireContext(), "랜드마크가 페이스 보우와 다른 위치를 추출했습니다", Toast.LENGTH_LONG).show()
-                isCountDown = false
-                bd.btnMBShooting.apply {
-                  isEnabled = true
-                }
-                return
-              }
-            }
-            playSound(R.raw.camera_shutter)
-
-            lifecycleScope.launch {
-              mvm.captureImage(mvm.currentSeq, requireActivity())
-              mvm.face2DResult?.let { mvm.resultHsvToJson(it, mvm.currentTarget) }
-              viewModel.finishSequence()
-              updateUI()
-            }
-            setGuideAnimation(mvm.currentSeq, false)
+          hideViews()
+          // 보우 측정 시 data가 3개 미만일 경우 혹은/ 1개의 y축 값이 튀었을 경우 다시 촬영
+          val yValues = mvm.currentTarget.map { it.center.y.toFloat() }
+          if (yValues.size < 3) {
+            Log.d("보우측정", "데이터가 3개 미만 → 다시 촬영")
+            Toast.makeText(requireContext(), "랜드마크가 3개 미만으로 추출됐습니다", Toast.LENGTH_LONG).show()
             isCountDown = false
             bd.btnMBShooting.apply {
               isEnabled = true
             }
             return
+          } else {
+            val maxY = yValues.maxOrNull() ?: 0f
+            val minY = yValues.minOrNull() ?: 0f
+            val diff = maxY - minY
+            Log.v("diff 확인", "$diff")
+            if (diff > 50f) {
+              Log.d("보우측정", "Y값 차이 $diff → 튄 값 있음, 다시 촬영")
+              Toast.makeText(requireContext(), "랜드마크가 페이스 보우와 다른 위치를 추출했습니다", Toast.LENGTH_LONG).show()
+              isCountDown = false
+              bd.btnMBShooting.apply {
+                isEnabled = true
+              }
+              return
+            }
           }
-        } else {
-          Toast.makeText(requireContext(), "얼굴 인식에 문제가 발생했습니다. 다시 시도해주세요", Toast.LENGTH_SHORT).show()
-          updateUI()
-          setPreviousStep()
+          playSound(R.raw.camera_shutter)
+
+          lifecycleScope.launch {
+            mvm.captureImage(mvm.currentSeq, requireActivity())
+            mvm.face2DResult?.let { mvm.resultHsvToJson(it, mvm.currentTarget) }
+            viewModel.finishSequence()
+            updateUI()
+          }
+          setGuideAnimation(mvm.currentSeq, false)
+          isCountDown = false
+          bd.btnMBShooting.apply {
+            isEnabled = true
+          }
         }
       }
     }
@@ -154,7 +147,7 @@ class MBowFragment : Fragment() {
         lifecycleScope.launch(Dispatchers.IO) {
           val fd = FaceDatabase.getDatabase(requireActivity())
           fDao = fd.faceDao()
-
+          // TODO hsvFLCoordinatesJA 와 StaticJA 갯수 맞춰서 1개 그냥 input 하면 됨.
           Log.v("userSn설정잘됐는지", "is init? = ${mvm.currentUserSn}, ${mvm.allSeqs}")
           val allSeqs = mvm.allSeqs
           val staticJos = mutableListOf<JSONObject>()
@@ -190,7 +183,8 @@ class MBowFragment : Fragment() {
               Log.v("LEN", "i=$i, coordinatesLen=${mvm.coordinatesJA.length()}, plrLen=${mvm.plrJA.length()}, mediaNames=${mvm.mediaFileNames.size}")
               put("face_landmark", mvm.coordinatesJA.optJSONArray(i))
               put("pose_landmark", mvm.plrJA.optJSONArray(i))
-
+              // TODO 여기다가 bow_landmark해서 넣기
+              put("bow_landmark", mvm.hsvFLCoordinatesJA.optJSONArray(0))
               if (i == 0) {
                 put("hairline_landmark", mvm.hairLineJA.optJSONArray(i))
               }
@@ -214,8 +208,6 @@ class MBowFragment : Fragment() {
             val lastTempServerSn = prefsUtil.getLastTempServerSn()
             // prefs에서 마지막 sn을 +1 하기
             prefsUtil.setNextTempServerSn()
-
-//						Log.v("스태틱스Sn", "$lastTempServerSn, ${mvm.currentUserSn}: ${transStatics.map { it.user_sn }}")
             viewModel.comparisonDoubleItem = null
             val intent = Intent(requireActivity(), MainActivity::class.java)
             intent.putExtra("serverSn", lastTempServerSn)
@@ -230,12 +222,6 @@ class MBowFragment : Fragment() {
       }
     }
 
-    bd.tvMBPrevious.setOnSingleClickListener {
-      showPreviousDialog(requireActivity(), { setPreviousStep() })
-    }
-
-
-
     bd.tvMBGyro.setOnSingleClickListener {
       val gyro = GyroDialogFragment()
       gyro.show(requireActivity().supportFragmentManager, "gyroDialogFragment")
@@ -247,94 +233,9 @@ class MBowFragment : Fragment() {
 
   }
 
-  private var lookUpAnimator: ValueAnimator? = null
-  fun startLookUpAnimation() {
-    val iv = bd.ivMBFrame
-    val container = bd.llMBLookUpContainer
-    val arrow = bd.tvMBLookUpArrow
-
-    iv.post {
-      // 1. 컨테이너(눈+화살표 전체)의 위치를 75%, 30% 지점으로 이동
-      val startX = iv.x + (iv.width * 0.8f) - (container.width / 2f)
-      val startY = iv.y + (iv.height * 0.25f)
-
-      container.x = startX
-      container.y = startY
-      container.visibility = View.VISIBLE
-
-      lookUpAnimator?.cancel()
-
-      lookUpAnimator = ValueAnimator.ofFloat(0f, 1f).apply {
-        duration = 1500 // 1.5초
-        repeatCount = ValueAnimator.INFINITE // 무한 반복
-
-        addUpdateListener { animator ->
-          val fraction = animator.animatedValue as Float
-
-          // 2. 화살표(arrow)만 위로 이동
-          arrow.translationY = -100f * fraction
-
-          // 3. 화살표(arrow)만 투명도 조절
-          arrow.alpha = when {
-            fraction < 0.2f -> fraction / 0.2f
-            fraction > 0.7f -> (1f - fraction) / 0.3f
-            else -> 1f
-          }
-        }
-      }
-      lookUpAnimator?.start()
-    }
-  }
-
-  fun stopLookUpAnimation() {
-    lookUpAnimator?.cancel()
-    bd.llMBLookUpContainer.visibility = View.INVISIBLE
-  }
-  private fun setPreviousStep() {
-    mvm.moveToPreviousSeq()
-
-    // -----------# frame -> fdgv 변경하기 #--------
-    Log.v("이전seq", "${mvm.allSeqs}/${mvm.currentSeq}")
-    bd.ivMBFrame.setImageDrawable(
-      ContextCompat.getDrawable(
-        requireActivity(),
-        when (mvm.currentSeq) {
-          Sequence.COMFORT -> R.drawable.drawable_seq_0
-          else -> R.drawable.drawable_seq_6
-        }
-      )
-    )
-    bd.clMBCountDown.visibility = View.GONE
-    mCountDown.cancel()
-    setGuideAnimation(mvm.currentSeq, false)
-
-    bd.btnMBShooting.apply {
-      text = "촬영"
-      isEnabled = true
-    }
-    bd.tvMBPrevious.apply {
-      visibility = if (mvm.currentSeq == mvm.allSeqs[0]) View.INVISIBLE else View.VISIBLE
-      isEnabled = true
-    }
-
-    val seqCount = "${mvm.getSeqIndex() + 1}. ${mvm.currentSeq.displayName}"
-    bd.tvMBSeqCount.text = seqCount
-    viewModel.setCountDownFlag(false)
-
-    val ci =  mvm.getSeqIndex()
-    mvm.tempStaticJo = null
-    mvm.staticJA.remove(ci)
-    mvm.coordinatesJA.remove(ci)
-    mvm.plrJA.remove(ci)
-    mvm.mediaFileNames.removeAt(ci)
-    Log.v("그외STATIC삭제", "${mvm.tempStaticJo}, ${mvm.staticJA.length()}, ${mvm.coordinatesJA.length()}, ${mvm.plrJA.length()}, ${mvm.mediaFileNames}")
-    isCountDown = false
-//    bd.tvGoGallery.isEnabled = true
-  }
 
   private fun setGuideAnimation(seq: Sequence, isEnded: Boolean) {
     bd.btnMBShooting.isEnabled = false
-    bd.tvMBPrevious.isEnabled = false
     bd.tvMBSeqGuide.apply {
       clearAnimation()
       text = if (isEnded) {
@@ -347,15 +248,10 @@ class MBowFragment : Fragment() {
     }
   }
 
-  private val guideHandler = Handler(Looper.getMainLooper())
-  private val guideRunnables = mutableListOf<Runnable>()
-
   // ------! 타이머 control 시작 !------
   private fun startTimer() {
     // 시작 버튼 후 시작
-    guideHandler.postDelayed({stopLookUpAnimation()}, 1000)
     bd.btnMBShooting.isEnabled = false
-    bd.tvMBPrevious.isEnabled = false
     Log.v("startTimer", "${mvm.currentSeq} / ${mvm.allSeqs.size}")
     mCountDown.start()
     viewModel.setCountDownFlag(true)
@@ -384,14 +280,8 @@ class MBowFragment : Fragment() {
       bd.ivMBFrame.setImageDrawable(
         ContextCompat.getDrawable(requireContext(), R.drawable.drawable_seq_6)
       )
-      startLookUpAnimation()
     }
-
     bd.btnMBShooting.apply {
-      isEnabled = true
-    }
-    bd.tvMBPrevious.apply {
-      visibility = View.VISIBLE
       isEnabled = true
     }
     Handler(Looper.getMainLooper()).postDelayed({

@@ -123,9 +123,9 @@ class GyroDialogFragment : DialogFragment(), SensorEventListener {
 
 			context?.let { safeContext ->
 				val colorRes = if (isVerticalCorrect && isHorizontalCorrect)
-					R.color.normal
+					R.color.accentContrast
 				else
-					R.color.red
+					R.color.accent
 				bd.cvMTDGyro.setCardBackgroundColor(ContextCompat.getColor(safeContext, colorRes))
 			}
 		}

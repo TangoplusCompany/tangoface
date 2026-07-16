@@ -238,6 +238,7 @@ object ClassifyUtility {
 
 		if (leftLineLen == 0f || rightLineLen == 0f) return Pair(0f, 0f)
 
+		// 💡 [수정] 외적값에 abs()를 취해 항상 양수 거리만 반환하도록 보장
 		fun distanceFromLine(
 			px: Float, py: Float,
 			x0: Float, y0: Float,
@@ -245,17 +246,17 @@ object ClassifyUtility {
 			lineLen: Float
 		): Float {
 			val cross = (px - x0) * lineY - (py - y0) * lineX
-			return cross / lineLen
+			return abs(cross) / lineLen // 👈 abs() 추가로 방향 무관 절대 거리 산출
 		}
 
 		// 턱선 라인만 (132, 58 제거)
 		val leftCheekIndices  = listOf(136, 150, 149, 176, 148)
 		val rightCheekIndices = listOf(365, 379, 378, 400, 377)
 
-		// 왼쪽은 부호 반전 (왼쪽 기준선은 처짐이 음수로 나옴)
+		// 💡 [수정] 부호 반전 없이 순수 절대 거리의 최댓값만 수집
 		val leftMaxD = leftCheekIndices
 			.map { idx ->
-				-distanceFromLine(
+				distanceFromLine(
 					lm[idx].first, lm[idx].second,
 					leftJaw.first, leftJaw.second,
 					leftLineX, leftLineY, leftLineLen
@@ -263,7 +264,6 @@ object ClassifyUtility {
 			}
 			.maxOrNull() ?: 0f
 
-		// 오른쪽은 양수 그대로
 		val rightMaxD = rightCheekIndices
 			.map { idx ->
 				distanceFromLine(
@@ -274,12 +274,22 @@ object ClassifyUtility {
 			}
 			.maxOrNull() ?: 0f
 
-		val leftCI  = ((leftMaxD  / leftLineLen)  * 10f).coerceAtLeast(0f)
-		val rightCI = ((rightMaxD / rightLineLen) * 10f).coerceAtLeast(0f)
+		// 💡 [수정] 기준값 1.0에서 시작하여 최대 2.0으로 수렴시키는 보정 수식
+		// d/L 비율(보통 0.0 ~ 0.1 사이)에 10을 곱해 더해줍니다.
+
+		/* $0.0\text{cm}$1.00처짐 없음 (칼날 같은 V라인)
+		* $1.4\text{cm}$1.29미세 처짐
+		* $2.8\text{cm}$1.57보통 처짐
+		* $4.2\text{cm}$1.86심한 처짐
+		* $4.9\text{cm}$2.00 (Max)극심한 처짐 (Max 기준점)
+		* */
+		val scaleFactor = 2.86f
+
+		val leftCI  = (1.0f + (leftMaxD  / leftLineLen)  * scaleFactor).coerceIn(1.0f, 2.0f)
+		val rightCI = (1.0f + (rightMaxD / rightLineLen) * scaleFactor).coerceIn(1.0f, 2.0f)
 
 		Log.v("처짐CI", "왼쪽 d: ${"%.4f".format(leftMaxD)} L: ${"%.4f".format(leftLineLen)} CI: ${"%.2f".format(leftCI)}")
 		Log.v("처짐CI", "오른쪽 d: ${"%.4f".format(rightMaxD)} L: ${"%.4f".format(rightLineLen)} CI: ${"%.2f".format(rightCI)}")
-
 		return Pair(leftCI, rightCI)
 	}
 

@@ -31,7 +31,6 @@ import com.tangoplus.tangoface.domain.util.LandmarkUtility.calculateScreenY
 import com.tangoplus.tangoface.domain.util.MeasureUtility.animationSet
 import com.tangoplus.tangoface.domain.util.MeasureUtility.getGuideText
 import com.tangoplus.tangoface.domain.util.MeasureUtility.showPreviousDialog
-import com.tangoplus.tangoface.domain.util.MediaUtility.saveDebugBitmap
 import com.tangoplus.tangoface.domain.util.PreferenceUtility
 import com.tangoplus.tangoface.domain.util.UXUtility.playSound
 import com.tangoplus.tangoface.domain.util.UXUtility.startLongVibrate
@@ -90,6 +89,7 @@ class MExpertFragment : Fragment() {
             when (mvm.currentSeq) {
               Sequence.JAW_LEFT_TILT, Sequence.JAW_RIGHT_TILT -> {
                 val tiltDrawable = if (mvm.currentSeq == Sequence.JAW_LEFT_TILT) R.drawable.drawable_seq_2 else R.drawable.drawable_seq_3
+                setJawTiltGuideText(mvm.currentSeq)
                 bd.ivMEFrame.setFramesAndStart(
                   drawableResIds = listOf(R.drawable.drawable_seq_1, tiltDrawable, R.drawable.drawable_seq_4, R.drawable.drawable_seq_23_done),
                   accentColor = ContextCompat.getColor(requireActivity(), R.color.accent),
@@ -99,22 +99,21 @@ class MExpertFragment : Fragment() {
                   mvm.tempStaticJo = null
 
                   Log.v("녹화 완료", "좌표값: ${mvm.videoTempCoordinatesJA.length()}")
-                  mvm.coordinatesJA.put(mvm.videoTempCoordinatesJA)
-                  mvm.videoTempCoordinatesJA = JSONArray()
+
 //                  mvm.resultBundleToJson(mvm.currentSeq)
                   Log.v("동적 저장완료", "${mvm.coordinatesJA.length()}, 현재 seq: ${mvm.currentSeq}")
                   Log.v("동적 저장완료", "jawOpening: ${isJawOpeningSave},bitmap: ${mvm.maxJawOpeningBitmap}")
                   if (mvm.currentSeq == Sequence.JAW_RIGHT_TILT &&  !isJawOpeningSave && mvm.maxJawOpeningBitmap != null) {
                     requireActivity().lifecycleScope.launch {
-                      saveDebugBitmap(requireContext(), mvm.maxJawOpeningBitmap!!, "JAWOPENING")
+//                      saveDebugBitmap(requireContext(), mvm.maxJawOpeningBitmap!!, "JAWOPENING")
                       mvm.processAndSaveFrameData(
                         Sequence.JAW_OPENING,
                         requireActivity(),
                         mvm.maxJawOpeningBitmap!!,
-                        mvm.maxJawOpeningDepthData,
-                        mvm.maxJawOpeningDepthW,
-                        mvm.maxJawOpeningDepthH,
-                        mvm.maxJawOpeningFace2D
+                        depthData = mvm.maxJawOpeningDepthData,
+                        depthW = mvm.maxJawOpeningDepthW,
+                        depthH = mvm.maxJawOpeningDepthH,
+                        face2D = mvm.maxJawOpeningFace2D
                       )
                       mvm.resultBundleToJson(Sequence.JAW_OPENING, mvm.maxJawOpeningFace2D, mvm.maxJawOpening3D)
                     }
@@ -186,83 +185,86 @@ class MExpertFragment : Fragment() {
     prefsUtil = PreferenceUtility(requireActivity())
     bd.btnMEShooting.setOnSingleClickListener {
       if (bd.btnMEShooting.text == "결과보기") {
-        // ---------------# 데이터 갈무리해서 gallery DialogFragment로 넘기기 #-----------------
-        // 결과보기 눌렀을 떄 임시저장해놨던 jawOpening사용해서 저장
 
-        // GUEST일 경우 초기화
+        // 💡 [단계 1] 클릭 즉시 메인 스레드에서 버튼을 비활성화하여 중복 터치를 차단합니다.
+        bd.btnMEShooting.isEnabled = false
+        // (선택) 로딩 바를 보여주거나 시각적 피드백을 주면 더 좋습니다.
+
         if (ivm.birthdayValue.value == "날짜 선택") {
           ivm.birthdayValue.value = ""
         }
 
         lifecycleScope.launch(Dispatchers.IO) {
-          val fd = FaceDatabase.getDatabase(requireActivity())
-          fDao = fd.faceDao()
+          // 💡 [단계 2] 코루틴 내부 전체를 try-finally로 감쌉니다.
+          try {
+            val fd = FaceDatabase.getDatabase(requireActivity())
+            fDao = fd.faceDao()
 
-          Log.v("userSn설정잘됐는지", "is init? = ${mvm.currentUserSn}, ${mvm.allSeqs}")
-          val allSeqs = mvm.allSeqs
-          val staticJos = mutableListOf<JSONObject>()
-          Log.v("userSn설정잘됐는지", "${mvm.staticJA.length()}")
+            Log.v("userSn설정잘됐는지", "is init? = ${mvm.currentUserSn}, ${mvm.allSeqs}")
+            val allSeqs = mvm.allSeqs
+            val staticJos = mutableListOf<JSONObject>()
 
-          allSeqs.forEachIndexed { index, sequence ->
-            val staticJSON = mvm.setJo(mvm.staticJA.getJSONObject(index), sequence, ivm, prefsUtil, true)
-            staticJos.add(staticJSON)
-//						Log.v("staticJSON", "$staticJSON")
-          }
-//					Log.v("staticJson까보기0", "${staticJos.size}")
-
-          // 받아온 user_sn으로 수정
-          val now = getCurrentDateTime()
-          val transStatics = staticJos.map {
-            it.toFaceStatic().copy(
-              user_sn = mvm.currentUserSn,
-              reg_date = now
-            )
-          }
-          // 부여 받은 user_sn넣기
-          for (static in transStatics) {
-            fDao.insertStatic(static)
-          }
-
-          // data
-          Log.v("mvm.plrJA", "${mvm.plrJA.length()}")
-          val mergedJOBeforeFileName = mutableListOf<JSONObject>()
-          for (i in 0 until staticJos.size) {
-            val mergedJSON = JSONObject().apply {
-              put("data", JSONObject(transStatics[i].toJsonString()))
-              Log.v("LEN", "i=$i, coordinatesLen=${mvm.coordinatesJA.length()}, plrLen=${mvm.plrJA.length()}, mediaNames=${mvm.mediaFileNames.size}")
-              put("face_landmark", mvm.coordinatesJA.optJSONArray(i))
-              put("pose_landmark", mvm.plrJA.optJSONArray(i))
-
-              if (i == 0) {
-                put("hairline_landmark", mvm.hairLineJA.optJSONArray(i))
-              }
+            allSeqs.forEachIndexed { index, sequence ->
+              val staticJSON = mvm.setJo(mvm.staticJA.getJSONObject(index), sequence, ivm, prefsUtil, true)
+              staticJos.add(staticJSON)
             }
-            mergedJOBeforeFileName.add(mergedJSON)
-            Log.v("json저장 전", "seq: $i")
-            val jsonPath = mvm.saveJsonToStorage(
-              requireActivity(),
-              mergedJSON,
-              mvm.mediaFileNames[i].replace(".webp", "").replace(".mp4", "")
-            )
 
+            val now = getCurrentDateTime()
+            val transStatics = staticJos.map {
+              it.toFaceStatic().copy(
+                user_sn = mvm.currentUserSn,
+                reg_date = now
+              )
+            }
 
-            mergedJOBeforeFileName[i].put("json_file_name", jsonPath)
-            mvm.mergedJA.put(mergedJOBeforeFileName[i])
-          }
+            for (static in transStatics) {
+              fDao.insertStatic(static)
+            }
 
-          Log.v("mvm.mergedJson", "${mvm.mergedJA.length()}")
+            val mergedJOBeforeFileName = mutableListOf<JSONObject>()
+            for (i in 0 until staticJos.size) {
+              val mergedJSON = JSONObject().apply {
+                put("data", JSONObject(transStatics[i].toJsonString()))
+                put("face_landmark", mvm.coordinatesJA.optJSONArray(i))
+                put("pose_landmark", mvm.plrJA.optJSONArray(i))
 
-          withContext(Dispatchers.Main) {
-            val lastTempServerSn = prefsUtil.getLastTempServerSn()
-            // prefs에서 마지막 sn을 +1 하기
-            prefsUtil.setNextTempServerSn()
+                if (i == 0) {
+                  put("hairline_landmark", mvm.hairLineJA.optJSONArray(i))
+                }
+              }
+              mergedJOBeforeFileName.add(mergedJSON)
+              val jsonPath = mvm.saveJsonToStorage(
+                requireActivity(),
+                mergedJSON,
+                mvm.mediaFileNames[i].replace(".webp", "").replace(".mp4", "")
+              )
 
-//						Log.v("스태틱스Sn", "$lastTempServerSn, ${mvm.currentUserSn}: ${transStatics.map { it.user_sn }}")
-            viewModel.comparisonDoubleItem = null
-            val intent = Intent(requireActivity(), MainActivity::class.java)
-            intent.putExtra("serverSn", lastTempServerSn)
-            startActivity(intent)
-            requireActivity().finishAffinity()
+              mergedJOBeforeFileName[i].put("json_file_name", jsonPath)
+              mvm.mergedJA.put(mergedJOBeforeFileName[i])
+            }
+
+            // 정상적으로 모든 헤비 연산이 끝난 시점
+            withContext(Dispatchers.Main) {
+              val lastTempServerSn = prefsUtil.getLastTempServerSn()
+              prefsUtil.setNextTempServerSn()
+
+              viewModel.comparisonDoubleItem = null
+              val intent = Intent(requireActivity(), MainActivity::class.java)
+              intent.putExtra("serverSn", lastTempServerSn)
+              startActivity(intent)
+              requireActivity().finishAffinity()
+            }
+
+          } catch (e: Exception) {
+            // 💡 연산 도중 에러(DB 풀, 용량 부족 등)가 났을 때 로그를 남깁니다.
+            Log.e("ShootingClick", "❌ 데이터 처리 중 예외 발생: ${e.message}")
+            e.printStackTrace()
+          } finally {
+            // 💡 [단계 3] 어떤 이유로든 작업이 종료되면 버튼 잠금을 해제합니다.
+            // 성공 시엔 finishAffinity()로 죽지만, 실패 시 사용자가 재시도할 수 있어야 하므로 필수입니다.
+            withContext(Dispatchers.Main) {
+              bd.btnMEShooting.isEnabled = true
+            }
           }
         }
       } else {
@@ -464,6 +466,35 @@ class MExpertFragment : Fragment() {
     isCountDown = false
 //    bd.tvGoGallery.isEnabled = true
     Log.v("업데이트UI", "${mvm.plrJA.length()}")
+  }
+
+
+  private fun setJawTiltGuideText(step: Sequence) {
+    val guideText = when (step) {
+      Sequence.JAW_LEFT_TILT -> "1. 미소지은 상태로 턱을 왼쪽으로 끝까지 움직이세요\n2. 입을 최대한 벌려주세요\n3. 입을 다물어 측정을 완료하세요"
+      Sequence.JAW_RIGHT_TILT -> "1. 미소지은 상태로 턱을 오른쪽으로 끝까지 움직이세요\n2. 입을 최대한 벌려주세요\n3. 입을 다물어 측정을 완료하세요"
+      else -> return
+    }
+
+    cancelJawTiltGuideText()
+    val lines = guideText.split("\n")
+    var accumulatedDelay = 0L
+
+    lines.forEachIndexed { index, line ->
+      val currentDelay = if (index == 0) 1750L else 1400L
+      val runnable = Runnable {
+        bd.tvMESeqGuide.text = line
+      }
+
+      // 등록
+      guideRunnables.add(runnable)
+      guideHandler.postDelayed(runnable, accumulatedDelay)
+      accumulatedDelay += currentDelay
+    }
+  }
+  fun cancelJawTiltGuideText() {
+    guideRunnables.forEach { runnable -> guideHandler.removeCallbacks(runnable) }
+    guideRunnables.clear()
   }
 
 }

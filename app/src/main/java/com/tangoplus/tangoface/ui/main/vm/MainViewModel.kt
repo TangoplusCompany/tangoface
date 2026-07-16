@@ -13,6 +13,8 @@ import com.tangoplus.tangoface.data.db.FaceDatabase
 import com.tangoplus.tangoface.data.db.FaceShape
 import com.tangoplus.tangoface.data.db.FaceStatic
 import com.tangoplus.tangoface.domain.util.FileUtility
+import com.tangoplus.tangoface.domain.util.FileUtility.getImageUriFromFileName
+import com.tangoplus.tangoface.domain.util.FileUtility.getVideoUriFromFileName
 import com.tangoplus.tangoface.domain.vision.face.FaceLandmarkerHelper
 import com.tangoplus.tangoface.domain.vo.FaceResult
 import com.tangoplus.tangoface.domain.vo.Sequence
@@ -169,11 +171,20 @@ class MainViewModel : ViewModel() {
 		faceStatics.filter { it.local_sn != 0 }.forEachIndexed { indexx, faceStatic ->
 			// 이미지 URI 변환
 			try {
-				val imageUri = FileUtility.getImageUriFromFileName(context, faceStatic.media_file_name)
-				val baseStr = faceStatic.media_file_name.replaceFirst("-", "-moire-")
-				val moireUri = FileUtility.getImageUriFromFileName(context, baseStr)
-				mediaUris.add(imageUri)
-				moireUris.add(moireUri)
+				if (faceStatic.seq in listOf(2, 3)) { // DB에 저장된 seq Int값
+					val videoUri = getVideoUriFromFileName(context, faceStatic.media_file_name)
+					mediaUris.add(videoUri)
+					Log.v("비디오", "$indexx ${faceStatic.media_file_name}")
+				} else {
+					val imageUri = getImageUriFromFileName(context, faceStatic.media_file_name)
+					mediaUris.add(imageUri)
+					if (indexx == 0) {
+						val baseStr = faceStatic.media_file_name.replaceFirst("-", "-moire-")
+						val moireUri = getImageUriFromFileName(context, baseStr)
+						moireUris.add(moireUri)
+					}
+					Log.v("이미지URI", "$indexx ${faceStatic.media_file_name}")
+				}
 			} catch (e: Exception) {
 				mediaUris.add(null)
 				Log.e("FaceResultConverter", "이미지 URI 파싱 실패: ${faceStatic.media_file_name}", e)
@@ -182,6 +193,7 @@ class MainViewModel : ViewModel() {
 			// JSON 읽기
 			try {
 				val jsonObject = FileUtility.readJsonFromFile(faceStatic.json_file_name) ?: JSONObject()
+				Log.v("faceResult", "$indexx => ${faceStatic.json_file_name}")
 				jsonArray.put(jsonObject)
 			} catch (e: Exception) {
 				Log.e("FaceResultConverter", "JSON 파일 읽기 실패", e)

@@ -18,36 +18,36 @@ object MediaUtility {
       List(frameLandmarks.length()) { j ->
         val landmark = frameLandmarks.getJSONArray(j)
         Pair(
-          landmark.getDouble(1).toFloat(),  // x
-          landmark.getDouble(2).toFloat()   // y
+          landmark.getDouble(0).toFloat(),  // x
+          landmark.getDouble(1).toFloat()   // y
         )
       }
     }
   }
 
-  fun saveDebugBitmap(context: Context, bitmap: Bitmap, seqName: String) {
-    try {
-      val fileName = "DEBUG_${seqName}_${System.currentTimeMillis()}.jpg"
-      val contentValues = ContentValues().apply {
-        put(MediaStore.MediaColumns.DISPLAY_NAME, fileName)
-        put(MediaStore.MediaColumns.MIME_TYPE, "image/jpeg")
-        put(MediaStore.Images.Media.RELATIVE_PATH, "Pictures/DebugTango")
-      }
-
-      val imageUri = context.contentResolver.insert(
-        MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
-        contentValues
-      )
-
-      imageUri?.let { uri ->
-        context.contentResolver.openOutputStream(uri)?.use { outputStream ->
-          // 현재 상태 그대로 퀄리티 100으로 저장
-          bitmap.compress(Bitmap.CompressFormat.JPEG, 100, outputStream)
-          Log.d("DebugBitmap", "✅ 디버그 이미지 저장 완료: Pictures/DebugTango/$fileName")
-        }
-      }
-    } catch (e: Exception) {
-      Log.e("DebugBitmap", "❌ 디버그 이미지 저장 실패: ${e.message}")
-    }
-  }
+//  fun saveDebugBitmap(context: Context, bitmap: Bitmap, seqName: String) {
+//    try {
+//      val fileName = "DEBUG_${seqName}_${System.currentTimeMillis()}.jpg"
+//      val contentValues = ContentValues().apply {
+//        put(MediaStore.MediaColumns.DISPLAY_NAME, fileName)
+//        put(MediaStore.MediaColumns.MIME_TYPE, "image/jpeg")
+//        put(MediaStore.Images.Media.RELATIVE_PATH, "Pictures/DebugTango")
+//      }
+//
+//      val imageUri = context.contentResolver.insert(
+//        MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
+//        contentValues
+//      )
+//
+//      imageUri?.let { uri ->
+//        context.contentResolver.openOutputStream(uri)?.use { outputStream ->
+//          // 현재 상태 그대로 퀄리티 100으로 저장
+//          bitmap.compress(Bitmap.CompressFormat.JPEG, 100, outputStream)
+//          Log.d("DebugBitmap", "✅ 디버그 이미지 저장 완료: Pictures/DebugTango/$fileName")
+//        }
+//      }
+//    } catch (e: Exception) {
+//      Log.e("DebugBitmap", "❌ 디버그 이미지 저장 실패: ${e.message}")
+//    }
+//  }
 }

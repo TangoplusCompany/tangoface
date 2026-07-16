@@ -32,6 +32,7 @@
     <color name="subColor700">#545353</color>
     <color name="subColor900">#181717</color>
     <color name="rippleColor">#33FFFDFD</color>
+    <color name="rippleColorDark">#33000000</color>
 
 
     <color name="red">#FF5449</color>

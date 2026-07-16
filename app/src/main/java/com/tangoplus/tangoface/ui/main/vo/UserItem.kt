@@ -1,6 +1,7 @@
 package com.tangoplus.tangoface.ui.main.vo
 
 import android.os.Parcelable
+import com.tangoplus.tangoface.domain.vo.MeasureType
 import kotlinx.parcelize.Parcelize
 
 
@@ -14,5 +15,6 @@ data class UserItem(
 	val gender: Int? = null,
 	val regDate: String = "",
 	val insight: String  ="",
+	val measureType: MeasureType,
 	var activated: Int = 1
 ) : Parcelable

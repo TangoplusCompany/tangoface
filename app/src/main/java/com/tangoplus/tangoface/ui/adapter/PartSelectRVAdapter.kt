@@ -14,7 +14,7 @@ import com.tangoplus.tangoface.ui.info.vm.SelectViewModel
 import com.tangoplus.tangoface.ui.info.vo.FacialPart
 import com.tangoplus.tangoface.ui.listener.OnFacialPartClickListener
 
-class PartSelectRVAdapter(private val svm: SelectViewModel, private val case: Int) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
+class PartSelectRVAdapter(private val svm: SelectViewModel) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
 	var onFacialPartClickListener : OnFacialPartClickListener? = null
 	inner class FacialPartViewHolder(view: View) : RecyclerView.ViewHolder(view) {
 		val clFHAI : ConstraintLayout = view.findViewById(R.id.clFHAI)
@@ -56,9 +56,6 @@ class PartSelectRVAdapter(private val svm: SelectViewModel, private val case: In
 	}
 
 	override fun getItemCount(): Int {
-		return when (case) {
-			0 -> svm.facialHorizonSelect.size
-			else -> 0
-		}
+		return svm.facialHorizonSelect.size
 	}
 }

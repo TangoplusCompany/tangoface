@@ -493,34 +493,37 @@ class OverlayView(context: Context?, attrs: AttributeSet?) :
 		// 콘텐츠 배치(레터박스/크롭) 계산
 		val (scale, offX, offY, effW, effH) = computePlacement(srcW, srcH, dstW, dstH, scaleType)
 
-		targets.forEach { t ->
-			// 1) 회전/미러 반영된 포인트/박스 얻기
+		val targetPoints = targets.map { t ->
 			val (cx, cy) = rotateMirrorPoint(t.center.x, t.center.y, srcW, srcH, rotateDeg, mirrorX)
-			val (bx0, by0) = rotateMirrorPoint(
-				t.bbox.x.toDouble(),
-				t.bbox.y.toDouble(),
-				srcW,
-				srcH,
-				rotateDeg,
-				mirrorX
-			)
-			val (bx1, by1) = rotateMirrorPoint(
-				(t.bbox.x + t.bbox.width).toDouble(),
-				(t.bbox.y + t.bbox.height).toDouble(),
-				srcW, srcH, rotateDeg, mirrorX
-			)
-
-			// 2) (src) → (dst) 스케일 & 오프셋 적용
 			val vx = (cx * scale + offX).toFloat()
 			val vy = (cy * scale + offY).toFloat()
-			val left = (minOf(bx0, bx1) * scale + offX).toFloat()
-			val top = (minOf(by0, by1) * scale + offY).toFloat()
-			val right = (maxOf(bx0, bx1) * scale + offX).toFloat()
-			val bottom = (maxOf(by0, by1) * scale + offY).toFloat()
+			PointF(vx, vy)
+		}
 
-			// 3) 그리기
-			canvas.drawCircle(vx, vy, 20f, circlePaint)
-//            canvas.drawRect(RectF(left, top, right, bottom), boxPaint)
+// 2) horizontal 방식과 똑같이 곡선 Path 생성
+		val targetsLinePath = Path()
+		if (targetPoints.isNotEmpty()) {
+			targetsLinePath.moveTo(targetPoints[0].x, targetPoints[0].y)
+
+			for (i in 1 until targetPoints.size) {
+				val prev = targetPoints[i - 1]
+				val curr = targetPoints[i]
+
+				val midX = (prev.x + curr.x) / 2
+				val midY = (prev.y + curr.y) / 2
+
+				targetsLinePath.quadTo(prev.x, prev.y, midX, midY)
+			}
+			targetsLinePath.lineTo(targetPoints.last().x, targetPoints.last().y)
+		}
+
+// 3) 선 그리기
+		val targetsLinePaint = standardPaint // 원하는 페인트 객체 지정
+		canvas.drawPath(targetsLinePath, targetsLinePaint)
+
+// 4) 기존처럼 각 점 위치에 원(Circle) 그리기
+		targetPoints.forEach { pt ->
+			canvas.drawCircle(pt.x, pt.y, 20f, circlePaint)
 		}
 	}
 

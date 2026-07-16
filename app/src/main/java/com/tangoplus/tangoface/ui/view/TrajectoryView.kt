@@ -19,14 +19,14 @@ class TrajectoryView @JvmOverloads constructor(
 ) : View(context, attrs, defStyleAttr) {
 
 	private val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-		color = "#8000FF00".toColorInt()
+		color = "#FF0055".toColorInt()
 		strokeWidth = 6f
 		isAntiAlias = true
 		style = Paint.Style.STROKE
 //        maskFilter = BlurMaskFilter(10f, BlurMaskFilter.Blur.SOLID)
 	}
 	private val circlePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-		color = "#FFD700".toColorInt()
+		color = "#00FFCC".toColorInt()
 		style = Paint.Style.FILL_AND_STROKE
 	}
 	private var preCalculatedBreakpoints: List<Int> = listOf()
@@ -112,7 +112,7 @@ class TrajectoryView @JvmOverloads constructor(
 				canvas.drawCircle(
 					scaledPoints[breakpointIndex].x,
 					scaledPoints[breakpointIndex].y,
-					15f,
+					12f,
 					circlePaint
 				)
 			}

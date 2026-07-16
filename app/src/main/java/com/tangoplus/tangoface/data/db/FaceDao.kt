@@ -53,6 +53,7 @@ interface FaceDao {
 			    S.gender AS gender,
 			    S.reg_date AS regDate, 
 			    IFNULL(I.insight, '') AS insight,
+					S.measure_type AS measureType,
 			    S.uuid,
 			    1 AS activated
 			FROM t_face_static S

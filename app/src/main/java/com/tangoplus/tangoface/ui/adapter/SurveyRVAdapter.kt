@@ -1,5 +1,6 @@
 package com.tangoplus.tangoface.ui.adapter
 
+import android.annotation.SuppressLint
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -29,7 +30,7 @@ class SurveyRVAdapter(
     return SurveyViewHolder(bd.root)
   }
 
-  override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
+  override fun onBindViewHolder(holder: RecyclerView.ViewHolder, @SuppressLint("RecyclerView") position: Int) {
     if (holder is SurveyViewHolder) {
       holder.tvRSITitle.text = titles[position]
 

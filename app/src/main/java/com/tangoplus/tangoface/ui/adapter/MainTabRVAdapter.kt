@@ -22,10 +22,10 @@ class MainTabRVAdapter(private val tabs : List<String>) : RecyclerView.Adapter<R
     fun bind(currentItem : String, idx: Int) {
       tvMTITitle.text = currentItem
       ivMTI.text = when(idx) {
-        0 -> "🎀"
-        1 -> "😬"
-        2 -> "🏹"
-        else -> "🖼️"
+        0 -> "🖼️"
+        1 -> "🏹"
+        2 -> "😬"
+        else -> "👰🏻‍♀️"
       }
 
       clMTI.setOnSingleClickListener {

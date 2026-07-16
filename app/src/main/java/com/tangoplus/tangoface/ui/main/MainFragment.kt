@@ -204,7 +204,6 @@ class MainFragment : Fragment(), OnMainTabClickListener {
 	private val promoImages = listOf(
 		R.drawable.poster_main_0,
 		R.drawable.poster_main_1,
-		R.drawable.poster_main_2,
 	)
 	private val autoScrollHandler = Handler(Looper.getMainLooper())
 	private var autoScrollRunnable: Runnable? = null

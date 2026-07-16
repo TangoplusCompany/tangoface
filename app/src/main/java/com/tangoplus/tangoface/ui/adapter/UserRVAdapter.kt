@@ -12,6 +12,7 @@ import com.tangoplus.tangoface.R
 import com.tangoplus.tangoface.databinding.RvUserItemBinding
 import com.tangoplus.tangoface.ui.main.vo.UserItem
 import com.tangoplus.tangoface.domain.util.FileUtility.setOnSingleClickListener
+import com.tangoplus.tangoface.domain.vo.MeasureType
 import com.tangoplus.tangoface.ui.listener.OnUserClickListener
 import java.util.Calendar
 import java.util.TimeZone
@@ -31,6 +32,7 @@ class UserRVAdapter(
 		val tvMVIGender: TextView = view.findViewById(R.id.tvMVIGender)
 		val tvUICircle: TextView = view.findViewById(R.id.tvUICircle)
 		val tvMVIMobile : TextView = view.findViewById(R.id.tvMVIMobile)
+		val tvMVIType : TextView = view.findViewById(R.id.tvMVIType)
 	}
 
 	override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder {
@@ -106,6 +108,11 @@ class UserRVAdapter(
 			holder.clMVI.setOnSingleClickListener {
 				onUserClickListener?.onUserClick(currentItem.tempServerSn)
 			}
+//
+//			val typeText = when (currentItem.measureType) {
+//				MeasureType.EXPERT ->
+//			}
+			holder.tvMVIType.text = currentItem.measureType.displayName
 		}
 	}
 
