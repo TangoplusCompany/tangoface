@@ -3,6 +3,7 @@ package com.tangoplus.tangoface.data.db
 import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.Query
+import com.tangoplus.tangoface.ui.info.vo.BowItem
 import com.tangoplus.tangoface.ui.main.vo.UserItem
 
 @Dao
@@ -66,6 +67,44 @@ interface FaceDao {
 	suspend fun getAllUserItem(): List<UserItem>
 
 
+	@Query(
+		"""
+   SELECT
+    temp_server_sn AS tempServerSn,
+    name AS name,
+    mobile AS mobile,
+    birthday AS birthday,
+    nationality AS nationality,
+    reg_date AS regDate,
+    1 AS activated
+   FROM t_face_static
+   WHERE (:isGuest = 1 AND name = 'GUEST')
+      OR (:isGuest = 0 AND temp_server_sn = :tempServerSn)
+  """
+	)
+	suspend fun getAllBowItems(
+		tempServerSn: Int? = null, // 💡 nullable 및 기본값 null 적용
+		isGuest: Boolean = false
+	): List<BowItem>
+
+	@Query(
+		"""
+   SELECT
+    temp_server_sn AS tempServerSn,
+    name AS name,
+    mobile AS mobile,
+    birthday AS birthday,
+    nationality AS nationality,
+    reg_date AS regDate,
+    1 AS activated
+   FROM t_face_static
+   WHERE temp_server_sn = :tempServerSn
+  """
+	)
+	suspend fun getMatchedBowItem(
+		tempServerSn: Int? = null,
+	): BowItem
+
 	@Query("SELECT * FROM t_face_static WHERE temp_server_sn == :tempServerSn ORDER BY seq ASC")
 	suspend fun getStatic(tempServerSn: Int): List<FaceStatic>
 
@@ -85,8 +124,7 @@ interface FaceDao {
 
 	@Query("SELECT temp_server_sn FROM t_face_static WHERE activated = 1 ORDER BY temp_server_sn DESC LIMIT 1")
 	suspend fun getLatestTempServerSn(): Int
-	@Query("SELECT temp_server_sn FROM t_face_static WHERE measure_type = 2 AND uuid = :uuid ORDER BY reg_date DESC")
-	suspend fun getBowSns(uuid: String): List<Int>
+
 	// ------------------------------------# 설문지 넣기 #------------------------------------
 	@Insert
 	suspend fun insertPreCheckListResult(precheckListResult: PreCheckList): Long

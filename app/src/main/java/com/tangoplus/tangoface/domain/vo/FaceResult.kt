@@ -17,5 +17,4 @@ data class FaceResult(
 	var insight: String,
 	var regDate: String? = null,
 	var measureType : Int,
-	var bowSns : List<Int> = listOf()
 )

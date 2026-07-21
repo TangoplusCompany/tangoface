@@ -105,6 +105,11 @@ class IExpertFragment : Fragment(), OnFacialPartClickListener, OnSequenceClickLi
       val behavior = BottomSheetBehavior.from(bd.bsIE)
       behavior.state = BottomSheetBehavior.STATE_HIDDEN
     }
+
+    bd.tvIEBow.setOnSingleClickListener {
+      val dialog = IBowSelectDialogFragment()
+      dialog.show(requireActivity().supportFragmentManager, "")
+    }
   }
 
   private fun setAdapter() {

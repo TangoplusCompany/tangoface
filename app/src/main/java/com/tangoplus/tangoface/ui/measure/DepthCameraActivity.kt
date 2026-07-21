@@ -384,7 +384,7 @@ class DepthCameraActivity : BaseActivity(), FaceLandmarkerHelper.LandmarkerListe
 									}
 								}
 
-								if (mvm.currentSeq == Sequence.BOW) {
+								if (mvm.currentSeq == Sequence.BOW && ::trackerExecutor.isInitialized) {
 									val result = hsvTracker.process(bmp, makeDebugMask = false)
 									trackerExecutor.execute {
 										if (result.targets.isEmpty()) {
@@ -396,7 +396,8 @@ class DepthCameraActivity : BaseActivity(), FaceLandmarkerHelper.LandmarkerListe
 												srcH = 1920,
 												scaleType = OverlayView.ScaleType.FIT,
 												rotateDeg = 0,
-												mirrorX = true
+												mirrorX = true,
+												offsetY = -40f,
 											)
 											mvm.currentTarget = result.targets
 										}
@@ -515,6 +516,10 @@ class DepthCameraActivity : BaseActivity(), FaceLandmarkerHelper.LandmarkerListe
 		supportFragmentManager.beginTransaction().apply {
 			replace(R.id.flDC, selectedFragment)
 			commit()
+		}
+
+		if (mvm.measureType == MeasureType.BOW) {
+			initHsv()
 		}
 		// 상단, 하단 상태표시줄 넣기
 		val controller = WindowCompat.getInsetsController(window, window.decorView)
@@ -835,7 +840,6 @@ class DepthCameraActivity : BaseActivity(), FaceLandmarkerHelper.LandmarkerListe
 		ivm.nameValue.value = ""
 		ivm.mobileValue.value = ""
 		ivm.isShownBtn = false
-		viewModel.comparisonDoubleItem = null
 
 //		val currentUserItem = intent.getParcelableExtra<UserItem>("currentUserItem")
 //		Log.v("currentUserItem", "is init? = $currentUserItem, ${currentUserItem == null}")

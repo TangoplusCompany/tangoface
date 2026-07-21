@@ -7,7 +7,6 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.activityViewModels
 import com.tangoplus.tangoface.R
-import com.tangoplus.tangoface.data.db.FaceDao
 import com.tangoplus.tangoface.databinding.FragmentInfoContainerBinding
 import com.tangoplus.tangoface.domain.vo.MeasureType
 import com.tangoplus.tangoface.domain.vo.Sequence
@@ -23,7 +22,6 @@ class InfoContainerFragment : Fragment() {
   private val svm: SelectViewModel by activityViewModels()
   private val ivm: InformationViewModel by activityViewModels()
   private val mvm: MainViewModel by activityViewModels()
-  private lateinit var fDao: FaceDao
 
   companion object {
     private const val ARG_M_TYPE = "MEASURE_TYPE"
@@ -50,7 +48,6 @@ class InfoContainerFragment : Fragment() {
   }
   override fun onDestroyView() {
     super.onDestroyView()
-    mvm.comparisonDoubleItem = null
     ivm.currentCheckedLines.clear()
     svm.updateFacialPart(FacialPart.DERIVE)
     svm.updateSequence(Sequence.COMFORT)
@@ -67,7 +64,7 @@ class InfoContainerFragment : Fragment() {
     val frg = when (measureTypeNum) {
       0 -> INormalFragment()
       1 -> IExpertFragment()
-      else -> INormalFragment()
+      else -> IExpertFragment()
     }
 
     requireActivity().supportFragmentManager.beginTransaction().apply {

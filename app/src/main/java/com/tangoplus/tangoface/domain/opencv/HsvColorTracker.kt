@@ -16,9 +16,11 @@ import kotlin.math.max
 
 class HsvColorTracker(
 	private var hsvRange: HsvRange = HsvRange.exampleRedDual().second,
-	private val minBlobAreaPx: Int = 400, // reject tiny noise blobs
-	private val useOpenMorphology: Boolean = true, // open/close to clean mask
-	private val smoothFactor: Float = 0.25f // EMA smoothing for track point
+	private val minBlobAreaPx: Int = 400,        // 노이즈 필터 최소 크기 (400 이상 추천)
+	private val useOpenMorphology: Boolean = true,
+	private val smoothFactor: Float = 0.25f,     // EMA 이동평활화
+	private val useClahe: Boolean = false,       // 💡 CLAHE는 노이즈 유발하므로 기본 false
+	private val maxMissingFrames: Int = 1        // 💡 튀는 거 막기 위해 1프레임만 유지
 ) {
 	data class HsvRange(
 		val low: Scalar, // Scalar(h, s, v)
@@ -45,11 +47,11 @@ class HsvColorTracker(
 //            fun exampleGreen() = HsvRange(Scalar(40.0, 60.0, 60.0), Scalar(85.0, 255.0, 255.0))
 			fun exampleRedDual(): Pair<HsvRange, HsvRange> =
 				HsvRange(
-					Scalar(0.0, 90.0, 100.0),
-					Scalar(10.0, 255.0, 255.0)
+					Scalar(0.0, 110.0, 45.0),   // H: 0~8 (주황/피부색 제외), S: 110 이상 (순도 높은 빨강만), V: 45 이상
+					Scalar(8.0, 255.0, 255.0)
 				) to
 					HsvRange(
-						Scalar(170.0, 100.0, 90.0),
+						Scalar(172.0, 110.0, 45.0), // H: 172~180 (피부색 상한선 차단)
 						Scalar(180.0, 255.0, 255.0)
 					)
 		}
@@ -97,29 +99,35 @@ class HsvColorTracker(
 			// RGBA → HSV
 			val hsv = Mat()
 			Imgproc.cvtColor(rgba, hsv, Imgproc.COLOR_RGB2HSV)
-			if (hsv.empty()) return MultiTrackResult(emptyList(), null)
+			if (useClahe) {
+				val hsvChannels = ArrayList<Mat>()
+				Core.split(hsv, hsvChannels)
+				val clahe = Imgproc.createCLAHE(1.5, Size(8.0, 8.0))
+				clahe.apply(hsvChannels[2], hsvChannels[2])
+				Core.merge(hsvChannels, hsv)
+				hsvChannels.forEach { it.release() }
+			}
 
 			// inRange
 			val mask = Mat()
 			val (redLo, redHi) = HsvRange.exampleRedDual()
-			if (hsvRange == redLo || hsvRange == redHi) {
-				val m1 = Mat();
-				val m2 = Mat()
-				Core.inRange(hsv, redLo.low, redLo.high, m1)
-				Core.inRange(hsv, redHi.low, redHi.high, m2)
-				Core.bitwise_or(m1, m2, mask)
-				m1.release(); m2.release()
-			} else {
-				Core.inRange(hsv, hsvRange.low, hsvRange.high, mask)
-			}
+			val m1 = Mat()
+			val m2 = Mat()
+			Core.inRange(hsv, redLo.low, redLo.high, m1)
+			Core.inRange(hsv, redHi.low, redHi.high, m2)
+			Core.bitwise_or(m1, m2, mask)
+			m1.release()
+			m2.release()
 
+			// 💡 모폴로지 연산: MORPH_OPEN으로 미세 노이즈 박멸
 			if (useOpenMorphology) {
 				val k = Imgproc.getStructuringElement(
 					Imgproc.MORPH_ELLIPSE,
-					Size(7.0, 7.0) // 노이즈 억제 강화
+					Size(7.0, 7.0) // 커널 크기를 7x7로 찌꺼기 완벽 제거
 				)
 				Imgproc.morphologyEx(mask, mask, Imgproc.MORPH_OPEN, k)
 				Imgproc.morphologyEx(mask, mask, Imgproc.MORPH_CLOSE, k)
+				k.release()
 			}
 
 			// 컨투어
@@ -178,13 +186,21 @@ class HsvColorTracker(
 				preview.release()
 				dbg
 			} else null
+			val imgW = mask.cols()
+			val imgH = mask.rows()
+
+			val roiTargets = smoothedTargets.filter { target ->
+				val normX = target.center.x / imgW
+				val normY = target.center.y / imgH
+				normX in 0.05..0.95 && normY in 0.35..1.0 // 원하는 영역 비율 (10%~90%, 35%~100%)
+			}
 
 			// 정리
 			hsv.release(); mask.release()
 			contours.forEach { it.release() }
 			rgba.release()
 
-			return MultiTrackResult(smoothedTargets, debugBmp)
+			return MultiTrackResult(roiTargets, debugBmp)
 
 		} catch (t: Throwable) {
 			android.util.Log.e("HSV", "process() exception: ${t.message}", t)

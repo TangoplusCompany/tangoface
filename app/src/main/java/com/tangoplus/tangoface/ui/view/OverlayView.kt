@@ -455,6 +455,7 @@ class OverlayView(context: Context?, attrs: AttributeSet?) :
 		invalidate()
 	}
 	private var targets: List<HsvColorTracker.Target> = emptyList()
+	private var targetOffsetY: Float = 0f
 	// HSV 페이스 보우
 	fun updateColorTracks(
 		targets: List<HsvColorTracker.Target>,
@@ -462,7 +463,8 @@ class OverlayView(context: Context?, attrs: AttributeSet?) :
 		srcH: Int,
 		scaleType: ScaleType = ScaleType.FIT,
 		rotateDeg: Int = 0,
-		mirrorX: Boolean = false
+		mirrorX: Boolean = false,
+		offsetY: Float = 0f
 	) {
 		this.targets = targets
 		this.srcW = srcW
@@ -471,6 +473,7 @@ class OverlayView(context: Context?, attrs: AttributeSet?) :
 		this.rotateDeg = rotateDeg
 		this.mirrorX = mirrorX
 		this.visible = targets.isNotEmpty()
+		this.targetOffsetY = offsetY
 		postInvalidateOnAnimation()
 	}
 
@@ -494,35 +497,40 @@ class OverlayView(context: Context?, attrs: AttributeSet?) :
 		val (scale, offX, offY, effW, effH) = computePlacement(srcW, srcH, dstW, dstH, scaleType)
 
 		val targetPoints = targets.map { t ->
-			val (cx, cy) = rotateMirrorPoint(t.center.x, t.center.y, srcW, srcH, rotateDeg, mirrorX)
+			val shiftedY = t.center.y - targetOffsetY
+
+			val (cx, cy) = rotateMirrorPoint(t.center.x, shiftedY, srcW, srcH, rotateDeg, mirrorX)
 			val vx = (cx * scale + offX).toFloat()
 			val vy = (cy * scale + offY).toFloat()
 			PointF(vx, vy)
 		}
 
-// 2) horizontal 방식과 똑같이 곡선 Path 생성
-		val targetsLinePath = Path()
-		if (targetPoints.isNotEmpty()) {
-			targetsLinePath.moveTo(targetPoints[0].x, targetPoints[0].y)
+		val sortedPoints = targetPoints
+			.map { PointF(it.x, it.y - 40f) } // 💡 Y축 -40 오프셋 적용
+			.sortedBy { it.x }                // 💡 X값 작은 순서대로 정렬
 
-			for (i in 1 until targetPoints.size) {
-				val prev = targetPoints[i - 1]
-				val curr = targetPoints[i]
+		val targetsLinePath = Path()
+		if (sortedPoints.isNotEmpty()) {
+			targetsLinePath.moveTo(sortedPoints[0].x, sortedPoints[0].y)
+
+			for (i in 1 until sortedPoints.size) {
+				val prev = sortedPoints[i - 1]
+				val curr = sortedPoints[i]
 
 				val midX = (prev.x + curr.x) / 2
 				val midY = (prev.y + curr.y) / 2
 
 				targetsLinePath.quadTo(prev.x, prev.y, midX, midY)
 			}
-			targetsLinePath.lineTo(targetPoints.last().x, targetPoints.last().y)
+			targetsLinePath.lineTo(sortedPoints.last().x, sortedPoints.last().y)
 		}
 
 // 3) 선 그리기
-		val targetsLinePaint = standardPaint // 원하는 페인트 객체 지정
+		val targetsLinePaint = standardPaint
 		canvas.drawPath(targetsLinePath, targetsLinePaint)
 
-// 4) 기존처럼 각 점 위치에 원(Circle) 그리기
-		targetPoints.forEach { pt ->
+// 4) 보정된 좌표 위치에 원(Circle) 그리기
+		sortedPoints.forEach { pt ->
 			canvas.drawCircle(pt.x, pt.y, 20f, circlePaint)
 		}
 	}

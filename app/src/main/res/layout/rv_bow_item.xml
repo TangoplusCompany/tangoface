@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/clBI"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginStart="10dp"
+    android:layout_marginEnd="10dp"
+    android:layout_marginBottom="10dp"
+    android:background="@drawable/bckgnd_20"
+    android:backgroundTint="@color/bg700">
+
+    <TextView
+        android:id="@+id/tvBIName"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="20dp"
+        android:layout_marginTop="20dp"
+        android:layout_marginBottom="20dp"
+        android:text="이름"
+        android:textColor="@color/subColor100"
+        android:textSize="18sp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <TextView
+        android:id="@+id/tvBIDate"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="10dp"
+        android:text="2026년 10월 26일"
+        android:textColor="@color/subColor100"
+        android:textSize="18sp"
+        app:layout_constraintBottom_toBottomOf="@+id/tvBIName"
+        app:layout_constraintStart_toEndOf="@+id/tvBIName"
+        app:layout_constraintTop_toTopOf="@+id/tvBIName" />
+</androidx.constraintlayout.widget.ConstraintLayout>

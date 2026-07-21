@@ -26,7 +26,12 @@ class SequenceSelectRVAdapter(private val svm: SelectViewModel) : RecyclerView.A
 
       // 2. Context 가져오기 (색상 리소스 참조용)
       val context = itemView.context
-
+      val currentText = tvFHAI.text.toString()
+      if (currentText.contains("가측 이동")) {
+        tvFHAI.text = currentText
+          .replace("가측 이동(왼쪽)", "왼쪽 이동")
+          .replace("가측 이동(오른쪽)", "오른쪽 이동")
+      }
       if (isSelected) {
         clFHAI.backgroundTintList = ContextCompat.getColorStateList(context, R.color.accent)
       } else {

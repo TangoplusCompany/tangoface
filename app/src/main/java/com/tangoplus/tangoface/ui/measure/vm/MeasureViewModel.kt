@@ -220,12 +220,11 @@ class MeasureViewModel : ViewModel() {
 	val currentHairLine3DCoordinate = mutableListOf<Triple<Float, Float, Float>>()
 	val currentHairLine2DCoordinate = mutableListOf<Pair<Float, Float>>()
 	// ----------------# 보우 #-----------------
-	var currentTarget: List<HsvColorTracker.Target> = listOf()
+	var currentTarget: List<HsvColorTracker.Target> = listOf() // 페이스 보우의 3가지 빨간 점이 tracking되는 상황
 	val resultTargetFs = JSONArray()
-	val hsvColorJo = JSONObject()
-	val hsvFLCoordinatesJA = JSONArray() // 484개의 얼굴좌표 담는 곳
-	val hsvPLCoordinatesJA = JSONArray()
-	var hsvMediaFileName = ""
+//	val hsvColorJo = JSONObject()
+//	val hsvFLCoordinatesJA = JSONArray() // 484개의 얼굴좌표 담는 곳
+//
 
 	var videoTempCoordinatesJA = JSONArray()
 	// ----------------# 헤어라인 #---------------
@@ -1812,6 +1811,8 @@ class MeasureViewModel : ViewModel() {
 			current3DCoordinate.clear()
 
 			flr.forEachIndexed { index, faceLandmark ->
+
+
 				val scaledX = calculateScreenX( 1f - faceLandmark.x)
 				val scaledY = calculateScreenY( faceLandmark.y)
 				val x = (flr3D.getOrNull(index)?.x ?: 0f).safe()
@@ -1842,7 +1843,7 @@ class MeasureViewModel : ViewModel() {
 					)
 				)
 			}
-			hsvFLCoordinatesJA.copyFrom(tempCoordinateJA)
+			coordinatesJA.put(tempCoordinateJA)
 
 			val vmFlr = relativeCoordinate
 			if (targetFs.size >= 3) {
@@ -1853,11 +1854,14 @@ class MeasureViewModel : ViewModel() {
 				val chinAngle =
 					calculateSlope(vmFlr[291].first, vmFlr[291].second, vmFlr[61].first, vmFlr[61].second)
 
-				hsvColorJo.apply {
+				val tempHsvColorJo = JSONObject()
+				tempHsvColorJo.apply {
 					put("bow_eye_horizontal_angle", eyeAngle)
 					put("bow_tip_of_lips_horizontal_angle", lipsAngle)
 					put("bow_tip_of_chin_horizontal_angle", chinAngle)
 				}
+
+				staticJA.put(tempHsvColorJo)
 			}
 		}
 	}

@@ -45,6 +45,4 @@ class SelectViewModel: ViewModel() {
 		allSeqs =  sequenceMap[measureType] ?: emptyList()
 	}
 
-	// 측정 후 실제 측정 척도
-
 }

@@ -8,6 +8,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.activityViewModels
+import androidx.fragment.app.replace
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.GridLayoutManager
 import com.tangoplus.tangoface.R
@@ -17,6 +18,7 @@ import com.tangoplus.tangoface.databinding.FragmentMeasureHistoryBinding
 import com.tangoplus.tangoface.domain.util.FileUtility.setOnSingleClickListener
 import com.tangoplus.tangoface.orbbec.application.MyApplication
 import com.tangoplus.tangoface.ui.adapter.UserRVAdapter
+import com.tangoplus.tangoface.ui.info.vm.InformationViewModel
 import com.tangoplus.tangoface.ui.listener.OnUserClickListener
 import com.tangoplus.tangoface.ui.main.MainActivity
 import com.tangoplus.tangoface.ui.main.vm.MainViewModel
@@ -31,7 +33,7 @@ class MeasureHistoryFragment : Fragment(), OnUserClickListener {
 	private lateinit var bd: FragmentMeasureHistoryBinding
 	private val mvm: MainViewModel by activityViewModels()
 	private lateinit var fDao: FaceDao
-
+	private val ivm: InformationViewModel by activityViewModels()
 	override fun onCreateView(
 		inflater: LayoutInflater, container: ViewGroup?,
 		savedInstanceState: Bundle?
@@ -71,7 +73,7 @@ class MeasureHistoryFragment : Fragment(), OnUserClickListener {
 	private fun setAdapter(userItems: List<UserItem>) {
 		val currentSpanCount = if (MyApplication.isTablet()) 2 else 1
 		val lm = GridLayoutManager(requireContext(), currentSpanCount) // LinearLayoutManager(requireContext(), LinearLayoutManager.VERTICAL, false)
-		val userAdapter = UserRVAdapter(requireContext(), userItems)
+		val userAdapter = UserRVAdapter(requireContext(), mvm)
 		userAdapter.onUserClickListener = this@MeasureHistoryFragment
 		bd.rvMH.apply {
 			layoutManager = lm
@@ -81,8 +83,18 @@ class MeasureHistoryFragment : Fragment(), OnUserClickListener {
 		bd.llMHEmpty.visibility = if (mvm.currentUserItems.isEmpty()) View.VISIBLE else View.GONE
 	}
 
-	override fun onUserClick(tempServerSn: Int) {
-			lifecycleScope.launch(Dispatchers.IO) {
+	override fun onUserClick(tempServerSn: Int, isBow: Boolean) {
+
+		lifecycleScope.launch(Dispatchers.IO) {
+
+			if (isBow) {
+				val result = mvm.convertToFaceResult(requireContext(), fDao, tempServerSn)
+				withContext(Dispatchers.Main) {
+					mvm.currentBowResult.value = result
+					val dialog = IBowDialogFragment()
+					dialog.show(requireActivity().supportFragmentManager, "")
+				}
+			} else {
 				val result = mvm.convertToFaceResult(requireContext(), fDao, tempServerSn)
 				withContext(Dispatchers.Main) {
 					mvm.currentResult.value = result
@@ -93,6 +105,7 @@ class MeasureHistoryFragment : Fragment(), OnUserClickListener {
 					} }
 				}
 			}
+		}
 	}
 
 	private fun setSearchText() {

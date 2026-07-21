@@ -210,7 +210,6 @@ class MNormalFragment : Fragment() {
             prefsUtil.setNextTempServerSn()
 
 //						Log.v("스태틱스Sn", "$lastTempServerSn, ${mvm.currentUserSn}: ${transStatics.map { it.user_sn }}")
-            viewModel.comparisonDoubleItem = null
             val intent = Intent(requireActivity(), MainActivity::class.java)
             intent.putExtra("serverSn", lastTempServerSn)
             startActivity(intent)

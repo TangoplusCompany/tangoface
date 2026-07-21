@@ -96,20 +96,40 @@
 
 
                     <TextView
-                            android:id="@+id/tvIEInfo"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_marginStart="10dp"
-                            android:layout_marginTop="20dp"
-                            android:background="@drawable/bckgnd_12"
-                            android:backgroundTint="@color/bg15"
-                            android:gravity="center_vertical"
-                            android:padding="5dp"
-                            android:text="이강휘, 010-4544-9999"
-                            android:textColor="@color/white"
-                            android:textSize="14sp"
-                            app:layout_constraintStart_toStartOf="parent"
-                            app:layout_constraintTop_toTopOf="parent"/>
+                        android:id="@+id/tvIEInfo"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="10dp"
+                        android:layout_marginTop="20dp"
+                        android:background="@drawable/bckgnd_12"
+                        android:backgroundTint="@color/bg15"
+                        android:gravity="center_vertical"
+                        android:padding="5dp"
+                        android:text="이강휘, 010-4544-9999"
+                        android:textColor="@color/white"
+                        android:textSize="18sp"
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintTop_toTopOf="parent" />
+
+                    <TextView
+                        android:id="@+id/tvIEBow"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginEnd="10dp"
+                        android:background="@drawable/effect_20"
+                        android:backgroundTint="#1A140000"
+                        android:gravity="center"
+                        android:padding="10dp"
+                        android:paddingStart="16dp"
+                        android:paddingTop="8dp"
+                        android:paddingEnd="16dp"
+                        android:paddingBottom="8dp"
+                        android:text="🏹 페이스 보우"
+                        android:textColor="@color/white"
+                        android:textSize="18sp"
+                        app:layout_constraintBottom_toBottomOf="@+id/tvIEInfo"
+                        app:layout_constraintEnd_toEndOf="parent"
+                        app:layout_constraintTop_toTopOf="@+id/tvIEInfo" />
 
 
                 </androidx.constraintlayout.widget.ConstraintLayout>

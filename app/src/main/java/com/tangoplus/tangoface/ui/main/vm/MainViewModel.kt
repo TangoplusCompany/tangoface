@@ -142,9 +142,9 @@ class MainViewModel : ViewModel() {
 			val sorted = allData.sortedWith(compareByDescending(collator) { it.regDate })
 			currentUserItems = sorted
 			staticDataLoad.postValue(true)
-
 		}
 	}
+
 	val allDataLoaded = MediatorLiveData<Boolean>().apply {
 		val update = {
 			value = staticDataLoad.value == true
@@ -159,7 +159,6 @@ class MainViewModel : ViewModel() {
 	//-------------------------------# info로 들어가는 dataClass 변환 #-------------------------------
 	suspend fun convertToFaceResult(context: Context, fDao: FaceDao, serverSn: Int): FaceResult {
 
-		// 1. 함수 내부에서 DB 데이터 직접 조회
 		val faceStatics = fDao.getStatic(serverSn)
 		val faceInsight = fDao.getInsight(serverSn)
 
@@ -211,11 +210,6 @@ class MainViewModel : ViewModel() {
 		val validData = faceStatics.find { it.media_file_name.isNotBlank() } ?: faceStatics.getOrNull(0) ?: FaceStatic()
 		val measureType = faceStatics.getOrNull(0)?.measure_type ?: 0
 
-		// BOW 처리 (기존 작성중이시던 로직 유지 가능)
-		val bowSns = if (measureType == 1) {
-			fDao.getBowSns(faceStatics.getOrNull(0)?.uuid ?: "")
-		} else { listOf() }
-
 		val factors = Factor(
 			facialAxis = validData.comfort_facial_axis_shape,
 			primaryFaceShape = validData.comfort_face_shape,
@@ -236,52 +230,14 @@ class MainViewModel : ViewModel() {
 			insight = faceInsight?.insight ?: "",
 			regDate = validData.reg_date,
 			measureType = measureType,
-			bowSns = bowSns
 		)
 	}
 
-	// 비교일 경우
-	private var _comparisonState = MutableLiveData<Boolean>()
-	val comparisonState: LiveData<Boolean> = _comparisonState
 
-	fun setComparisonState(isComparison: Boolean) {
-		_comparisonState.value = isComparison
-	}
-
-	fun getComparisonState(): Boolean {
-		return _comparisonState.value ?: false
-	}
-
-	var comparisonDoubleItem: Pair<FaceResult, FaceResult>? =
-		null // null 일경우 1개 선택 한 상황 not null일 경우 비교상황
-
-	private val _tempComparisonItems = MutableLiveData<MutableList<UserItem>>(mutableListOf())
-	val tempComparisonItems: LiveData<MutableList<UserItem>> = _tempComparisonItems
-	fun addItem(item: UserItem) {
-		val currentList = _tempComparisonItems.value ?: mutableListOf()
-		currentList.add(item)
-		_tempComparisonItems.value = currentList.toMutableList()
-	}
-
-	fun removeItem(item: UserItem) {
-		val currentList = _tempComparisonItems.value ?: mutableListOf()
-		currentList.remove(item)
-		_tempComparisonItems.value = currentList.toMutableList()
-	}
-
-	fun clearItems() {
-		val currentList = _tempComparisonItems.value ?: mutableListOf()
-		currentList.clear()
-		_tempComparisonItems.value = currentList.toMutableList()
-	}
 
 	val currentResult = MutableLiveData<FaceResult>()
-
+	val currentBowResult = MutableLiveData<FaceResult>()
 	var tempServerSnAfterMeasure = 0
-
-	// TODO 여기서 DP에서 기록 가져오기 (data class 하나 필요할 듯 )
-	var dateDisplayList = listOf<DateDisplay>()
-
 
 
 }

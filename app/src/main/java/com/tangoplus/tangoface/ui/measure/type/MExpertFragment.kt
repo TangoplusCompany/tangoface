@@ -248,7 +248,6 @@ class MExpertFragment : Fragment() {
               val lastTempServerSn = prefsUtil.getLastTempServerSn()
               prefsUtil.setNextTempServerSn()
 
-              viewModel.comparisonDoubleItem = null
               val intent = Intent(requireActivity(), MainActivity::class.java)
               intent.putExtra("serverSn", lastTempServerSn)
               startActivity(intent)

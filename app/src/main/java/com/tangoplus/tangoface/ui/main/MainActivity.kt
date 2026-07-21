@@ -285,10 +285,9 @@ class MainActivity : AppCompatActivity() {
 	}
 
 	data class MeasurementFileInfo(
-		val filePrefix: String,  // "9-20251020145150"
-		val allFiles: List<File> // jpg(9개) + json(9개) + mp4(2개)
+		val filePrefix: String,
+		val allFiles: List<File>
 	)
-
 
 	private fun getLatestMeasurementFiles(): MeasurementFileInfo? {
 		try {
@@ -308,8 +307,6 @@ class MainActivity : AppCompatActivity() {
 				allFiles.addAll(jpgFiles)
 				Log.v("백업", "JPG 파일 ${jpgFiles.size}개: ${jpgFiles.map { it.name }}")
 			}
-
-			// 2. Documents/TangoPlus에서 1~9번 각각의 최신 JSON
 			val documentsDir = File(
 				Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS),
 				"TangoPlus"

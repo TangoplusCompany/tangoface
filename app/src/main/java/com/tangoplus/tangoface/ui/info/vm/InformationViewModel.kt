@@ -1,9 +1,12 @@
 package com.tangoplus.tangoface.ui.info.vm
 
+import android.content.Context
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
+import com.tangoplus.tangoface.data.db.FaceDao
 import com.tangoplus.tangoface.domain.vo.FaceStaticItem
 import com.tangoplus.tangoface.domain.vo.Sequence
+import com.tangoplus.tangoface.ui.info.vo.BowItem
 import com.tangoplus.tangoface.ui.info.vo.DrawLine
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -78,4 +81,32 @@ class InformationViewModel : ViewModel() {
 
 	var videoCoordinates: List<List<Pair<Float, Float>>>? = null
 	var videoTrajectory: List<Pair<Float, Float>>? = null
+
+	private val _currentBowResults = MutableStateFlow<List<BowItem>>(listOf())
+	val currentBowResults  = _currentBowResults.asStateFlow()
+	fun setCurrentBowResults(after: List<BowItem>) {
+		_currentBowResults.value = after
+	}
+	fun getCurrentBowResults() : List<BowItem> {
+		return currentBowResults.value
+	}
+//	private val _currentSequence = MutableStateFlow(Sequence.COMFORT)
+//	val currentSequence = _currentSequence.asStateFlow()
+	// IBowSelect에서 보여줄 bow item 목록
+	suspend fun getBowResults(fDao: FaceDao, serverSn: Int? = null) : List<BowItem> {
+		return if (serverSn == null) {
+			fDao.getAllBowItems(isGuest = true)
+		} else {
+			fDao.getAllBowItems(serverSn, false)
+		}
+	}
+	// 측정 후 실제 측정 척도
+	private val _currentBowItem = MutableStateFlow<BowItem>(
+		BowItem(-1)
+	)
+	val currentBowItem = _currentBowItem.value
+
+	fun setCurrentBowItem(item: BowItem) {
+		_currentBowItem.value = item
+	}
 }

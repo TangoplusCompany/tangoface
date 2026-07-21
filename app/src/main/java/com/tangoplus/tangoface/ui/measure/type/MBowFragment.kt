@@ -95,7 +95,7 @@ class MBowFragment : Fragment() {
             val minY = yValues.minOrNull() ?: 0f
             val diff = maxY - minY
             Log.v("diff 확인", "$diff")
-            if (diff > 50f) {
+            if (diff > 100f) {
               Log.d("보우측정", "Y값 차이 $diff → 튄 값 있음, 다시 촬영")
               Toast.makeText(requireContext(), "랜드마크가 페이스 보우와 다른 위치를 추출했습니다", Toast.LENGTH_LONG).show()
               isCountDown = false
@@ -109,7 +109,7 @@ class MBowFragment : Fragment() {
 
           lifecycleScope.launch {
             mvm.captureImage(mvm.currentSeq, requireActivity())
-            mvm.face2DResult?.let { mvm.resultHsvToJson(it, mvm.currentTarget) }
+            mvm.face2DResult?.let { mvm.resultHsvToJson(it, mvm.currentTarget, mvm.face3DResult) }
             viewModel.finishSequence()
             updateUI()
           }
@@ -183,8 +183,7 @@ class MBowFragment : Fragment() {
               Log.v("LEN", "i=$i, coordinatesLen=${mvm.coordinatesJA.length()}, plrLen=${mvm.plrJA.length()}, mediaNames=${mvm.mediaFileNames.size}")
               put("face_landmark", mvm.coordinatesJA.optJSONArray(i))
               put("pose_landmark", mvm.plrJA.optJSONArray(i))
-              // TODO 여기다가 bow_landmark해서 넣기
-              put("bow_landmark", mvm.hsvFLCoordinatesJA.optJSONArray(0))
+
               if (i == 0) {
                 put("hairline_landmark", mvm.hairLineJA.optJSONArray(i))
               }
@@ -208,9 +207,7 @@ class MBowFragment : Fragment() {
             val lastTempServerSn = prefsUtil.getLastTempServerSn()
             // prefs에서 마지막 sn을 +1 하기
             prefsUtil.setNextTempServerSn()
-            viewModel.comparisonDoubleItem = null
             val intent = Intent(requireActivity(), MainActivity::class.java)
-            intent.putExtra("serverSn", lastTempServerSn)
             startActivity(intent)
             requireActivity().finishAffinity()
           }

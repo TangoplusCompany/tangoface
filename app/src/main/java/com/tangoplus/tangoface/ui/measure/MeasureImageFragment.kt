@@ -212,7 +212,6 @@ class MeasureImageFragment : Fragment() {
 								try {
 									val lastTempServerSn = prefsUtil.getLastTempServerSn()
 									prefsUtil.setNextTempServerSn()
-									viewModel.comparisonDoubleItem = null
 									if (lastTempServerSn != -1) {
 										val result = withContext(Dispatchers.IO) {
 											mainVm.convertToFaceResult(requireContext(), fDao, lastTempServerSn)
