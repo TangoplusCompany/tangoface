@@ -22,7 +22,7 @@
         app:layout_constraintWidth_percent="0.4" />
 
     <ImageView
-        android:id="@+id/imageView"
+        android:id="@+id/ivMHEmpty"
         android:layout_width="0dp"
         android:layout_height="0dp"
         android:layout_marginStart="10dp"

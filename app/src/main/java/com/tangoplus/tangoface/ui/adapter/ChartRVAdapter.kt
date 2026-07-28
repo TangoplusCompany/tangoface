@@ -16,7 +16,7 @@ import com.github.mikephil.charting.data.PieEntry
 import com.github.mikephil.charting.formatter.PercentFormatter
 import com.tangoplus.tangoface.R
 import com.tangoplus.tangoface.databinding.RvChartItemBinding
-import com.tangoplus.tangoface.ui.statistics.vm.ChartViewModel
+import com.tangoplus.tangoface.ui.settings.vm.ChartViewModel
 
 class ChartRVAdapter(
     private val cvm: ChartViewModel,

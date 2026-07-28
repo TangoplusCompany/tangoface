@@ -199,7 +199,6 @@ class MeasureViewModel : ViewModel() {
 
 	// 포즈랜드마크 전부
 	val plrJA = JSONArray()
-
 	// 그 외 추가할 것 헤어라인 등
 	var hairLineJA = JSONArray()
 
@@ -1844,7 +1843,6 @@ class MeasureViewModel : ViewModel() {
 				)
 			}
 			coordinatesJA.put(tempCoordinateJA)
-
 			val vmFlr = relativeCoordinate
 			if (targetFs.size >= 3) {
 				val eyeAngle =

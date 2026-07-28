@@ -201,10 +201,10 @@ class MainFragment : Fragment(), OnMainTabClickListener {
 			.setNegativeButton("취소", null)
 			.show()
 	}
-	private val promoImages = listOf(
-		R.drawable.poster_main_0,
-		R.drawable.poster_main_1,
-	)
+//	private val promoImages = listOf(
+//		R.drawable.poster_main_0,
+//		R.drawable.poster_main_1,
+//	)
 	private val autoScrollHandler = Handler(Looper.getMainLooper())
 	private var autoScrollRunnable: Runnable? = null
 	var startX = 0f
@@ -268,7 +268,7 @@ class MainFragment : Fragment(), OnMainTabClickListener {
 
 	private fun setAdapter() {
 		bd.rvM.visibility = View.GONE
-		val mAdapter = MainTabRVAdapter(tabs)
+		val mAdapter = MainTabRVAdapter(requireContext(), tabs)
 		mAdapter.onMainTabClickListener = this@MainFragment
 		val vLayoutManager = LinearLayoutManager(requireContext(), LinearLayoutManager.VERTICAL , false)
 		bd.rvM.apply {
@@ -310,7 +310,7 @@ class MainFragment : Fragment(), OnMainTabClickListener {
 		super.onDestroyView()
 		stopAutoScroll()
 	}
-	private val tabs = listOf(   "내 사진 분석", "페이스 보우", "비대칭 진단","얼굴 밸런스",)
+	private val tabs = listOf(   "사진 검사", "페이스 보우", "정밀 검사","간편 검사")
 	override fun onMainTabClick(tab: String) {
 		when (tab) {
 			tabs[3] -> { selectedMeasureType = MeasureType.NORMAL }

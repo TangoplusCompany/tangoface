@@ -1187,6 +1187,35 @@ object BitmapUtility {
 				drawExtendedLine(canvas, x1, y1, x1 + 1, y1, 300f, 300f, redPaint)
 				drawExtendedLine(canvas, x1, y4, x1 + 1, y4, 300f, 300f, redPaint)
 			}
+
+			if (dim.setedLine.contains(DrawLine.A_BOW)) {
+				if (!dim.lms.bowLandmarks.isNullOrEmpty()) {
+					val leftBowDot = dim.lms.bowLandmarks.get(0)
+					val rightBowDot = dim.lms.bowLandmarks.get(2)
+					val x40 = leftBowDot.first
+					val y40 = leftBowDot.second
+					val x41 = rightBowDot.first
+					val y41 = rightBowDot.second
+					drawExtendedLine(canvas, x40, y40, x41, y41, 300f, 300f, whitePaint)
+				}
+				val leftEye = dimFLS.landmarks[130]
+				val rightEye = dimFLS.landmarks[359]
+				val x10 = leftEye.x
+				val y10 = leftEye.y
+				val x11 = rightEye.x
+				val y11 = rightEye.y
+				drawExtendedLine(canvas, x10, y10, x11, y11, 300f, 300f, redPaint)
+
+				val leftChin = dimFLS.landmarks[148]
+				val rightChin = dimFLS.landmarks[377]
+				val x20 = leftChin.x
+				val y20 = leftChin.y
+				val x21 = rightChin.x
+				val y21 = rightChin.y
+				drawExtendedLine(canvas, x20, y20, x21, y21, 300f, 300f, redPaint)
+			}
+
+
 		}
 
 		if (dim.flags.isMoireOn && dim.faceResult.moireUri.isNotEmpty()) {
@@ -1478,7 +1507,6 @@ object BitmapUtility {
 	}
 
 	val df = DecimalFormat("#.##")
-	// TODO 전부 COMFORT 분기 처리
 	private fun extractRawData(dim: DrawImageUiModel, dl: DrawLine): List<String> {
 		val fr = dim.faceResult
 
@@ -1593,7 +1621,6 @@ object BitmapUtility {
 				else -> listOf()
 			}
 
-
 			DrawLine.A_FACIAL_AXIS -> when (seq) {
 				Sequence.COMFORT -> listOf("comfort_length_symmetry_factor", "comfort_angle_symmetry_factor")
 				else -> listOf()
@@ -1607,6 +1634,9 @@ object BitmapUtility {
 				Sequence.COMFORT -> listOf("horizontal_ratio")
 				else -> listOf()
 			}
+			DrawLine.A_BOW -> if (seq == Sequence.BOW) {
+				listOf("bow_eye_horizontal_angle", "bow_tip_of_lips_horizontal_angle", "bow_tip_of_chin_horizontal_angle")
+			} else listOf()
 		}
 
 		val jsonObject = fr.results.getJSONObject(seqIndex)
@@ -2137,6 +2167,44 @@ object BitmapUtility {
 						))
 					))
 				}
+			}
+
+			if (dl.contains(DrawLine.A_BOW)) {
+				val rawData = extractRawData(dim, DrawLine.A_BOW)
+				if (rawData.isNotEmpty()) {
+
+					val v10 = rawData.getOrNull(0)
+					val v1 = if (v10 == null || v10 == "0") "🚫" else v10 + "º"
+
+					val eyePos = calculateFinalPixel(flm[263].x, flm[263].y,)
+					textBoxes.add(TextBoxData(
+						anchorX = eyePos.x, anchorY = eyePos.y,
+						targetGridIndex = 9, //
+						info = TextDrawInfo("눈 수평 각도", listOf(TextItem("", v1)))
+					))
+
+					val v20 = rawData.getOrNull(1)
+					val v2 = if (v20 == null || v20 == "0") "🚫" else v20 + "º"
+					// 우측 볼 (361번)
+					val lipsPos = calculateFinalPixel(flm[287].x, flm[287].y,)
+					textBoxes.add(TextBoxData(
+						anchorX = lipsPos.x, anchorY = lipsPos.y,
+						targetGridIndex = 14, // 오른쪽 하단부
+						info = TextDrawInfo("보우 각도", listOf(TextItem("", v2)))
+					))
+
+					val v30 = rawData.getOrNull(2)
+					val v3 = if (v30 == null || v30 == "0") "🚫" else v30 + "º"
+					// 우측 볼 (361번)
+					val chinPos = calculateFinalPixel(flm[152].x, flm[152].y,)
+					textBoxes.add(TextBoxData(
+						anchorX = chinPos.x, anchorY = chinPos.y,
+						targetGridIndex = 18, // 오른쪽 하단부
+						info = TextDrawInfo("턱 각도", listOf(TextItem("", v3)))
+					))
+				}
+
+
 			}
 		}
 

@@ -1,4 +1,4 @@
-package com.tangoplus.tangoface.ui.statistics.vm
+package com.tangoplus.tangoface.ui.settings.vm
 
 import android.content.Context
 import android.util.Log
@@ -10,7 +10,7 @@ import com.github.mikephil.charting.data.PieEntry
 import com.tangoplus.tangoface.data.db.FaceDatabase
 import com.tangoplus.tangoface.data.db.PreCheckList
 import com.tangoplus.tangoface.domain.util.PreCheckListUtility.filteredChecklist
-import com.tangoplus.tangoface.ui.statistics.vo.PreCheckListFilter
+import com.tangoplus.tangoface.ui.settings.vo.PreCheckListFilter
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 

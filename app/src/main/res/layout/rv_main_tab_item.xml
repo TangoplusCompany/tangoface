@@ -1,27 +1,40 @@
 <?xml version="1.0" encoding="utf-8"?>
 <androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
-                                                   xmlns:app="http://schemas.android.com/apk/res-auto"
-                                                   android:layout_width="wrap_content"
-                                                   android:layout_height="wrap_content"
-                                                   android:id="@+id/clMTI">
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/clMTI"
+    android:layout_width="300dp"
+    android:layout_height="wrap_content"
+    android:layout_gravity="right|end">
+
+    <ImageView
+        android:id="@+id/ivMTI"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="10dp"
+        android:layout_marginBottom="10dp"
+        android:background="@drawable/color_gradation_accent_64"
+        android:padding="15dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:srcCompat="@drawable/ic_bow"
+        app:tint="@color/accent100" />
 
     <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content" android:id="@+id/ivMTI"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintTop_toTopOf="parent" android:textSize="36sp"
-            android:text="☀️" android:background="@drawable/color_gradation_accent_64"
-            android:paddingStart="35dp" android:paddingTop="10dp" android:paddingBottom="10dp" android:paddingEnd="35dp"
-            app:layout_constraintBottom_toBottomOf="parent" android:layout_marginTop="10dp"
-            android:layout_marginBottom="10dp"/>
-    <TextView
-            android:text="페이스 보우 측정"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content" android:id="@+id/tvMTITitle"
-            android:textSize="20sp"
-            android:textColor="@color/white" app:layout_constraintTop_toTopOf="@+id/ivMTI"
-            app:layout_constraintEnd_toStartOf="@+id/ivMTI" app:layout_constraintBottom_toBottomOf="@+id/ivMTI"
-            android:layout_marginEnd="20dp" android:elevation="2dp"
-            android:shadowDx="0" android:shadowDy="4" android:shadowRadius="12"
-            android:shadowColor="@color/bg" android:padding="6dp"/>
+        android:id="@+id/tvMTITitle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginEnd="20dp"
+        android:elevation="2dp"
+        android:padding="6dp"
+        android:shadowColor="@color/bg"
+        android:shadowDx="0"
+        android:shadowDy="4"
+        android:shadowRadius="12"
+        android:text="페이스 보우 측정"
+        android:textColor="@color/white"
+        android:textSize="20sp"
+        app:layout_constraintBottom_toBottomOf="@+id/ivMTI"
+        app:layout_constraintEnd_toStartOf="@+id/ivMTI"
+        app:layout_constraintTop_toTopOf="@+id/ivMTI" />
 </androidx.constraintlayout.widget.ConstraintLayout>

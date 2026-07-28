@@ -39,11 +39,10 @@ import com.tangoplus.tangoface.ui.main.MainActivity
 import com.tangoplus.tangoface.ui.main.vm.MainViewModel
 import com.tangoplus.tangoface.ui.measure.vm.InputViewModel
 import com.tangoplus.tangoface.ui.measure.vm.MeasureViewModel
-import com.tangoplus.tangoface.ui.statistics.GyroDialogFragment
+import com.tangoplus.tangoface.ui.settings.GyroDialogFragment
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import org.json.JSONArray
 import org.json.JSONObject
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter

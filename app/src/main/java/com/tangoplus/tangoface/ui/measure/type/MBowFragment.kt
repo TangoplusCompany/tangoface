@@ -1,6 +1,5 @@
 package com.tangoplus.tangoface.ui.measure.type
 
-import android.animation.ValueAnimator
 import android.annotation.SuppressLint
 import android.content.Intent
 import android.os.Bundle
@@ -27,7 +26,6 @@ import com.tangoplus.tangoface.domain.util.FileUtility.toFaceStatic
 import com.tangoplus.tangoface.domain.util.FileUtility.toJsonString
 import com.tangoplus.tangoface.domain.util.MeasureUtility.animationSet
 import com.tangoplus.tangoface.domain.util.MeasureUtility.getGuideText
-import com.tangoplus.tangoface.domain.util.MeasureUtility.showPreviousDialog
 import com.tangoplus.tangoface.domain.util.PreferenceUtility
 import com.tangoplus.tangoface.domain.util.UXUtility.playSound
 import com.tangoplus.tangoface.domain.vo.Sequence
@@ -35,7 +33,7 @@ import com.tangoplus.tangoface.ui.main.MainActivity
 import com.tangoplus.tangoface.ui.main.vm.MainViewModel
 import com.tangoplus.tangoface.ui.measure.vm.InputViewModel
 import com.tangoplus.tangoface.ui.measure.vm.MeasureViewModel
-import com.tangoplus.tangoface.ui.statistics.GyroDialogFragment
+import com.tangoplus.tangoface.ui.settings.GyroDialogFragment
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -147,7 +145,6 @@ class MBowFragment : Fragment() {
         lifecycleScope.launch(Dispatchers.IO) {
           val fd = FaceDatabase.getDatabase(requireActivity())
           fDao = fd.faceDao()
-          // TODO hsvFLCoordinatesJA 와 StaticJA 갯수 맞춰서 1개 그냥 input 하면 됨.
           Log.v("userSn설정잘됐는지", "is init? = ${mvm.currentUserSn}, ${mvm.allSeqs}")
           val allSeqs = mvm.allSeqs
           val staticJos = mutableListOf<JSONObject>()
@@ -183,10 +180,7 @@ class MBowFragment : Fragment() {
               Log.v("LEN", "i=$i, coordinatesLen=${mvm.coordinatesJA.length()}, plrLen=${mvm.plrJA.length()}, mediaNames=${mvm.mediaFileNames.size}")
               put("face_landmark", mvm.coordinatesJA.optJSONArray(i))
               put("pose_landmark", mvm.plrJA.optJSONArray(i))
-
-              if (i == 0) {
-                put("hairline_landmark", mvm.hairLineJA.optJSONArray(i))
-              }
+              put("bow_landmark", mvm.resultTargetFs)
             }
             mergedJOBeforeFileName.add(mergedJSON)
             Log.v("json저장 전", "seq: $i")

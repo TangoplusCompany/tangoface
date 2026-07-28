@@ -11,7 +11,7 @@ import com.tangoplus.tangoface.R
 import com.tangoplus.tangoface.databinding.RvPosterItemBinding
 import com.tangoplus.tangoface.domain.util.FileUtility.setOnSingleClickListener
 import com.tangoplus.tangoface.ui.listener.OnPosterClickListener
-import com.tangoplus.tangoface.ui.statistics.vm.PosterViewModel
+import com.tangoplus.tangoface.ui.settings.vm.PosterViewModel
 
 class PosterRVAdapter(
 	private val fragment: Fragment,

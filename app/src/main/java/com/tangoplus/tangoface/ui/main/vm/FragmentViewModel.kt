@@ -13,6 +13,7 @@ class FragmentViewModel : ViewModel() {
 	enum class FragmentType {
 		MAIN,
 		MEASURE_HISTORY,
+		SETTINGS,
 		STATISTICS,
 	}
 

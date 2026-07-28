@@ -40,6 +40,9 @@
         android:theme="@style/Theme.tangoface"
         tools:targetApi="31">
         <activity
+            android:name=".ui.settings.DepthCameraSettingsActivity"
+            android:exported="false" />
+        <activity
             android:name="com.yalantis.ucrop.UCropActivity"
             android:screenOrientation="portrait"
             android:theme="@style/Theme.AppCompat.Light.NoActionBar" />

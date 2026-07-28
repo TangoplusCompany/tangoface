@@ -1,9 +1,9 @@
 package com.tangoplus.tangoface.domain.util
 
 import com.tangoplus.tangoface.data.db.PreCheckList
-import com.tangoplus.tangoface.ui.statistics.vm.ChartViewModel
+import com.tangoplus.tangoface.ui.settings.vm.ChartViewModel
 
-import com.tangoplus.tangoface.ui.statistics.vo.PreCheckListFilter
+import com.tangoplus.tangoface.ui.settings.vo.PreCheckListFilter
 import java.time.LocalDate
 import java.time.Period
 import java.time.format.DateTimeFormatter

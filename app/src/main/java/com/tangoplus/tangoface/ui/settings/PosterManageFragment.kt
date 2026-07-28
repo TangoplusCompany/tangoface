@@ -1,4 +1,4 @@
-package com.tangoplus.tangoface.ui.statistics
+package com.tangoplus.tangoface.ui.settings
 
 import android.app.Activity
 import android.graphics.Bitmap
@@ -20,8 +20,8 @@ import com.tangoplus.tangoface.orbbec.application.MyApplication
 import com.tangoplus.tangoface.ui.adapter.PosterRVAdapter
 import com.tangoplus.tangoface.ui.listener.OnPosterClickListener
 import com.tangoplus.tangoface.ui.main.MainActivity
-import com.tangoplus.tangoface.ui.statistics.vm.PosterViewModel
-import com.tangoplus.tangoface.ui.statistics.vm.PosterViewModelFactory
+import com.tangoplus.tangoface.ui.settings.vm.PosterViewModel
+import com.tangoplus.tangoface.ui.settings.vm.PosterViewModelFactory
 import com.yalantis.ucrop.UCrop
 import java.io.File
 

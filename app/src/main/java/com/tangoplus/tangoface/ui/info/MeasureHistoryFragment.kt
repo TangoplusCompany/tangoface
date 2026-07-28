@@ -3,6 +3,7 @@ package com.tangoplus.tangoface.ui.info
 import android.os.Bundle
 import android.text.Editable
 import android.text.TextWatcher
+import android.util.Log
 import androidx.fragment.app.Fragment
 import android.view.LayoutInflater
 import android.view.View
@@ -19,6 +20,7 @@ import com.tangoplus.tangoface.domain.util.FileUtility.setOnSingleClickListener
 import com.tangoplus.tangoface.orbbec.application.MyApplication
 import com.tangoplus.tangoface.ui.adapter.UserRVAdapter
 import com.tangoplus.tangoface.ui.info.vm.InformationViewModel
+import com.tangoplus.tangoface.ui.info.vo.HistoryMappingItem
 import com.tangoplus.tangoface.ui.listener.OnUserClickListener
 import com.tangoplus.tangoface.ui.main.MainActivity
 import com.tangoplus.tangoface.ui.main.vm.MainViewModel
@@ -34,6 +36,8 @@ class MeasureHistoryFragment : Fragment(), OnUserClickListener {
 	private val mvm: MainViewModel by activityViewModels()
 	private lateinit var fDao: FaceDao
 	private val ivm: InformationViewModel by activityViewModels()
+	private lateinit var userAdapter: UserRVAdapter
+
 	override fun onCreateView(
 		inflater: LayoutInflater, container: ViewGroup?,
 		savedInstanceState: Bundle?
@@ -48,7 +52,7 @@ class MeasureHistoryFragment : Fragment(), OnUserClickListener {
 		mvm.allDataLoaded.observe(viewLifecycleOwner) { isLoaded ->
 			if (isLoaded == true) {
 				mvm.clearLoadDataFlag()
-				setAdapter(mvm.currentUserItems)
+				initAdapter()
 			}
 		}
 
@@ -57,7 +61,7 @@ class MeasureHistoryFragment : Fragment(), OnUserClickListener {
 			val fd = FaceDatabase.getDatabase(requireContext())
 			fDao = fd.faceDao()
 			initUserUI()
-			setAdapter(mvm.currentUserItems)
+			initAdapter()
 
 			bd.btnMHImage.setOnSingleClickListener {
 				(requireActivity() as MainActivity).navigateToSubFragment(MeasureImageFragment())
@@ -70,18 +74,6 @@ class MeasureHistoryFragment : Fragment(), OnUserClickListener {
 		mvm.loadUserDataFromDB(requireContext())
 	}
 
-	private fun setAdapter(userItems: List<UserItem>) {
-		val currentSpanCount = if (MyApplication.isTablet()) 2 else 1
-		val lm = GridLayoutManager(requireContext(), currentSpanCount) // LinearLayoutManager(requireContext(), LinearLayoutManager.VERTICAL, false)
-		val userAdapter = UserRVAdapter(requireContext(), mvm)
-		userAdapter.onUserClickListener = this@MeasureHistoryFragment
-		bd.rvMH.apply {
-			layoutManager = lm
-			adapter = userAdapter
-		}
-
-		bd.llMHEmpty.visibility = if (mvm.currentUserItems.isEmpty()) View.VISIBLE else View.GONE
-	}
 
 	override fun onUserClick(tempServerSn: Int, isBow: Boolean) {
 
@@ -108,19 +100,65 @@ class MeasureHistoryFragment : Fragment(), OnUserClickListener {
 		}
 	}
 
+	private fun initAdapter() {
+		val currentSpanCount = if (MyApplication.isTablet()) 2 else 1
+		userAdapter = UserRVAdapter(requireContext(), mvm).apply {
+			onUserClickListener = this@MeasureHistoryFragment
+		}
+		bd.llMHEmpty.visibility = if (mvm.currentUserItems.size > 0 ) View.GONE else View.VISIBLE
+		val lm = GridLayoutManager(requireContext(), currentSpanCount).apply {
+			spanSizeLookup = object : GridLayoutManager.SpanSizeLookup() {
+				override fun getSpanSize(p0: Int): Int {
+					return when (userAdapter.getItemViewType(p0)) {
+						UserRVAdapter.TYPE_HEADER -> currentSpanCount
+						UserRVAdapter.TYPE_ITEM -> 1
+						else -> 1
+					}
+				}
+			}
+		}
+
+		bd.rvMH.apply {
+			layoutManager = lm
+			adapter = userAdapter
+		}
+	}
+
+	// 2. 데이터 세팅 및 업데이트
+	private fun updateAdapter(userItems: List<UserItem>) {
+		// UserItem -> HistoryMappingItem (날짜별 그룹화) 변환
+		val mappingList = userItems.toHistoryMapping()
+
+		userAdapter.submitHistoryList(mappingList)
+		bd.llMHEmpty.visibility = if (userItems.isEmpty()) View.VISIBLE else View.GONE
+	}
+
+	// 3. 검색 리스너
 	private fun setSearchText() {
-		bd.etMHSearch.addTextChangedListener(object: TextWatcher{
+		bd.etMHSearch.addTextChangedListener(object : TextWatcher {
 			override fun beforeTextChanged(p0: CharSequence?, p1: Int, p2: Int, p3: Int) {}
 			override fun onTextChanged(p0: CharSequence?, p1: Int, p2: Int, p3: Int) {}
 			override fun afterTextChanged(p0: Editable?) {
-				val afterText = p0.toString()
-				if (afterText.isNotEmpty()) {
-					val filteredUserItems = mvm.currentUserItems.filter { it.name?.contains(afterText) == true || it.mobile?.contains(afterText) == true }
-					setAdapter(filteredUserItems)
+				val afterText = p0.toString().trim()
+				val filteredList = if (afterText.isNotEmpty()) {
+					mvm.currentUserItems.filter {
+						it.name?.contains(afterText, ignoreCase = true) == true ||
+							it.mobile?.contains(afterText) == true
+					}
 				} else {
-					setAdapter(mvm.currentUserItems)
+					mvm.currentUserItems
 				}
+
+				updateAdapter(filteredList)
 			}
 		})
+	}
+
+	// 💡 확장 함수: UserItem 리스트 -> HistoryMappingItem 리스트 변환
+	private fun List<UserItem>.toHistoryMapping(): List<HistoryMappingItem> {
+		return this.groupBy { item -> item.regDate.substring(0, 10).replace("-", ".") }
+			.flatMap { (date, items) ->
+				listOf(HistoryMappingItem.Header(date)) + items.map { HistoryMappingItem.Item(it) }
+			}
 	}
 }

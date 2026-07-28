@@ -1,4 +1,4 @@
-package com.tangoplus.tangoface.ui.statistics
+package com.tangoplus.tangoface.ui.settings
 
 import android.content.Context
 import android.hardware.Sensor

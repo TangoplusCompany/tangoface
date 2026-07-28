@@ -1,4 +1,4 @@
-package com.tangoplus.tangoface.ui.statistics.vo
+package com.tangoplus.tangoface.ui.settings.vo
 
 enum class PreCheckListFilter(val displayName: String) {
 	AGE_0_20("20세 미만"),

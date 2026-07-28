@@ -1,6 +1,7 @@
 package com.tangoplus.tangoface.domain.opencv
 
 import android.graphics.Bitmap
+import android.util.Log
 import androidx.annotation.WorkerThread
 import com.google.mediapipe.framework.image.MPImage
 import org.opencv.android.Utils
@@ -12,6 +13,8 @@ import org.opencv.core.Rect
 import org.opencv.core.Scalar
 import org.opencv.core.Size
 import org.opencv.imgproc.Imgproc
+import java.io.File
+import java.io.FileOutputStream
 import kotlin.math.max
 
 class HsvColorTracker(
@@ -74,19 +77,18 @@ class HsvColorTracker(
 	// ---------# contour할 갯수 #----------
 	private var maxTargets: Int = 3
 
-	@WorkerThread
-	fun process(mpImage: MPImage, makeDebugMask: Boolean = false): MultiTrackResult {
-		val bmp: Bitmap = mpImageToBitmap(mpImage)
-		return process(bmp, makeDebugMask)
-	}
+//	@WorkerThread
+//	fun process(mpImage: MPImage, makeDebugMask: Boolean = false): MultiTrackResult {
+//		val bmp: Bitmap = mpImageToBitmap(mpImage)
+//		return process(bmp, makeDebugMask)
+//	}
 
 	@WorkerThread
 	fun process(bitmap: Bitmap, makeDebugMask: Boolean = false): MultiTrackResult {
 		if (bitmap.isRecycled || bitmap.width <= 0 || bitmap.height <= 0) {
-			android.util.Log.e("HSV", "Invalid bitmap")
+			Log.e("HSV", "Invalid bitmap")
 			return MultiTrackResult(emptyList(), null)
 		}
-
 		val srcBmp: Bitmap = if (bitmap.config != Bitmap.Config.ARGB_8888 || !bitmap.isMutable) {
 			bitmap.copy(Bitmap.Config.ARGB_8888, false)
 		} else bitmap
@@ -118,7 +120,7 @@ class HsvColorTracker(
 			Core.bitwise_or(m1, m2, mask)
 			m1.release()
 			m2.release()
-
+			Log.d("HSV_DEBUG", "Mat cols(W): ${mask.cols()}, rows(H): ${mask.rows()}")
 			// 💡 모폴로지 연산: MORPH_OPEN으로 미세 노이즈 박멸
 			if (useOpenMorphology) {
 				val k = Imgproc.getStructuringElement(

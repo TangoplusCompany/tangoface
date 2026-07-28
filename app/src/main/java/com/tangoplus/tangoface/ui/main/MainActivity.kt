@@ -41,7 +41,8 @@ import com.tangoplus.tangoface.ui.info.InfoContainerFragment
 import com.tangoplus.tangoface.ui.info.MeasureHistoryFragment
 import com.tangoplus.tangoface.ui.main.vm.FragmentViewModel
 import com.tangoplus.tangoface.ui.main.vm.MainViewModel
-import com.tangoplus.tangoface.ui.statistics.StatisticsFragment
+import com.tangoplus.tangoface.ui.settings.SettingsFragment
+import com.tangoplus.tangoface.ui.settings.StatisticsFragment
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -553,7 +554,7 @@ class MainActivity : AppCompatActivity() {
 		val tabOrder = mapOf(
 			R.id.nav_main to 0,
 			R.id.nav_measure_history to 1,
-			R.id.nav_statistics to 2
+			R.id.nav_settings to 2
 		)
 
 		val currentPosition = tabOrder[itemId] ?: 0
@@ -566,14 +567,14 @@ class MainActivity : AppCompatActivity() {
 		val fragment = when (itemId) {
 			R.id.nav_main -> MainFragment()
 			R.id.nav_measure_history -> MeasureHistoryFragment()
-			R.id.nav_statistics -> StatisticsFragment()
+			R.id.nav_settings -> SettingsFragment()
 			else -> MainFragment()
 		}
 
 		when (fragment) {
 			is MainFragment -> fvm.setCurrentFragment(FragmentViewModel.FragmentType.MAIN)
 			is MeasureHistoryFragment -> fvm.setCurrentFragment(FragmentViewModel.FragmentType.MEASURE_HISTORY)
-			is StatisticsFragment -> fvm.setCurrentFragment(FragmentViewModel.FragmentType.STATISTICS)
+			is SettingsFragment -> fvm.setCurrentFragment(FragmentViewModel.FragmentType.SETTINGS)
 		}
 
 		supportFragmentManager.beginTransaction().apply {

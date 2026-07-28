@@ -63,7 +63,7 @@ class IBowDialogFragment : DialogFragment() {
         dialog?.setCanceledOnTouchOutside(false)
         val fd = FaceDatabase.getDatabase(requireContext())
         fDao = fd.faceDao()
-        ivm.currentCheckedLines.addAll(listOf(DrawLine.NECK, DrawLine.FACE, DrawLine.A_SAGGING_FACE, DrawLine.A_FACIAL_AXIS, DrawLine.A_HORIZON))
+        ivm.currentCheckedLines.addAll(listOf( DrawLine.A_BOW))
 
         setUserInfo()
         setResult()
@@ -87,11 +87,6 @@ class IBowDialogFragment : DialogFragment() {
         bd.btnIBGrid.setOnSingleClickListener {
             ivm.switchedGridLineOn()
             bd.btnIBGrid.text = if (ivm.getGridLineOn()) "ꖛ 그리드 끄기" else "ꖛ 그리드 켜기 "
-            setImage()
-        }
-        bd.btnIBMoire.setOnSingleClickListener {
-            ivm.switchedMoireOn()
-            bd.btnIBMoire.text = if (ivm.getMoireOn()) "🏳️‍🌈 Moire 끄기" else "🏳️‍🌈 Moire 보기"
             setImage()
         }
     }

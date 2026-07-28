@@ -261,10 +261,10 @@ object LandmarkUtility {
 
 
 	fun extractFaceCoordinates(jsonData: JSONObject?): List<Pair<Float, Float>>? {
-		val poseData = jsonData?.optJSONArray("face_landmark")
-		return if (poseData != null) {
-			List(poseData.length()) { i ->
-				val landmark = poseData.getJSONArray(i)
+		val faceData = jsonData?.optJSONArray("face_landmark")
+		return if (faceData != null) {
+			List(faceData.length()) { i ->
+				val landmark = faceData.getJSONArray(i)
 				Pair(
 					landmark.optDouble(0).toFloat(),
 					landmark.optDouble(1).toFloat()

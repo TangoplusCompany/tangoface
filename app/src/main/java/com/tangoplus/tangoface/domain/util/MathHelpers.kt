@@ -93,8 +93,8 @@ object MathHelpers {
 		t: HsvColorTracker.Target,
 		baseW: Int,
 		baseH: Int,
-		outW: Int = 1280,
-		outH: Int = 720,
+		outW: Int = 720,
+		outH: Int = 1280,
 		mirrorX: Boolean
 	): TargetF {
 		val sx = outW.toFloat() / baseW

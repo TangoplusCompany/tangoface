@@ -69,7 +69,7 @@
                         android:id="@+id/tvIBInfo"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_marginStart="10dp"
+                        android:layout_marginStart="20dp"
                         android:layout_marginTop="20dp"
                         android:background="@drawable/bckgnd_12"
                         android:backgroundTint="@color/bg15"
@@ -106,17 +106,6 @@
                 app:layout_constraintBottom_toBottomOf="parent"
                 app:layout_constraintEnd_toEndOf="parent">
 
-                <TextView
-                    android:id="@+id/btnIBMoire"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_gravity="bottom|end"
-                    android:background="@drawable/effect_20"
-                    android:backgroundTint="#1A140000"
-                    android:gravity="center"
-                    android:text="🏳️‍🌈 Moire 보기"
-                    android:textColor="@color/white"
-                    android:textSize="18sp" android:padding="10dp" android:layout_marginBottom="10dp"/>
                 <TextView
                     android:id="@+id/btnIBClean"
                     android:layout_width="match_parent"

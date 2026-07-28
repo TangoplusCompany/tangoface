@@ -1,4 +1,4 @@
-package com.tangoplus.tangoface.ui.statistics
+package com.tangoplus.tangoface.ui.settings
 
 import android.content.res.ColorStateList
 import android.os.Bundle
@@ -14,7 +14,7 @@ import com.tangoplus.tangoface.R
 import com.tangoplus.tangoface.databinding.FragmentFlickerSettingsDialogBinding
 import com.tangoplus.tangoface.domain.util.FileUtility.setOnSingleClickListener
 import com.tangoplus.tangoface.domain.util.PreferenceUtility
-import com.tangoplus.tangoface.ui.statistics.vm.SettingsViewModel
+import com.tangoplus.tangoface.ui.settings.vm.SettingsViewModel
 
 class FlickerSettingsDialogFragment : DialogFragment() {
 	private lateinit var bd: FragmentFlickerSettingsDialogBinding

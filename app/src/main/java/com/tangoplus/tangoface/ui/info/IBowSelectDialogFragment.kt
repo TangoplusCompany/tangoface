@@ -3,6 +3,7 @@ package com.tangoplus.tangoface.ui.info
 import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
 import android.os.Bundle
+import android.util.Log
 import androidx.fragment.app.Fragment
 import android.view.LayoutInflater
 import android.view.View
@@ -22,6 +23,7 @@ import com.tangoplus.tangoface.ui.main.vm.MainViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import androidx.core.graphics.drawable.toDrawable
 
 class IBowSelectDialogFragment : DialogFragment(), OnBowItemClickListener {
 	private lateinit var bd : FragmentIBowSelectDialogBinding
@@ -44,6 +46,7 @@ class IBowSelectDialogFragment : DialogFragment(), OnBowItemClickListener {
 		lifecycleScope.launch {
 			val isGuest = mvm.currentResult.value?.userName == "GUEST"
 			val result = ivm.getBowResults(fDao, if (isGuest) null else mvm.currentResult.value?.tempServerSn)
+			Log.v("bow결과", "$isGuest = $result")
 			ivm.setCurrentBowResults(result)
 
 			setAdapter()
@@ -52,7 +55,7 @@ class IBowSelectDialogFragment : DialogFragment(), OnBowItemClickListener {
 
 	private fun setAdapter() {
 		val vLayoutManager = LinearLayoutManager(requireContext(), LinearLayoutManager.VERTICAL, false)
-		val uAdapter = UserRVAdapter(requireContext(), ivm = ivm)
+		val uAdapter = UserRVAdapter(requireContext(), ivm = ivm, fType = 1)
 		uAdapter.onBowItemClickListener = this@IBowSelectDialogFragment
 		bd.rvIBS.apply {
 			layoutManager = vLayoutManager
@@ -77,17 +80,15 @@ class IBowSelectDialogFragment : DialogFragment(), OnBowItemClickListener {
 		super.onStart()
 
 		dialog?.window?.let { window ->
-			// 1. 기본 흰색/검은색 윈도우 배경을 투명하게 (커스텀 둥근 모서리 적용 시 필수)
-			window.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
-
+//			window.setBackgroundDrawable(Color.parseColor("#80000000").toDrawable())
 			// 2. 단말기 화면 크기(px) 구하기
 			val displayMetrics = requireContext().resources.displayMetrics
 			val screenWidth = displayMetrics.widthPixels
       val screenHeight = displayMetrics.heightPixels
 
 			// 3. 원하는 퍼센트 설정 (예: 가로 85%, 세로 60%)
-			val width = (screenWidth * 1.0).toInt()
-			val height = (screenHeight * 0.5).toInt() // ViewGroup.LayoutParams.WRAP_CONTENT// 💡 세로는 뷰 크기에 맞추려면 ViewGroup.LayoutParams.WRAP_CONTENT 사용
+			val width = ViewGroup.LayoutParams.WRAP_CONTENT //(screenWidth * 0.9).toInt()
+			val height = ViewGroup.LayoutParams.WRAP_CONTENT // (screenHeight * 0.9).toInt() 💡 세로는 뷰 크기에 맞추려면 ViewGroup.LayoutParams.WRAP_CONTENT 사용
 
 			// 4. 윈도우 크기 적용
 			window.setLayout(width, height)

@@ -78,8 +78,9 @@ interface FaceDao {
     reg_date AS regDate,
     1 AS activated
    FROM t_face_static
-   WHERE (:isGuest = 1 AND name = 'GUEST')
-      OR (:isGuest = 0 AND temp_server_sn = :tempServerSn)
+   WHERE measure_type == 2 AND 
+			((:isGuest = 1 AND name = 'GUEST')
+      OR (:isGuest = 0 AND temp_server_sn = :tempServerSn))
   """
 	)
 	suspend fun getAllBowItems(

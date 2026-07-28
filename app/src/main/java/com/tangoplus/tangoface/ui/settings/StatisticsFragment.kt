@@ -1,4 +1,4 @@
-package com.tangoplus.tangoface.ui.statistics
+package com.tangoplus.tangoface.ui.settings
 
 import android.os.Bundle
 import android.util.Log
@@ -27,10 +27,11 @@ import com.tangoplus.tangoface.ui.adapter.ChartRVAdapter
 import com.tangoplus.tangoface.ui.adapter.PreCheckListFilterRVAdapter
 import com.tangoplus.tangoface.ui.adapter.SettingsRVAdapter
 import com.tangoplus.tangoface.ui.listener.PreCheckListFilterCheckListener
-import com.tangoplus.tangoface.ui.statistics.vm.ChartViewModel
-import com.tangoplus.tangoface.ui.statistics.vo.PreCheckListFilter
+import com.tangoplus.tangoface.ui.settings.vm.ChartViewModel
+import com.tangoplus.tangoface.ui.settings.vo.PreCheckListFilter
 import com.tangoplus.tangoface.ui.view.BarChartRender
 import kotlinx.coroutines.launch
+import kotlin.collections.iterator
 
 
 class StatisticsFragment : Fragment(), PreCheckListFilterCheckListener {
@@ -178,12 +179,6 @@ class StatisticsFragment : Fragment(), PreCheckListFilterCheckListener {
 		}
 
 
-		val lLayoutManager = LinearLayoutManager(context, LinearLayoutManager.VERTICAL, false)
-		val sAdapter = SettingsRVAdapter(this@StatisticsFragment)
-		bd.rvSettings.apply {
-			layoutManager =  lLayoutManager
-			adapter = sAdapter
-		}
 	}
 
 	private fun setPieChart() {

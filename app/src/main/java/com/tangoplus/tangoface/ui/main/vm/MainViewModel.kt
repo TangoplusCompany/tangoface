@@ -20,6 +20,7 @@ import com.tangoplus.tangoface.domain.vo.FaceResult
 import com.tangoplus.tangoface.domain.vo.Sequence
 import com.tangoplus.tangoface.ui.info.vo.DateDisplay
 import com.tangoplus.tangoface.ui.info.vo.Factor
+import com.tangoplus.tangoface.ui.info.vo.HistoryMappingItem
 import com.tangoplus.tangoface.ui.main.vo.UserItem
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -129,6 +130,10 @@ class MainViewModel : ViewModel() {
 	var userCount = 0
 	var currentUserItems = listOf<UserItem>()
 	private val staticDataLoad = MutableLiveData<Boolean>()
+
+	private val _displayUserItemList = MutableLiveData<List<HistoryMappingItem>>()
+	val displayUserItemList: LiveData<List<HistoryMappingItem>> get() = _displayUserItemList
+
 	fun loadUserDataFromDB(context: Context) {
 		viewModelScope.launch(Dispatchers.IO) {
 			val dao = FaceDatabase.getDatabase(context).faceDao()
@@ -141,6 +146,15 @@ class MainViewModel : ViewModel() {
 			val collator = Collator.getInstance(Locale.KOREAN)
 			val sorted = allData.sortedWith(compareByDescending(collator) { it.regDate })
 			currentUserItems = sorted
+
+			val mappedList = sorted
+				.groupBy { item -> item.regDate.substring(0, 10).replace("-", ".") }
+				.flatMap { (date, items) ->
+					listOf(HistoryMappingItem.Header(date)) + items.map { HistoryMappingItem.Item(it) }
+				}
+
+			// 💡 LiveData로 결과 전달 (postValue 사용)
+			_displayUserItemList.postValue(mappedList)
 			staticDataLoad.postValue(true)
 		}
 	}

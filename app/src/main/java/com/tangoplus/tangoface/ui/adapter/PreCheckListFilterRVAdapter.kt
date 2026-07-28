@@ -8,8 +8,8 @@ import com.google.android.material.checkbox.MaterialCheckBox
 import com.tangoplus.tangoface.R
 import com.tangoplus.tangoface.databinding.RvChecklistFilterItemBinding
 import com.tangoplus.tangoface.ui.listener.PreCheckListFilterCheckListener
-import com.tangoplus.tangoface.ui.statistics.vm.ChartViewModel
-import com.tangoplus.tangoface.ui.statistics.vo.PreCheckListFilter
+import com.tangoplus.tangoface.ui.settings.vm.ChartViewModel
+import com.tangoplus.tangoface.ui.settings.vo.PreCheckListFilter
 import kotlin.collections.set
 
 class PreCheckListFilterRVAdapter(

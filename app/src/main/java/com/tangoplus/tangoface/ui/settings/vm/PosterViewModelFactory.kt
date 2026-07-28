@@ -1,4 +1,4 @@
-package com.tangoplus.tangoface.ui.statistics.vm
+package com.tangoplus.tangoface.ui.settings.vm
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
