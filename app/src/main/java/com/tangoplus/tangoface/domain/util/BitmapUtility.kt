@@ -152,30 +152,29 @@ object BitmapUtility {
 				)
 			)
 
-			val isPortrait =
-				fragment.resources.configuration.orientation == Configuration.ORIENTATION_PORTRAIT
-			val upscaledBitmap = upscaleImage(combinedBitmap, 2.25f)
-			val finalBitmap = if (isPortrait) {
-				val width = upscaledBitmap.width
-				val height = upscaledBitmap.height
 
-				if (width > height) {
-					val targetWidth = (height * 3f / 4f).toInt()
-					val x = (width - targetWidth) / 2
-					Log.d("BitmapCrop", "Cropping from ${width}x${height} to ${targetWidth}x${height}")
-					Bitmap.createBitmap(upscaledBitmap, x, 0, targetWidth, height)
-				} else {
-					upscaledBitmap
-				}
-			} else {
-				upscaledBitmap
+			val srcWidth = combinedBitmap.width   // 1080
+			val srcHeight = combinedBitmap.height // 1920
+
+// 3:4 비율을 맞추기 위한 가로 크기 계산 (1920 기준 -> 1440)
+			val targetWidth = (srcHeight * 3) / 4 // 1440
+			val targetHeight = srcHeight          // 1920
+
+// 1440x1920 검은색 캔버스 생성
+			val paddedBitmap = Bitmap.createBitmap(targetWidth, targetHeight, Bitmap.Config.ARGB_8888)
+			val canvas = Canvas(paddedBitmap).apply {
+				drawColor(Color.BLACK) // 검은색 배경 채우기
 			}
-			val targetWidth = upscaledBitmap.width // 1080
-			val targetHeight = (targetWidth * 4) / 3 // 1440
-			val startY = (upscaledBitmap.height - targetHeight) / 2
-			val centerCroppedBitmap = Bitmap.createBitmap(upscaledBitmap, 0, startY, targetWidth, targetHeight)
 
-			Triple(centerCroppedBitmap.copy(centerCroppedBitmap.config ?: Bitmap.Config.ARGB_8888, true), textBoxes, faceRect)
+// 좌우 여백(각 180px) 중앙 배치
+			val leftOffset = (targetWidth - srcWidth) / 2f
+			canvas.drawBitmap(combinedBitmap, leftOffset, 0f, null)
+
+			Triple(
+				paddedBitmap,
+				textBoxes,
+				faceRect
+			)
 
 		} catch (e: Exception) {
 			Log.e("getCombineBitmap", "Error: ${e.message}", e)

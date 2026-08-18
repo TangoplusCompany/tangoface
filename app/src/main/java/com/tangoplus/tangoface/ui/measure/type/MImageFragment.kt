@@ -1,4 +1,4 @@
-package com.tangoplus.tangoface.ui.measure
+package com.tangoplus.tangoface.ui.measure.type
 
 import android.app.Activity
 import android.content.res.ColorStateList
@@ -6,7 +6,6 @@ import android.graphics.Bitmap
 import android.net.Uri
 import android.os.Bundle
 import android.util.Log
-import androidx.fragment.app.Fragment
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -14,6 +13,7 @@ import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
+import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
@@ -22,26 +22,27 @@ import com.google.mediapipe.tasks.vision.core.RunningMode
 import com.tangoplus.tangoface.R
 import com.tangoplus.tangoface.data.db.FaceDao
 import com.tangoplus.tangoface.data.db.FaceDatabase
-import com.tangoplus.tangoface.data.db.FaceStatic.Companion.getCurrentDateTime
+import com.tangoplus.tangoface.data.db.FaceStatic
 import com.tangoplus.tangoface.databinding.FragmentMeasureImageBinding
 import com.tangoplus.tangoface.domain.util.AnimationUtility.setupGuideBanner
-import com.tangoplus.tangoface.domain.util.ClassifyUtility.calculateHorizontalRatio
-import com.tangoplus.tangoface.domain.util.FileUtility.saveImageToInternalStorage
+import com.tangoplus.tangoface.domain.util.ClassifyUtility
+import com.tangoplus.tangoface.domain.util.FileUtility
 import com.tangoplus.tangoface.domain.util.FileUtility.setOnSingleClickListener
 import com.tangoplus.tangoface.domain.util.FileUtility.toFaceStatic
 import com.tangoplus.tangoface.domain.util.FileUtility.toJsonString
-import com.tangoplus.tangoface.domain.util.LandmarkUtility.calculateScreenX
-import com.tangoplus.tangoface.domain.util.LandmarkUtility.calculateScreenY
+import com.tangoplus.tangoface.domain.util.LandmarkUtility
 import com.tangoplus.tangoface.domain.util.PreferenceUtility
-import com.tangoplus.tangoface.domain.util.UXUtility.startLongVibrate
+import com.tangoplus.tangoface.domain.util.UXUtility
 import com.tangoplus.tangoface.domain.util.clearAll
 import com.tangoplus.tangoface.domain.vision.face.FaceLandmarkerHelper
 import com.tangoplus.tangoface.domain.vision.pose.PoseLandmarkerHelper
+import com.tangoplus.tangoface.domain.vo.MeasureType
 import com.tangoplus.tangoface.domain.vo.Sequence
 import com.tangoplus.tangoface.ui.adapter.MeasureImageRVAdapter
 import com.tangoplus.tangoface.ui.adapter.MeasureImageVPAdapter
 import com.tangoplus.tangoface.ui.main.MainActivity
 import com.tangoplus.tangoface.ui.main.vm.MainViewModel
+import com.tangoplus.tangoface.ui.measure.UserSetupDialogFragment
 import com.tangoplus.tangoface.ui.measure.vm.InputViewModel
 import com.tangoplus.tangoface.ui.measure.vm.MeasureImageViewModel
 import com.tangoplus.tangoface.ui.measure.vm.MeasureViewModel
@@ -53,8 +54,7 @@ import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import java.io.File
 
-
-class MeasureImageFragment : Fragment() {
+class MImageFragment : Fragment() {
 	private lateinit var bd : FragmentMeasureImageBinding
 	private val mainVm : MainViewModel by activityViewModels()
 	private val mivm: MeasureImageViewModel by viewModels()
@@ -86,7 +86,7 @@ class MeasureImageFragment : Fragment() {
 			bannerView = bd.guideBanner1.root,
 			closeButton = bd.guideBanner1.btnCloseGuide,
 			textView = bd.guideBanner1.tvGuideText,
-			message = "🤗목폄 자세가 없을 경우 일반 정면 사진을 추가해주세요\n🔔뎁스카메라를 사용하지 않아 얼굴 크기 등 실제 길이 확인은 제한될 수 있습니다",
+			message = "🔔뎁스카메라를 사용하지 않아 얼굴 크기 등 실제 길이 확인은 제한될 수 있습니다",
 			prefKey = "measureImageGuide"
 		)
 
@@ -94,62 +94,64 @@ class MeasureImageFragment : Fragment() {
 
 			if (it) {
 				mvm.isDepthCameraMeasure = false
-
+				mvm.measureType = MeasureType.IMAGE
 				lifecycleScope.launch {
-					val paths = mivm.imagePaths.value ?: emptyList()
-					for (path in paths) {
-						if (path != null) {
-							// suspend 함수이므로 여기서 처리가 끝날 때까지 기다립니다.
-							val success = mvm.scannedImage(requireActivity() as AppCompatActivity, paths, mvm.currentSeq, flh, plh)
+					val path = mivm.imagePath.value
+					if (path != null) {
+						// suspend 함수이므로 여기서 처리가 끝날 때까지 기다립니다.
+						val success = mvm.scannedImage(requireActivity() as AppCompatActivity, path, flh, plh)
 
-							if (success) {
-								mvm.resultBundleToJson(mvm.currentSeq)
-								Log.v("2d얼굴", "${mvm.face2DResult?.landmarks}")
-								Log.v("헤어라인", "${mvm.currentHairLine2DCoordinate}")
-								if (mvm.currentHairLine2DCoordinate.size == 7) {
-									val absoluteLandmarkPairs = mvm.face2DResult?.landmarks?.map {
-										Pair(calculateScreenX(it.x), calculateScreenY(it.y))
-									}?.toMutableList()
+						if (success) {
+							mvm.resultBundleToJson(Sequence.COMFORT)
+							Log.v("2d얼굴", "${mvm.face2DResult?.landmarks}")
+							Log.v("헤어라인", "${mvm.currentHairLine2DCoordinate}")
+							if (mvm.currentHairLine2DCoordinate.size == 7) {
+								val absoluteLandmarkPairs = mvm.face2DResult?.landmarks?.map {
+									Pair(
+										LandmarkUtility.calculateScreenX(it.x),
+										LandmarkUtility.calculateScreenY(it.y)
+									)
+								}?.toMutableList()
 
-									absoluteLandmarkPairs?.let { pairs ->
-										val currentHairLine3DCoordinate = mvm.currentHairLine2DCoordinate.map {
-											Triple(it.first, it.second, 0f)
-										}.toMutableList()
-										val horizontalRatio = calculateHorizontalRatio(pairs, currentHairLine3DCoordinate)
-										Log.v("횡비", "${horizontalRatio}: ${currentHairLine3DCoordinate}")
-										val index = mvm.currentSeq.ordinal
-										while (mvm.staticJA.length() <= index) {
-											mvm.staticJA.put(JSONObject().apply { put("horizontal_ratio", "0:0:0") })
-										}
-										if (mvm.currentSeq == Sequence.COMFORT) {
-											mvm.staticJA.getJSONObject(index).put("horizontal_ratio", horizontalRatio)
-										} else {
-											mvm.staticJA.getJSONObject(index).put("horizontal_ratio", "0:0:0")
-										}
-
+								absoluteLandmarkPairs?.let { pairs ->
+									val horizontalRatio =
+										ClassifyUtility.calculateHorizontalRatio(pairs, mvm.currentHairLine2DCoordinate)
+									val index = Sequence.COMFORT.ordinal
+									while (mvm.staticJA.length() <= index) {
+										mvm.staticJA.put(JSONObject().apply { put("horizontal_ratio", "0:0:0") })
 									}
-								}
-								mvm.currentHairLine3DCoordinate.clear()
-								mvm.moveToNextSeq()
-								isAllSuccessful = true
-							} else {
-								isAllSuccessful = false
+									if (Sequence.COMFORT == Sequence.COMFORT) {
+										mvm.staticJA.getJSONObject(index).put("horizontal_ratio", horizontalRatio)
+									} else {
+										mvm.staticJA.getJSONObject(index).put("horizontal_ratio", "0:0:0")
+									}
 
-								withContext(Dispatchers.Main) {
-									Toast.makeText(context, "분석 결과를 도출할 수 없습니다. 얼굴이 잘 나온 사진으로 다시 시도해주세요!", Toast.LENGTH_LONG).show()
 								}
-								// 더 이상 남은 path를 스캔하지 않고 반복문 즉시 탈출
-								break
+							}
+							mvm.currentHairLine3DCoordinate.clear()
+//							mvm.moveToNextSeq()
+							isAllSuccessful = true
+						} else {
+							isAllSuccessful = false
+
+							withContext(Dispatchers.Main) {
+								Toast.makeText(
+									context,
+									"분석 결과를 도출할 수 없습니다. 얼굴이 잘 나온 사진으로 다시 시도해주세요!",
+									Toast.LENGTH_LONG
+								).show()
 							}
 						}
-					} // for 루프 끝
+					}
+
+
 					if (isAllSuccessful) {
 						// 2 seq 둘다 정상적으로 끝났고, 이제 저장하고 메인 화면으로 가기
 						if (ivm.birthdayValue.value == "날짜 선택") {
 							ivm.birthdayValue.value = ""
 						}
 						withContext(Dispatchers.IO) {
-							val fd = FaceDatabase.getDatabase(requireContext())
+							val fd = FaceDatabase.Companion.getDatabase(requireContext())
 							fDao = fd.faceDao()
 
 							Log.v("userSn설정잘됐는지", "is init? = ${mvm.currentUserSn}, ${mvm.allSeqs}")
@@ -158,18 +160,20 @@ class MeasureImageFragment : Fragment() {
 
 							allSeqs.forEachIndexed { index, sequence ->
 								Log.v("staticJA", "${mvm.staticJA.getJSONObject(0).getString("horizontal_ratio")}")
-								val staticJSON = mvm.setJo(mvm.staticJA.getJSONObject(index), sequence, ivm, prefsUtil, false)
+								val staticJSON =
+									mvm.setJo(mvm.staticJA.getJSONObject(index), sequence, ivm, prefsUtil, false)
 								Log.v("staticJSON", "${mvm.staticJA.getJSONObject(index)}")
 								staticJos.add(staticJSON)
 							}
 							Log.v("staticJson까보기0", "${staticJos.size}")
 
 							// 받아온 user_sn으로 수정
-							val now = getCurrentDateTime()
+							val now = FaceStatic.Companion.getCurrentDateTime()
 							val transStatics = staticJos.map {
 								it.toFaceStatic().copy(
 									user_sn = mvm.currentUserSn,
-									reg_date = now
+									reg_date = now,
+									measure_type = 3
 								)
 							}
 							// 부여 받은 user_sn넣기
@@ -200,8 +204,6 @@ class MeasureImageFragment : Fragment() {
 									mergedJSON,
 									mvm.mediaFileNames[i].replace(".webp", "").replace(".mp4", "")
 								)
-
-
 								mergedJOBeforeFileName[i].put("json_file_name", jsonPath)
 								mvm.mergedJA.put(mergedJOBeforeFileName[i])
 							}
@@ -216,7 +218,7 @@ class MeasureImageFragment : Fragment() {
 										val result = withContext(Dispatchers.IO) {
 											mainVm.convertToFaceResult(requireContext(), fDao, lastTempServerSn)
 										}
-										startLongVibrate(requireContext())
+										UXUtility.startLongVibrate(requireContext())
 										mainVm.currentResult.value = result
 										(activity as MainActivity).navigateToMeasureHistoryInformation(result.measureType)
 										initSettings()
@@ -226,7 +228,7 @@ class MeasureImageFragment : Fragment() {
 									}
 								} catch (e: Exception) {
 									Log.e("LoadingError", "Error: ${e.message}", e)
-									startLongVibrate(requireContext())
+									UXUtility.startLongVibrate(requireContext())
 									ivm.isFinishInput.value = false
 								}
 							}
@@ -237,18 +239,17 @@ class MeasureImageFragment : Fragment() {
 		}
 
 		setAdapter()
-		mivm.imagePaths.observe(viewLifecycleOwner) { paths ->
+		mivm.imagePath.observe(viewLifecycleOwner) { path ->
 			// 1. 기존 가이드 텍스트 숨김 처리 (하나라도 있으면 숨김)
-			bd.tvMIGuide.visibility = if (paths.any { it != null }) View.GONE else View.VISIBLE
+			bd.tvMIGuide.visibility = if (path == null) View.GONE else View.VISIBLE
 
-			setVPAdapter()
 			setAdapter()
 
 			// 2. 버튼 활성화 및 색상 변경 (둘 다 null이 아닐 때)
 			// 리스트 사이즈가 항상 2로 고정되어 있다면 paths.all { it != null }만 하셔도 됩니다.
-			val isBothFilled = paths.size >= 2 && paths.all { it != null }
+			val isImageUpload = path != null
 
-			if (isBothFilled) {
+			if (isImageUpload) {
 				// 둘 다 사진이 들어왔을 때: 활성화 색상 (예: 파란색)
 				bd.btnMI.backgroundTintList = null
 				bd.btnMI.isEnabled = true
@@ -260,7 +261,7 @@ class MeasureImageFragment : Fragment() {
 		}
 
 		bd.btnMI.setOnSingleClickListener {
-			val userDialog = UserSetupDialogFragment.newInstance(1)
+			val userDialog = UserSetupDialogFragment.Companion.newInstance(1)
 			userDialog.show(requireActivity().supportFragmentManager, "")
 		}
 	}
@@ -275,9 +276,8 @@ class MeasureImageFragment : Fragment() {
 				setCompressionQuality(100)
 				setHideBottomControls(false)
 				setAspectRatioOptions(0,
-					AspectRatio("16:9", 16f, 9f),
 					AspectRatio("3:4", 3f, 4f),
-					AspectRatio("4:3", 4f, 3f)
+					AspectRatio("9:16", 9f, 16f),
 				)
 				setFreeStyleCropEnabled(false)
 				setToolbarTitle("측정 이미지 선택")
@@ -305,31 +305,26 @@ class MeasureImageFragment : Fragment() {
 
 		processedUri?.let { uri ->
 			val timestamp = System.currentTimeMillis()
-			val fileName = "measure_${mivm.targetIndex}_${timestamp}.jpg"
-			val finalPath = saveImageToInternalStorage(requireContext(), uri, fileName)
+			val fileName = "scanImaged_${timestamp}.jpg"
+			val finalPath = FileUtility.saveImageToInternalStorage(requireContext(), uri, fileName)
 
 			finalPath?.let { path ->
-				mivm.setImage(mivm.targetIndex, path)
+				mivm.setImage(path)
 			}
 		}
-	}
-	private fun setVPAdapter() {
-		val vAdapter = MeasureImageVPAdapter(mivm.imagePaths.value!!)
-		bd.vpMI.adapter = vAdapter
 	}
 
 	private fun setAdapter() {
 		val adapter = MeasureImageRVAdapter(
 			fragment = this,
-			uris = mivm.imagePaths.value ?: listOf(null, null)
-		) { position ->
+			uri = mivm.imagePath.value
+		) {
 			// [클릭 시 동작]
-			mivm.targetIndex = position // 어떤 슬롯을 바꾸는지 VM에 저장
 			pickImage.launch("image/*") // 갤러리 열기
 		}
 
 		bd.rvMI.apply {
-			layoutManager = GridLayoutManager(context, 2)
+			layoutManager = GridLayoutManager(context, 1)
 			this.adapter = adapter
 		}
 	}
@@ -367,10 +362,10 @@ class MeasureImageFragment : Fragment() {
 				plh = PoseLandmarkerHelper(
 					context = requireContext(), // 이제 this가 완전히 초기화된 상태
 					runningMode = RunningMode.IMAGE,
-					minPoseDetectionConfidence = PoseLandmarkerHelper.DEFAULT_POSE_DETECTION_CONFIDENCE,
-					minPoseTrackingConfidence = PoseLandmarkerHelper.DEFAULT_POSE_TRACKING_CONFIDENCE,
-					minPosePresenceConfidence = PoseLandmarkerHelper.DEFAULT_POSE_PRESENCE_CONFIDENCE,
-					currentDelegate = PoseLandmarkerHelper.DELEGATE_CPU,
+					minPoseDetectionConfidence = PoseLandmarkerHelper.Companion.DEFAULT_POSE_DETECTION_CONFIDENCE,
+					minPoseTrackingConfidence = PoseLandmarkerHelper.Companion.DEFAULT_POSE_TRACKING_CONFIDENCE,
+					minPosePresenceConfidence = PoseLandmarkerHelper.Companion.DEFAULT_POSE_PRESENCE_CONFIDENCE,
+					currentDelegate = PoseLandmarkerHelper.Companion.DELEGATE_CPU,
 					poseLandmarkerHelperListener = null
 				)
 				Log.d("PoseLandmarker", "Initialization successful!")
@@ -439,7 +434,6 @@ class MeasureImageFragment : Fragment() {
 		mvm.overlayW = 0f
 		mvm.overlayH = 0f
 
-		// measureImageViewModel
 		mivm.removeImage(0)
 		mivm.removeImage(1)
 		ivm.nameValue.value = ""

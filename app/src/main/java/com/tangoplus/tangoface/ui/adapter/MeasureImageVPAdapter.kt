@@ -6,7 +6,7 @@ import android.widget.ImageView
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
 
-class MeasureImageVPAdapter(private val items: List<String?>) : RecyclerView.Adapter<MeasureImageVPAdapter.VH>() {
+class MeasureImageVPAdapter(private val item: String?) : RecyclerView.Adapter<MeasureImageVPAdapter.VH>() {
 	inner class VH(val iv: ImageView) : RecyclerView.ViewHolder(iv)
 	override fun onCreateViewHolder(parent: ViewGroup, viewType: Int) =
 		VH(ImageView(parent.context).apply {
@@ -14,7 +14,7 @@ class MeasureImageVPAdapter(private val items: List<String?>) : RecyclerView.Ada
 			scaleType = ImageView.ScaleType.CENTER_CROP
 		})
 	override fun onBindViewHolder(holder: VH, position: Int) {
-		Glide.with(holder.iv).load(items[position]).into(holder.iv)
+		Glide.with(holder.iv).load(item).into(holder.iv)
 	}
-	override fun getItemCount() = items.size
+	override fun getItemCount() = 1
 }

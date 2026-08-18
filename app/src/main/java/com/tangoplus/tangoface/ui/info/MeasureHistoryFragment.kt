@@ -3,13 +3,11 @@ package com.tangoplus.tangoface.ui.info
 import android.os.Bundle
 import android.text.Editable
 import android.text.TextWatcher
-import android.util.Log
 import androidx.fragment.app.Fragment
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.activityViewModels
-import androidx.fragment.app.replace
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.GridLayoutManager
 import com.tangoplus.tangoface.R
@@ -25,7 +23,7 @@ import com.tangoplus.tangoface.ui.listener.OnUserClickListener
 import com.tangoplus.tangoface.ui.main.MainActivity
 import com.tangoplus.tangoface.ui.main.vm.MainViewModel
 import com.tangoplus.tangoface.ui.main.vo.UserItem
-import com.tangoplus.tangoface.ui.measure.MeasureImageFragment
+import com.tangoplus.tangoface.ui.measure.type.MImageFragment
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -64,7 +62,7 @@ class MeasureHistoryFragment : Fragment(), OnUserClickListener {
 			initAdapter()
 
 			bd.btnMHImage.setOnSingleClickListener {
-				(requireActivity() as MainActivity).navigateToSubFragment(MeasureImageFragment())
+				(requireActivity() as MainActivity).navigateToSubFragment(MImageFragment())
 			}
 		}
 		setSearchText()

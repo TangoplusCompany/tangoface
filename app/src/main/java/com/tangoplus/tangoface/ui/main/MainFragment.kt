@@ -45,7 +45,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlin.math.abs
 import androidx.core.view.isGone
-import com.tangoplus.tangoface.ui.measure.MeasureImageFragment
+import com.tangoplus.tangoface.ui.measure.type.MImageFragment
 
 
 class MainFragment : Fragment(), OnMainTabClickListener {
@@ -317,7 +317,7 @@ class MainFragment : Fragment(), OnMainTabClickListener {
 			tabs[2] -> { selectedMeasureType = MeasureType.EXPERT }
 			tabs[1] -> { selectedMeasureType = MeasureType.BOW }
 			tabs[0] -> {
-				(requireActivity() as MainActivity).navigateToSubFragment(MeasureImageFragment())
+				(requireActivity() as MainActivity).navigateToSubFragment(MImageFragment())
 				return
 			}
 		}

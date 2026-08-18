@@ -2,9 +2,59 @@
 <androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
-    android:id="@+id/main"
+    android:id="@+id/clDCS"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     tools:context=".ui.settings.DepthCameraSettingsActivity">
 
+    <com.tangoplus.tangoface.orbbec.view.OBGLView
+        android:id="@+id/obglvDCS"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+<!--    <com.tangoplus.tangoface.ui.view.OverlayView-->
+<!--        android:id="@+id/overlay"-->
+<!--        android:layout_width="0dp"-->
+<!--        android:layout_height="0dp"-->
+<!--        app:layout_constraintBottom_toBottomOf="@+id/obglvDCS"-->
+<!--        app:layout_constraintEnd_toEndOf="@+id/obglvDCS"-->
+<!--        app:layout_constraintStart_toStartOf="@+id/obglvDCS"-->
+<!--        app:layout_constraintTop_toTopOf="@+id/obglvDCS"/>-->
+
+    <TextView
+        android:id="@+id/tvDCSPitch"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:background="@color/accent30"
+        android:padding="10dp"
+        android:text="TextView"
+        android:textColor="@color/white"
+        android:textSize="18sp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/tvDCSGoGallery" />
+
+    <TextView
+        android:id="@+id/tvDCSGoGallery"
+        android:layout_width="wrap_content"
+        android:layout_height="0dp"
+        android:layout_marginStart="30dp"
+        android:layout_marginTop="20dp"
+        android:background="@drawable/bckgnd_20"
+        android:backgroundTint="@color/bg15"
+        android:gravity="center"
+        android:paddingStart="12dp"
+        android:paddingTop="8dp"
+        android:paddingEnd="12dp"
+        android:paddingBottom="8dp"
+        android:text="← 기록으로 돌아가기"
+        android:textColor="@color/white"
+        android:textSize="24dp"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"/>
 </androidx.constraintlayout.widget.ConstraintLayout>

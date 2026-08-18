@@ -177,55 +177,55 @@ class IExpertFragment : Fragment(), OnFacialPartClickListener, OnSequenceClickLi
   }
 
   private fun setupSurveyAdapter() {
-    val surveyAdapter = SurveyRVAdapter { pain, palpation, discomfort ->
-      val scores = listOf(pain, palpation, discomfort)
-      val fDao = FaceDatabase.getDatabase(requireContext()).faceDao()
-
-      lifecycleScope.launch {
-        if (mvm.currentResult.value != null) {
-          val survey = AfterSurvey(
-            server_sn = mvm.currentResult.value?.tempServerSn!!,
-            pain_score = pain,
-            palpation_score = palpation,
-            discomfort_score = discomfort
-          )
-          fDao.insertAfterSurvey(survey)
-        }
-      }
-
-      // 애니메이션 진행 후 결과 화면으로 전환
-      bd.rvIE3.animate()
-        .alpha(0f)
-        .setDuration(200)
-        .withEndAction {
-          bd.rvIE4.visibility = View.GONE
-
-          bd.ivCheckFeedback.visibility = View.VISIBLE
-          bd.ivCheckFeedback.animate()
-            .scaleX(1f)
-            .scaleY(1f)
-            .alpha(1f)
-            .setDuration(400)
-            .withEndAction {
-              bd.ivCheckFeedback.animate()
-                .scaleX(0f)
-                .scaleY(0f)
-                .alpha(0f)
-                .setStartDelay(300)
-                .setDuration(300)
-                .withEndAction {
-                  bd.ivCheckFeedback.visibility = View.GONE
-                  // 완료 후 결과 어댑터 세팅 함수 호출
-                  setupFactorAdapter(pain, palpation, discomfort)
-                }
-                .start()
-            }
-            .start()
-        }
-        .start()
-    }
-    bd.rvIE4.layoutManager = LinearLayoutManager(context)
-    bd.rvIE4.adapter = surveyAdapter
+//    val surveyAdapter = SurveyRVAdapter { pain, palpation, discomfort ->
+//      val scores = listOf(pain, palpation, discomfort)
+//      val fDao = FaceDatabase.getDatabase(requireContext()).faceDao()
+//
+//      lifecycleScope.launch {
+//        if (mvm.currentResult.value != null) {
+//          val survey = AfterSurvey(
+//            server_sn = mvm.currentResult.value?.tempServerSn!!,
+//            pain_score = pain,
+//            palpation_score = palpation,
+//            discomfort_score = discomfort
+//          )
+//          fDao.insertAfterSurvey(survey)
+//        }
+//      }
+//
+//      // 애니메이션 진행 후 결과 화면으로 전환
+//      bd.rvIE3.animate()
+//        .alpha(0f)
+//        .setDuration(200)
+//        .withEndAction {
+//          bd.rvIE4.visibility = View.GONE
+//
+//          bd.ivCheckFeedback.visibility = View.VISIBLE
+//          bd.ivCheckFeedback.animate()
+//            .scaleX(1f)
+//            .scaleY(1f)
+//            .alpha(1f)
+//            .setDuration(400)
+//            .withEndAction {
+//              bd.ivCheckFeedback.animate()
+//                .scaleX(0f)
+//                .scaleY(0f)
+//                .alpha(0f)
+//                .setStartDelay(300)
+//                .setDuration(300)
+//                .withEndAction {
+//                  bd.ivCheckFeedback.visibility = View.GONE
+//                  // 완료 후 결과 어댑터 세팅 함수 호출
+//                  setupFactorAdapter(pain, palpation, discomfort)
+//                }
+//                .start()
+//            }
+//            .start()
+//        }
+//        .start()
+//    }
+//    bd.rvIE4.layoutManager = LinearLayoutManager(context)
+//    bd.rvIE4.adapter = surveyAdapter
   }
 
   // 3. 결과 팩터 어댑터 설정 함수 (중복 코드 방지 및 직행용)

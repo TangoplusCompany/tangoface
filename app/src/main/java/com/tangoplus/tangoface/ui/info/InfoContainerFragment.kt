@@ -51,11 +51,15 @@ class InfoContainerFragment : Fragment() {
     ivm.currentCheckedLines.clear()
     svm.updateFacialPart(FacialPart.DERIVE)
     svm.updateSequence(Sequence.COMFORT)
+
     if (ivm.isAngleModeActive.value) ivm.toggleAngleMode()
+    if (ivm.getMoireOn()) ivm.switchedMoireOn()
+
+    if (!ivm.getLineOn()) ivm.switchedLineOn()
+    if (!ivm.getGridLineOn()) ivm.switchedGridLineOn()
 
     ivm.setSeq(Sequence.COMFORT)
     ivm.releaseUnitIdx()
-    if (!ivm.getLineOn()) ivm.switchedLineOn()
   }
 
   override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
@@ -64,7 +68,8 @@ class InfoContainerFragment : Fragment() {
     val frg = when (measureTypeNum) {
       0 -> INormalFragment()
       1 -> IExpertFragment()
-      else -> IExpertFragment()
+      3 -> IImageFragment()
+      else -> INormalFragment()
     }
 
     requireActivity().supportFragmentManager.beginTransaction().apply {

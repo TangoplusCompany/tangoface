@@ -352,14 +352,15 @@ object ClassifyUtility {
 
 	// 가로 비율 (상:중:하 총합 3)
 	fun calculateHorizontalRatio(
-		faceLandmarks: MutableList<Pair<Float, Float>>,
-		hairLine3DCoordinates: MutableList<Triple<Float, Float, Float>>
+		faceLandmarks: List<Pair<Float, Float>>,
+		hairLine2DCoordinates: List<Pair<Float, Float>>
 	): String {
-		if (faceLandmarks.isNotEmpty() && hairLine3DCoordinates.size > 3) {
-			val hairlineY = hairLine3DCoordinates[3].second
-			val eyesY = (faceLandmarks[55].second + faceLandmarks[285].second) / 2f
-			val noseY = faceLandmarks[2].second
-			val chinY = faceLandmarks[152].second
+		// 7개 포인트 중 중앙 지점(인덱스 3) 사용
+		if (faceLandmarks.isNotEmpty() && hairLine2DCoordinates.size > 3) {
+			val hairlineY = hairLine2DCoordinates[3].second
+			val eyesY = (faceLandmarks[55].second + faceLandmarks[285].second) / 2f // 눈썹 라인
+			val noseY = faceLandmarks[2].second   // 코끝
+			val chinY = faceLandmarks[152].second // 턱끝
 
 			val upper = eyesY - hairlineY
 			val mid = noseY - eyesY
@@ -368,7 +369,6 @@ object ClassifyUtility {
 			val total = upper + mid + lower
 			if (total <= 0f) return "0:0:0"
 
-			// 반올림하여 자연수(정수)로 변환
 			val pUpper = (upper / total * 100).roundToInt()
 			val pMid = (mid / total * 100).roundToInt()
 			val pLower = (lower / total * 100).roundToInt()
@@ -381,33 +381,32 @@ object ClassifyUtility {
 	fun calculateVerticalRatio(
 		faceLandmarks: MutableList<Pair<Float, Float>>
 	): String {
-		if (faceLandmarks.isNotEmpty()) {
-			val leftEarX = faceLandmarks[234].first
-			val leftEyeOutX = faceLandmarks[33].first
-			val leftEyeInX = faceLandmarks[133].first
-			val rightEyeInX = faceLandmarks[362].first
-			val rightEyeOutX = faceLandmarks[263].first
-			val rightEarX = faceLandmarks[454].first
+		if (faceLandmarks.isEmpty()) return "0:0:0:0:0"
 
-			val m1 = leftEyeOutX - leftEarX
-			val m2 = leftEyeInX - leftEyeOutX
-			val m3 = rightEyeInX - leftEyeInX
-			val m4 = rightEyeOutX - rightEyeInX
-			val m5 = rightEarX - rightEyeOutX
+		val leftEarX = faceLandmarks[234].first
+		val leftEyeOutX = faceLandmarks[33].first
+		val leftEyeInX = faceLandmarks[133].first
+		val rightEyeInX = faceLandmarks[362].first
+		val rightEyeOutX = faceLandmarks[263].first
+		val rightEarX = faceLandmarks[454].first
 
-			val total = m1 + m2 + m3 + m4 + m5
-			if (total <= 0f) return "0:0:0:0:0"
+		// 💡 절댓값으로 계산해 좌우 반전 및 음수 방지
+		val m1 = abs(leftEyeOutX - leftEarX)
+		val m2 = abs(leftEyeInX - leftEyeOutX)
+		val m3 = abs(rightEyeInX - leftEyeInX)
+		val m4 = abs(rightEyeOutX - rightEyeInX)
+		val m5 = abs(rightEarX - rightEyeOutX)
 
-			// 100% 기준 자연수(정수)로 변환
-			val p1 = (m1 / total * 100).roundToInt()
-			val p2 = (m2 / total * 100).roundToInt()
-			val p3 = (m3 / total * 100).roundToInt()
-			val p4 = (m4 / total * 100).roundToInt()
-			val p5 = (m5 / total * 100).roundToInt()
+		val total = m1 + m2 + m3 + m4 + m5
+		if (total <= 0f) return "0:0:0:0:0"
 
-			return "$p1:$p2:$p3:$p4:$p5"
-		}
-		return "0:0:0:0:0"
+		val p1 = (m1 / total * 100).roundToInt()
+		val p2 = (m2 / total * 100).roundToInt()
+		val p3 = (m3 / total * 100).roundToInt()
+		val p4 = (m4 / total * 100).roundToInt()
+		val p5 = (m5 / total * 100).roundToInt()
+
+		return "$p1:$p2:$p3:$p4:$p5"
 	}
 
 }

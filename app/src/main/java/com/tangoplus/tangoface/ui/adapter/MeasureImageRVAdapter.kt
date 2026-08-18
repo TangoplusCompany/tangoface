@@ -16,7 +16,7 @@ import com.tangoplus.tangoface.databinding.RvPosterItemBinding
 
 class MeasureImageRVAdapter(
 	private val fragment: Fragment,
-	private val uris: List<String?>,
+	private val uri: String?,
 	private val onImageClick: (Int) -> Unit // 클릭 시 인덱스를 넘겨줌
 ) : RecyclerView.Adapter<MeasureImageRVAdapter.MeasureImageViewHolder>() {
 
@@ -57,9 +57,9 @@ class MeasureImageRVAdapter(
 	}
 
 	override fun onBindViewHolder(p0: MeasureImageViewHolder, p1: Int) {
-		p0.bind(uris[p1], p1)
+		p0.bind(uri, p1)
 	}
 
 
-	override fun getItemCount(): Int = 2
+	override fun getItemCount(): Int = 1
 }

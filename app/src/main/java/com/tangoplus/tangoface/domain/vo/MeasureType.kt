@@ -5,7 +5,8 @@ import java.io.Serializable
 enum class MeasureType(val idx: Int, val displayName: String) : Serializable {
   NORMAL(0, "간편 검사"),
   EXPERT(1, "정밀 검사"),
-  BOW(2, "페이스 보우");
+  BOW(2, "페이스 보우"),
+  IMAGE(3, "사진 검사");
 
 
   override fun toString(): String = displayName

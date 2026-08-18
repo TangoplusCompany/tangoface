@@ -93,7 +93,7 @@ class MNormalFragment : Fragment() {
                 }?.toMutableList()
                 // 🕊️🕊️🕊️🕊️ 여기서 vertical 비율 넣기
                 absoluteLandmarkPairs?.let { pairs ->
-                  val horizontalRatio = calculateHorizontalRatio(pairs, mvm.currentHairLine3DCoordinate)
+                  val horizontalRatio = calculateHorizontalRatio(pairs, mvm.currentHairLine2DCoordinate)
                   if (mvm.staticJA.length() > 0) {
                     // 2. 첫 번째(인덱스 0) JSONObject를 꺼내서 값을 추가(또는 덮어쓰기)
                     val firstJsonObject = mvm.staticJA.getJSONObject(0)
@@ -107,7 +107,6 @@ class MNormalFragment : Fragment() {
 //									Log.v("스태틱", "${mvm.staticJA}")
                 }
               }
-              mvm.currentHairLine3DCoordinate.clear()
               mvm.currentHairLine3DCoordinate.clear()
               startLongVibrate(requireContext())
               // 이 블록 안의 코드는 애니메이션이 왕복을 마치고 완전히 멈췄을 때 실행됩니다.

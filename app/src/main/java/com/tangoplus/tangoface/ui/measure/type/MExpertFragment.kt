@@ -130,13 +130,13 @@ class MExpertFragment : Fragment() {
                   if (success) {
                     // hairline, pose 전부 끝난 시점
                     mvm.resultBundleToJson(mvm.currentSeq)
-                    if (mvm.currentHairLine3DCoordinate.size == 7) {
+                    if (mvm.currentHairLine2DCoordinate.size == 7) {
                       val absoluteLandmarkPairs = mvm.face2DResult?.landmarks?.map {
                         Pair(calculateScreenX( it.x), calculateScreenY( it.y))
                       }?.toMutableList()
                       // 🕊️🕊️🕊️🕊️ 여기서 vertical 비율 넣기
                       absoluteLandmarkPairs?.let { pairs ->
-                        val horizontalRatio = calculateHorizontalRatio(pairs, mvm.currentHairLine3DCoordinate)
+                        val horizontalRatio = calculateHorizontalRatio(pairs, mvm.currentHairLine2DCoordinate)
                         if (mvm.staticJA.length() > 0) {
                           // 2. 첫 번째(인덱스 0) JSONObject를 꺼내서 값을 추가(또는 덮어쓰기)
                           val firstJsonObject = mvm.staticJA.getJSONObject(0)

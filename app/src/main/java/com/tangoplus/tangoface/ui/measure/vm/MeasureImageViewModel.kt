@@ -14,29 +14,26 @@ import android.util.Log
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
+import com.google.common.collect.Multimaps.index
 import java.io.File
 import java.io.FileOutputStream
 import kotlin.math.min
 
 class MeasureImageViewModel : ViewModel() {
-	private val _imagePaths = MutableLiveData<MutableList<String?>>(mutableListOf(null, null))
-	val imagePaths: LiveData<MutableList<String?>> = _imagePaths
+	private val _imagePath = MutableLiveData<String?>(null)
+	val imagePath: LiveData<String?> = _imagePath
 
-	var targetIndex: Int = 0 // 현재 작업 중인 인덱스 (0 또는 1)
-
-	fun setImage(index: Int, path: String) {
-		val current = _imagePaths.value?.toMutableList() ?: mutableListOf<String?>(null, null)
-		current[index] = path
-		_imagePaths.value = current
+	fun setImage( path: String) {
+		_imagePath.value = path
 	}
 
 	fun removeImage(index: Int) {
 
-		val current = _imagePaths.value ?: return
-		current[index]?.let { File(it).delete() }
-		current[index] = null
-		_imagePaths.value = current
-		Log.v("초기화!", "이미지 list: $index 번 이미지 삭제: current[index] : ${current[index]}")
+		var current = _imagePath.value
+		current?.let { File(it).delete() }
+		current = null
+		_imagePath.value = current
+		Log.v("초기화!", "이미지 list: $index 번 이미지 삭제: current[index]")
 	}
 
 	fun make169WithPadding(context: Context, sourceUri: Uri): Uri? {

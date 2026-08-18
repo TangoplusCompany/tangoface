@@ -306,8 +306,6 @@ class DepthCameraActivity : BaseActivity(), FaceLandmarkerHelper.LandmarkerListe
 		while (mvm.mIsStreamRunning && !Thread.currentThread().isInterrupted) {
 
 			if (mvm.mIsDeviceDetached) break
-
-			val pipeline = mvm.mPipeline ?: break
 			try {
 				mvm.mPipeline!!.waitForFrameSet(1000).use { frameSet ->
 					if (frameSet == null) {
