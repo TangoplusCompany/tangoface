@@ -70,7 +70,7 @@ class PosterManageFragment : Fragment(), OnPosterClickListener {
 		}
 
 		bd.rvPM.apply {
-			layoutManager = GridLayoutManager(context, if (MyApplication.isTablet()) 3 else 2)
+			layoutManager = GridLayoutManager(context, 2)
 			adapter = pmAdapter
 		}
 	}
@@ -108,7 +108,7 @@ class PosterManageFragment : Fragment(), OnPosterClickListener {
 				setToolbarTitle("포스터 영역 선택")
 			}
 			val ratio = (activity as MainActivity).getFlMainSize()?.let { (width, height) ->
-				if (MyApplication.isTablet()) Pair(25.6f, 38.9f) else Pair(width.toFloat(), height.toFloat())
+				if (MyApplication.isTablet()) Pair(16f, 9f) else Pair(width.toFloat(), height.toFloat())
 			} ?: Pair(1f, 1f)
 
 			UCrop.of(sourceUri, destinationUri)

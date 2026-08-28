@@ -1,10 +1,14 @@
 package com.tangoplus.tangoface.ui.main
 
 import android.Manifest
+import android.R.attr.duration
+import android.animation.ValueAnimator
 import android.annotation.SuppressLint
 import android.app.Activity
+import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.hardware.usb.UsbManager
 import android.net.Uri
@@ -19,8 +23,11 @@ import android.view.LayoutInflater
 import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
+import android.view.animation.AccelerateDecelerateInterpolator
 import android.view.animation.AccelerateInterpolator
 import android.view.animation.DecelerateInterpolator
+import android.widget.ImageView
+import android.widget.LinearLayout
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.activityViewModels
@@ -45,7 +52,13 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlin.math.abs
 import androidx.core.view.isGone
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.repeatOnLifecycle
+import androidx.recyclerview.widget.GridLayoutManager
+import com.tangoplus.tangoface.ui.main.vo.AlertItem
 import com.tangoplus.tangoface.ui.measure.type.MImageFragment
+import eightbitlab.com.blurview.BlurTarget
+import eightbitlab.com.blurview.RenderScriptBlur
 
 
 class MainFragment : Fragment(), OnMainTabClickListener {
@@ -72,7 +85,24 @@ class MainFragment : Fragment(), OnMainTabClickListener {
 			}
 		}
 	}
+	private val usbReceiver = object : BroadcastReceiver() {
+		override fun onReceive(context: Context?, intent: Intent?) {
+			when (intent?.action) {
+				UsbManager.ACTION_USB_DEVICE_ATTACHED,
+				UsbManager.ACTION_USB_DEVICE_DETACHED -> {
+					checkAndLogUsbDevices()
+				}
+			}
+		}
+	}
+	private fun checkAndLogUsbDevices() {
+		val usbManager = requireContext().getSystemService(Context.USB_SERVICE) as UsbManager
+		val deviceList = usbManager.deviceList
 
+		// ViewModel에 전달하여 상태 즉시 갱신
+		mvm.updateUsbDeviceList(deviceList)
+		Log.d("USB_CHECK", "장치 갱신 완료: 연결 여부 = ${mvm.isDepthConnected.value}")
+	}
 	override fun onCreateView(
 		inflater: LayoutInflater, container: ViewGroup?,
 		savedInstanceState: Bundle?
@@ -80,54 +110,46 @@ class MainFragment : Fragment(), OnMainTabClickListener {
 		bd = FragmentMainBinding.inflate(layoutInflater)
 		return bd.root
 	}
-	private fun checkAndLogUsbDevices() {
-		val usbManager = requireContext().getSystemService(Context.USB_SERVICE) as UsbManager
-		val deviceList = usbManager.deviceList
 
-		if (deviceList.isEmpty()) {
-			Log.d("USB_CHECK", "연결된 USB 장치가 없습니다.")
-			return
-		}
-
-		Log.d("USB_CHECK", "--- 연결된 USB 장치 목록 (${deviceList.size}개) ---")
-		for ((key, device) in deviceList) {
-			Log.d("USB_CHECK", "Device Key: $key")
-			Log.d("USB_CHECK", "Device Name (경로): ${device.deviceName}")
-			Log.d("USB_CHECK", "Vendor ID: ${device.vendorId} (Hex: 0x${Integer.toHexString(device.vendorId)})")
-			Log.d("USB_CHECK", "Product ID: ${device.productId} (Hex: 0x${Integer.toHexString(device.productId)})")
-			Log.d("USB_CHECK", "Manufacturer Name: ${device.manufacturerName}")
-			Log.d("USB_CHECK", "Product Name: ${device.productName}")
-			Log.d("USB_CHECK", "-----------------------------------------")
-		}
-	}
 	override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
 		super.onViewCreated(view, savedInstanceState)
 		checkAndLogUsbDevices()
+		val filter = IntentFilter().apply {
+			addAction(UsbManager.ACTION_USB_DEVICE_ATTACHED)
+			addAction(UsbManager.ACTION_USB_DEVICE_DETACHED)
+		}
+		requireContext().registerReceiver(usbReceiver, filter)
 		// seq Select를 위한
 		setAdapter()
 		setupViewPager()
-		bd.clMStart.setOnSingleClickListener {
-			val recyclerView = bd.rvM
-			if (recyclerView.isGone) {
-				recyclerView.alpha = 0f
-				recyclerView.translationY = 30f
-				recyclerView.visibility = View.VISIBLE
-				recyclerView.animate()
-					.translationY(0f)
-					.alpha(1f)
-					.setDuration(250)
-					.setInterpolator(DecelerateInterpolator())
-					.start()
-			} else {
-				recyclerView.animate()
-					.translationY(30f)
-					.alpha(0f)
-					.setDuration(200)
-					.setInterpolator(AccelerateInterpolator())
-					.withEndAction { recyclerView.visibility = View.GONE }
-					.start()
-			}
+		observeViewModel()
+		// 1. 최초 진입 시에만 슬라이드 다운 애니메이션 실행
+		if (mvm.isAlertShow.value == false) {
+			playAlertSlideDownAnimation()
+			mvm.isAlertShow.value = true
 		}
+//		bd.clMStart.setOnSingleClickListener {
+//			val recyclerView = bd.rvM
+//			if (recyclerView.isGone) {
+//				recyclerView.alpha = 0f
+//				recyclerView.translationY = 30f
+//				recyclerView.visibility = View.VISIBLE
+//				recyclerView.animate()
+//					.translationY(0f)
+//					.alpha(1f)
+//					.setDuration(250)
+//					.setInterpolator(DecelerateInterpolator())
+//					.start()
+//			} else {
+//				recyclerView.animate()
+//					.translationY(30f)
+//					.alpha(0f)
+//					.setDuration(200)
+//					.setInterpolator(AccelerateInterpolator())
+//					.withEndAction { recyclerView.visibility = View.GONE }
+//					.start()
+//			}
+//		}
 
 	}
 
@@ -212,9 +234,9 @@ class MainFragment : Fragment(), OnMainTabClickListener {
 	@SuppressLint("ClickableViewAccessibility")
   private fun setupViewPager() {
 		bd.clM.post {
-			bd.vpM.layoutParams = bd.vpM.layoutParams.apply {
-				height = bd.clM.height
-			}
+//			bd.vpM.layoutParams = bd.vpM.layoutParams.apply {
+//				height = bd.clM.height
+//			}
 		}
 		val viewPagerChild = bd.vpM.getChildAt(0) as? RecyclerView
 		viewPagerChild?.setOnTouchListener { v, event ->
@@ -262,18 +284,68 @@ class MainFragment : Fragment(), OnMainTabClickListener {
 				}
 			}
 		})
+		setupIndicators(savedPosters.size)
+
+// 무한 스크롤 및 시작 위치 세팅 후 최초 1회 활성화
+		val initialRealIndex = (bd.vpM.currentItem) % savedPosters.size
+		updateIndicator(initialRealIndex)
+
+// 콜백에 인디케이터 갱신 추가
+		bd.vpM.registerOnPageChangeCallback(object : ViewPager2.OnPageChangeCallback() {
+			override fun onPageSelected(position: Int) {
+				super.onPageSelected(position)
+				if (savedPosters.isNotEmpty()) {
+					val realPosition = position % savedPosters.size
+					updateIndicator(realPosition)
+				}
+			}
+
+			override fun onPageScrollStateChanged(state: Int) {
+				when (state) {
+					ViewPager2.SCROLL_STATE_DRAGGING -> stopAutoScroll()
+					ViewPager2.SCROLL_STATE_IDLE -> startAutoScroll()
+				}
+			}
+		})
+	}
+	private fun setupIndicators(count: Int) {
+		bd.vpIndicator.removeAllViews()
+		if (count <= 1) return // 이미지가 1장이면 점 표시 안 함
+
+		val params = LinearLayout.LayoutParams(
+			LinearLayout.LayoutParams.WRAP_CONTENT,
+			LinearLayout.LayoutParams.WRAP_CONTENT
+		).apply {
+			setMargins(8, 0, 8, 0)
+		}
+
+		for (i in 0 until count) {
+			val dot = ImageView(requireContext()).apply {
+				setImageResource(if (i == 0) R.drawable.dot_active else R.drawable.dot_inactive)
+				layoutParams = params
+			}
+			bd.vpIndicator.addView(dot)
+		}
 	}
 
-
-
+	private fun updateIndicator(selectedPosition: Int) {
+		val childCount = bd.vpIndicator.childCount
+		for (i in 0 until childCount) {
+			val dot = bd.vpIndicator.getChildAt(i) as? ImageView
+			if (i == selectedPosition) {
+				dot?.setImageResource(R.drawable.dot_active)
+			} else {
+				dot?.setImageResource(R.drawable.dot_inactive)
+			}
+		}
+	}
 	private fun setAdapter() {
-		bd.rvM.visibility = View.GONE
 		val mAdapter = MainTabRVAdapter(requireContext(), tabs)
 		mAdapter.onMainTabClickListener = this@MainFragment
-		val vLayoutManager = LinearLayoutManager(requireContext(), LinearLayoutManager.VERTICAL , false)
-		bd.rvM.apply {
-			adapter= mAdapter
-			layoutManager = vLayoutManager
+		val gLayoutManager = GridLayoutManager(requireContext(), 2)
+		bd.rvM.post {
+			bd.rvM.adapter= mAdapter
+			bd.rvM.layoutManager = gLayoutManager
 		}
 	}
 	private fun startAutoScroll() {
@@ -308,9 +380,17 @@ class MainFragment : Fragment(), OnMainTabClickListener {
 
 	override fun onDestroyView() {
 		super.onDestroyView()
-		stopAutoScroll()
+		try {
+			requireContext().unregisterReceiver(usbReceiver)
+			stopAutoScroll()
+			bd.tvMTitle.animate().cancel()
+			bd.tvMDesc.animate().cancel()
+		} catch (e: Exception) {
+			// Unregistered 예외 방어
+		}
 	}
-	private val tabs = listOf(   "사진 검사", "페이스 보우", "정밀 검사","간편 검사")
+
+	private val tabs = listOf("사진 검사", "페이스 보우", "정밀 검사","간편 검사")
 	override fun onMainTabClick(tab: String) {
 		when (tab) {
 			tabs[3] -> { selectedMeasureType = MeasureType.NORMAL }
@@ -323,5 +403,82 @@ class MainFragment : Fragment(), OnMainTabClickListener {
 		}
 		checkStoragePermission()
 	}
+	private fun playAlertSlideDownAnimation() {
+		bd.clMAlert.post {
+			val targetTranslationY = 0f
 
+			// 초기 상태: 위로 살짝 올라가 있고 투명
+			bd.clMAlert.translationY = -40f
+			bd.clMAlert.alpha = 0f
+
+			// 아래로 내려오며(Slide Down) 부드럽게 착지
+			bd.clMAlert.animate()
+				.translationY(targetTranslationY)
+				.alpha(1f)
+				.setDuration(450)
+				.setInterpolator(android.view.animation.DecelerateInterpolator())
+				.start()
+		}
+	}
+
+	private fun Int.dpToPx(context: Context): Int =
+		(this * context.resources.displayMetrics.density).toInt()
+
+	private fun observeViewModel() {
+		// 롤링 시작
+		mvm.startAlertRolling(requireContext().applicationContext)
+
+		viewLifecycleOwner.lifecycleScope.launch {
+			viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+				mvm.currentAlert.collect { alert ->
+					alert?.let { item ->
+						// 최초 1회만 토스식 바운스 강조, 이후는 일반 슬라이드 전환
+						if (mvm.isAlertShow.value == false) {
+							playFirstHighlightAnimation(item)
+							mvm.isAlertShow.value = true // 최초 실행 완료 기록
+						} else {
+							updateAlertWithAnimation(item)
+						}
+					}
+				}
+			}
+		}
+	}
+
+	// 최초 1회 알림 강조 (Scale Bounce + Fade In)
+	private fun playFirstHighlightAnimation(item: AlertItem) {
+		bd.tvMTitle.text = item.title
+		bd.tvMDesc.text = item.desc
+
+		bd.clMAlert.scaleX = 0.96f
+		bd.clMAlert.scaleY = 0.96f
+		bd.clMAlert.alpha = 0f
+
+		bd.clMAlert.animate()
+			.scaleX(1.0f)
+			.scaleY(1.0f)
+			.alpha(1f)
+			.setDuration(450)
+			.setInterpolator(android.view.animation.OvershootInterpolator(1.4f))
+			.start()
+	}
+
+	// 일반 롤링 전환 (위로 슬라이드 아웃 -> 아래에서 슬라이드 인)
+	private fun updateAlertWithAnimation(item: AlertItem) {
+		bd.tvMTitle.animate()
+			.translationY(-15f).alpha(0f).setDuration(220)
+			.withEndAction {
+				bd.tvMTitle.text = item.title
+				bd.tvMTitle.translationY = 15f
+				bd.tvMTitle.animate().translationY(0f).alpha(1f).setDuration(220).start()
+			}.start()
+
+		bd.tvMDesc.animate()
+			.translationY(-15f).alpha(0f).setDuration(220)
+			.withEndAction {
+				bd.tvMDesc.text = item.desc
+				bd.tvMDesc.translationY = 15f
+				bd.tvMDesc.animate().translationY(0f).alpha(1f).setDuration(220).start()
+			}.start()
+	}
 }

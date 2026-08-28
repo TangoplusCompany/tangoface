@@ -56,20 +56,13 @@
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent">
 
-            <ImageView
-                android:id="@+id/ivMHEmpty"
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:layout_weight="1"
-                android:src="@drawable/drawable_empty" />
-
             <TextView
                 android:id="@+id/textView3"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
                 android:layout_weight="9"
                 android:gravity="center"
-                android:text="기록이 없습니다. 측정을 시작해보세요"
+                android:text="📢 기록이 없습니다. 측정을 시작해보세요"
                 android:textColor="@color/subColor100"
                 android:textSize="18sp" />
 
@@ -85,13 +78,13 @@
             android:backgroundTint="@color/bg300"
             android:drawablePadding="10dp"
             android:ems="10"
-            android:hint="이름을 입력해주세요 🔎"
+            android:hint="이름을 입력해주세요"
             android:inputType="text"
             android:paddingStart="20dp"
             android:paddingTop="15dp"
             android:paddingBottom="15dp"
-            android:textColor="@color/accent300"
-            android:textColorHint="@color/accent300"
+            android:textColor="@color/white"
+            android:textColorHint="@color/accent100"
             android:textSize="16sp"
             android:visibility="visible"
             app:layout_constraintBottom_toBottomOf="@+id/textView12"

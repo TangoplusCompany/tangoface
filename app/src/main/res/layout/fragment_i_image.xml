@@ -26,8 +26,9 @@
                 android:id="@+id/cardView4"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
+                android:layout_margin="10dp"
                 app:cardBackgroundColor="#00FFFFFF"
-                app:cardCornerRadius="0dp"
+                app:cardCornerRadius="12dp"
                 app:cardElevation="0dp"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
@@ -199,7 +200,7 @@
                 android:backgroundTint="@color/bg700"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toBottomOf="@id/linearLayout4">
+                app:layout_constraintTop_toBottomOf="@id/cardView4">
 
             </androidx.recyclerview.widget.RecyclerView>
 

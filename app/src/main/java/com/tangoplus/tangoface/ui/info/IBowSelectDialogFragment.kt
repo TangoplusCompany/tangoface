@@ -87,8 +87,8 @@ class IBowSelectDialogFragment : DialogFragment(), OnBowItemClickListener {
       val screenHeight = displayMetrics.heightPixels
 
 			// 3. 원하는 퍼센트 설정 (예: 가로 85%, 세로 60%)
-			val width = ViewGroup.LayoutParams.WRAP_CONTENT //(screenWidth * 0.9).toInt()
-			val height = ViewGroup.LayoutParams.WRAP_CONTENT // (screenHeight * 0.9).toInt() 💡 세로는 뷰 크기에 맞추려면 ViewGroup.LayoutParams.WRAP_CONTENT 사용
+			val width = (screenWidth * 0.8).toInt() // ViewGroup.LayoutParams.WRAP_CONTENT
+			val height = (screenHeight * 0.5).toInt() // ViewGroup.LayoutParams.WRAP_CONTENT //  💡 세로는 뷰 크기에 맞추려면 ViewGroup.LayoutParams.WRAP_CONTENT 사용
 
 			// 4. 윈도우 크기 적용
 			window.setLayout(width, height)

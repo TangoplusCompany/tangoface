@@ -19,5 +19,5 @@ app/src/test/java/com/tangoplus/tangoq/
 app/src/androidTest/java/com/tangoplus/tangoq/
 app/release/
 FaceBeauty/app/google-services.json
-app\src\main\assets\modnet.onnx
-app\src\main\assets\resnet18.onnx
+app/src/main/assets
+

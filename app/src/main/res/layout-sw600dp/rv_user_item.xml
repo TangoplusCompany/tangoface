@@ -17,115 +17,88 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent">
 
-        <androidx.cardview.widget.CardView
-            android:id="@+id/cardView"
+        <ImageView
+            android:id="@+id/ivMVIType"
             android:layout_width="64dp"
             android:layout_height="64dp"
             android:layout_marginStart="20dp"
-            app:cardBackgroundColor="@color/accent800"
-            app:cardCornerRadius="12dp"
-            app:cardElevation="0dp"
+            android:layout_marginTop="20dp"
+            android:layout_marginBottom="20dp"
+            android:background="@drawable/bg_stroke_1_8_800_600"
+            android:padding="16dp"
+            android:tint="@color/accent100"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="parent">
+            app:layout_constraintTop_toTopOf="parent"
+            app:srcCompat="@drawable/ic_normal" />
 
-            <ImageView
-                android:id="@+id/ivMVIType"
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:layout_margin="16dp"
-                app:srcCompat="@drawable/ic_normal" />
-        </androidx.cardview.widget.CardView>
-
-        <TextView
-            android:id="@+id/tvMVIName"
-            android:layout_width="wrap_content"
-            android:layout_height="match_parent"
-            android:layout_marginStart="20dp"
-            android:layout_weight="4"
-            android:gravity="center"
-            android:text="이*휘"
-            android:textColor="@color/accent100"
-            android:textSize="20sp"
-            android:textStyle="bold"
-            app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintStart_toEndOf="@+id/cardView"
-            app:layout_constraintTop_toTopOf="parent" />
-
-        <TextView
-            android:id="@+id/tvMVIAge"
+        <LinearLayout
+            android:id="@+id/linearLayout"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginStart="10dp"
-            android:layout_weight="1"
-            android:gravity="center"
-            android:text="만 30세"
-            android:textColor="@color/accent100"
-            android:textSize="16sp"
-            app:layout_constraintBottom_toBottomOf="@+id/tvMVIName"
-            app:layout_constraintStart_toEndOf="@+id/tvMVIName"
-            app:layout_constraintTop_toTopOf="@+id/tvMVIName" />
+            android:orientation="vertical"
+            app:layout_constraintBottom_toBottomOf="@+id/ivMVIType"
+            app:layout_constraintStart_toEndOf="@+id/ivMVIType"
+            app:layout_constraintTop_toTopOf="@+id/ivMVIType">
 
-        <TextView
-            android:id="@+id/tvMVIGender"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="5dp"
-            android:layout_weight="1"
-            android:gravity="center"
-            android:maxLength="25"
-            android:maxLines="1"
-            android:text="남성"
-            android:textColor="@color/accent100"
-            android:textSize="16sp"
-            app:layout_constraintBottom_toBottomOf="@+id/tvMVIAge"
-            app:layout_constraintStart_toEndOf="@+id/tvMVIAge"
-            app:layout_constraintTop_toTopOf="@+id/tvMVIAge" />
+            <TextView
+                android:id="@+id/tvMVIType"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:background="@drawable/bg_stroke_1_8_800_600"
+                android:paddingStart="10dp"
+                android:paddingTop="2.5dp"
+                android:paddingEnd="10dp"
+                android:paddingBottom="2.5dp"
+                android:text="사진"
+                android:textColor="@color/accent100"
+                android:textSize="14sp" />
 
-        <TextView
-            android:id="@+id/tvMVIType"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="20dp"
-            android:background="@drawable/bckgnd_stroke_1_8_accent_accent_800"
-            android:paddingStart="10dp"
-            android:paddingTop="2.5dp"
-            android:paddingEnd="10dp"
-            android:paddingBottom="2.5dp"
-            android:text="비대칭 진단"
-            android:textColor="@color/accent400"
-            android:textSize="12sp"
-            app:layout_constraintBottom_toTopOf="@+id/tvMVIName"
-            app:layout_constraintStart_toStartOf="@+id/tvMVIName"
-            app:layout_constraintTop_toTopOf="parent"
-            app:layout_constraintVertical_bias="1.0" />
+            <TextView
+                android:id="@+id/tvMVIName"
+                android:layout_width="wrap_content"
+                android:layout_height="match_parent"
+                android:layout_marginTop="5dp"
+                android:layout_weight="4"
+                android:gravity="center"
+                android:text="이*휘"
+                android:textColor="@color/accent100"
+                android:textSize="20sp"
+                android:textStyle="bold" />
 
-        <TextView
-            android:id="@+id/tvMVIMobile"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="20dp"
-            android:layout_weight="0.55"
-            android:drawableStart="@drawable/ic_call"
-            android:drawableTint="@color/accent100"
-            android:textColor="@color/accent100"
-            android:textSize="14sp"
-            app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintStart_toStartOf="@+id/tvMVIName"
-            app:layout_constraintTop_toBottomOf="@+id/tvMVIName"
-            app:layout_constraintVertical_bias="0.0" />
+        </LinearLayout>
 
-        <TextView
-            android:id="@+id/tvMVIRegDate"
+        <LinearLayout
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginEnd="5dp"
-            android:layout_weight="0.45"
-            android:textColor="@color/accent100"
-            android:textSize="12sp"
+            android:orientation="vertical"
             app:layout_constraintBottom_toBottomOf="@+id/imageView5"
             app:layout_constraintEnd_toStartOf="@+id/imageView5"
-            app:layout_constraintTop_toTopOf="@+id/imageView5" />
+            app:layout_constraintTop_toTopOf="@+id/imageView5">
+
+            <TextView
+                android:id="@+id/tvMVIRegDate"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:layout_weight="0.45"
+                android:gravity="end"
+                android:textColor="@color/accent100"
+                android:textSize="14sp" />
+
+            <TextView
+                android:id="@+id/tvMVIMobile"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="5dp"
+                android:layout_weight="0.55"
+                android:drawableStart="@drawable/ic_call"
+                android:drawableTint="@color/accent100"
+                android:textColor="@color/accent100"
+                android:textSize="14sp" />
+
+        </LinearLayout>
 
         <ImageView
             android:id="@+id/imageView5"

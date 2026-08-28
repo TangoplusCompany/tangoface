@@ -131,7 +131,10 @@ android {
 //noinspection UseTomlInstead
 dependencies {
     // 외부 라이브러리
-
+    implementation("com.github.Dimezis:BlurView:version-3.2.0")
+//    implementation("org.tensorflow:tensorflow-lite:2.14.0")
+//    implementation("org.tensorflow:tensorflow-lite-support:0.4.4")
+//    implementation("org.tensorflow:tensorflow-lite-gpu:2.14.0")
 //    // Ktor 서버 코어 및 Netty 엔진
 //    implementation("io.ktor:ktor-server-core:2.3.12")
 //    implementation("io.ktor:ktor-server-netty:2.3.12")

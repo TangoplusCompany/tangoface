@@ -1,40 +1,102 @@
 <?xml version="1.0" encoding="utf-8"?>
 <androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/clMTI"
-    android:layout_width="300dp"
+    android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:layout_gravity="right|end">
+    android:layout_margin="10dp"
+    android:layout_weight="1"
+    android:background="@drawable/effect_glass_card"
+    android:paddingStart="20dp"
+    android:paddingTop="20dp"
+    android:paddingEnd="20dp"
+    android:paddingBottom="20dp">
 
     <ImageView
         android:id="@+id/ivMTI"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="10dp"
-        android:layout_marginBottom="10dp"
-        android:background="@drawable/color_gradation_accent_64"
+        android:layout_gravity="center"
+        android:background="@drawable/bg_stroke_1_8_800_600"
         android:padding="15dp"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
-        app:srcCompat="@drawable/ic_bow"
-        app:tint="@color/accent100" />
+        app:srcCompat="@drawable/ic_expert" />
 
     <TextView
         android:id="@+id/tvMTITitle"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginEnd="20dp"
-        android:elevation="2dp"
-        android:padding="6dp"
-        android:shadowColor="@color/bg"
-        android:shadowDx="0"
-        android:shadowDy="4"
-        android:shadowRadius="12"
-        android:text="페이스 보우 측정"
+        android:layout_marginTop="5dp"
+        android:text="title"
         android:textColor="@color/white"
-        android:textSize="20sp"
-        app:layout_constraintBottom_toBottomOf="@+id/ivMTI"
-        app:layout_constraintEnd_toStartOf="@+id/ivMTI"
-        app:layout_constraintTop_toTopOf="@+id/ivMTI" />
+        android:textSize="24sp"
+        app:layout_constraintStart_toStartOf="@+id/ivMTI"
+        app:layout_constraintTop_toBottomOf="@+id/ivMTI" />
+
+    <TextView
+        android:id="@+id/tvMTIDesc"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="5dp"
+        android:lineSpacingExtra="4sp"
+        android:text="TextView"
+        android:textColor="@color/subColor300"
+        android:textSize="18sp"
+        app:layout_constraintStart_toStartOf="@+id/tvMTITitle"
+        app:layout_constraintTop_toBottomOf="@+id/tvMTITitle" />
+
+    <TextView
+        android:id="@+id/tvMTITimeSeq"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="5dp"
+        android:layout_marginBottom="5dp"
+        android:lineSpacingExtra="4sp"
+        android:text="TextView"
+        android:textColor="@color/subColor500"
+        android:textSize="16sp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="@+id/tvMTIDesc"
+        app:layout_constraintTop_toBottomOf="@+id/tvMTIDesc" />
+
+    <com.facebook.shimmer.ShimmerFrameLayout
+        android:id="@+id/sflMTI"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintVertical_bias="1.0"
+        app:shimmer_base_alpha="1.0"
+        app:shimmer_dropoff="0.7"
+        app:shimmer_duration="2000"
+        app:shimmer_highlight_alpha="0.7"
+        app:shimmer_repeat_delay="2000">
+
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent">
+
+            <TextView
+                android:id="@+id/btnMTI"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:drawablePadding="10dp"
+                android:text="측정 시작하기"
+                android:textColor="@color/subColor300"
+                android:textSize="24sp"
+                android:textStyle="bold"
+                android:visibility="invisible"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintVertical_bias="1.0" />
+
+        </androidx.constraintlayout.widget.ConstraintLayout>
+
+    </com.facebook.shimmer.ShimmerFrameLayout>
 </androidx.constraintlayout.widget.ConstraintLayout>

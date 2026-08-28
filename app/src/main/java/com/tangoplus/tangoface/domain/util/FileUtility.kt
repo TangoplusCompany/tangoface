@@ -461,4 +461,17 @@ object FileUtility {
 			null
 		}
 	}
+//
+//	// 모델 가져오기
+//	fun getModelPath(context: Context, modelName: String): String {
+//		val file = File(context.filesDir, modelName)
+//		if (!file.exists()) {
+//			context.assets.open(modelName).use { input ->
+//				FileOutputStream(file).use { output ->
+//					input.copyTo(output)
+//				}
+//			}
+//		}
+//		return file.absolutePath
+//	}
 }

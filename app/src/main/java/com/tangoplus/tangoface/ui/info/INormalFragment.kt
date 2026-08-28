@@ -259,7 +259,6 @@ class INormalFragment : Fragment(), OnFacialPartClickListener {
 			FacialPart.BOTTOM -> listOf(DrawLine.E_CHEEKS, DrawLine.A_CANTHUS_ORAL, DrawLine.MOUSE)
 		}
 
-		// item 클릭 후 facialPart, Adapter전부 확인
 		ivm.currentCheckedLines.addAll(drawLines)
 		svm.updateFacialPart(part)
 		if (ivm.isAngleModeActive.value) {

@@ -69,8 +69,8 @@ class UserRVAdapter(
 		val clMVI: ConstraintLayout = view.findViewById(R.id.clMVI)
 		val tvMVIName: TextView = view.findViewById(R.id.tvMVIName)
 		val tvMVIRegDate: TextView = view.findViewById(R.id.tvMVIRegDate)
-		val tvMVIAge: TextView = view.findViewById(R.id.tvMVIAge)
-		val tvMVIGender: TextView = view.findViewById(R.id.tvMVIGender)
+//		val tvMVIAge: TextView = view.findViewById(R.id.tvMVIAge)
+//		val tvMVIGender: TextView = view.findViewById(R.id.tvMVIGender)
 		val ivMVIType: ImageView = view.findViewById(R.id.ivMVIType)
 		val tvMVIMobile: TextView = view.findViewById(R.id.tvMVIMobile)
 		val tvMVIType: TextView = view.findViewById(R.id.tvMVIType)
@@ -94,14 +94,17 @@ class UserRVAdapter(
 			} else {
 				""
 			}
-
-			val genderText = when (currentItem.gender) {
-				0 -> "남성"
-				1 -> "여성"
-				else -> ""
-			}
-			tvMVIGender.text = genderText
+			tvMVIMobile.visibility = if (tvMVIName.text == "GUEST" && mobile == "") View.GONE else View.VISIBLE
 			tvMVIMobile.text = mobile
+
+
+//			val genderText = when (currentItem.gender) {
+//				0 -> "남성"
+//				1 -> "여성"
+//				else -> ""
+//			}
+//			tvMVIGender.text = genderText
+
 
 			val c = Calendar.getInstance(TimeZone.getTimeZone("Asia/Seoul"))
 			val birthday = currentItem.birthday
@@ -127,7 +130,7 @@ class UserRVAdapter(
 				""
 			}
 
-			tvMVIAge.text = age
+//			tvMVIAge.text = age
 			clMVI.setOnSingleClickListener {
 				val isBow = currentItem.measureType == MeasureType.BOW
 				onUserClickListener?.onUserClick(currentItem.tempServerSn, isBow)

@@ -1,5 +1,6 @@
 package com.tangoplus.tangoface.ui.info
 
+import android.R.attr.alpha
 import android.annotation.SuppressLint
 import android.graphics.PointF
 import android.os.Bundle
@@ -7,6 +8,7 @@ import android.util.Log
 import android.view.Gravity
 import androidx.fragment.app.Fragment
 import android.view.LayoutInflater
+import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
 import android.view.animation.BounceInterpolator
@@ -18,6 +20,7 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
 import com.google.android.exoplayer2.MediaItem
 import com.google.android.exoplayer2.Player
 import com.google.android.exoplayer2.SimpleExoPlayer
@@ -131,18 +134,21 @@ class IExpertFragment : Fragment(), OnFacialPartClickListener, OnSequenceClickLi
           adapter = pAdapter
           layoutManager = gLayoutManager5
         }
+        enableRecyclerView()
       }
 
       Sequence.JAW_LEFT_TILT, Sequence.JAW_RIGHT_TILT -> {
+        disableRecyclerView()
+
         val gLayoutManager2 = GridLayoutManager(context, 2)
         val tAdapter = TrajectoryRVAdapter(ivm)
-        bd.rvIE2.apply {
+        bd.rvIE3.apply {
           adapter = tAdapter
           layoutManager = gLayoutManager2
         }
       }
       else -> {
-
+        disableRecyclerView()
       }
     }
 
@@ -164,7 +170,6 @@ class IExpertFragment : Fragment(), OnFacialPartClickListener, OnSequenceClickLi
 
         if (savedSurvey != null) {
           // [경로 A] 이미 데이터가 존재하는 경우 -> 바로 결과 화면 노출
-          setupFactorAdapter(savedSurvey.pain_score, savedSurvey.palpation_score, savedSurvey.discomfort_score)
         } else {
           // [경로 B] 데이터가 없는 경우 -> 설문 조사 화면 노출
           setupSurveyAdapter()
@@ -175,7 +180,27 @@ class IExpertFragment : Fragment(), OnFacialPartClickListener, OnSequenceClickLi
       setupSurveyAdapter()
     }
   }
+  // 1. 터치 차단 리스너 정의
+  private val touchDisabler = object : RecyclerView.SimpleOnItemTouchListener() {
+    override fun onInterceptTouchEvent(rv: RecyclerView, e: MotionEvent): Boolean = true
+  }
 
+  // 2. 비활성화 (내부 아이템 클릭 + 스크롤 완전 차단 및 반투명)
+  fun disableRecyclerView() {
+    bd.rvIE2.apply {
+      alpha = 0.25f
+      removeOnItemTouchListener(touchDisabler) // 중복 등록 방지
+      addOnItemTouchListener(touchDisabler)
+    }
+  }
+
+  // 3. 활성화 (원상 복구)
+  fun enableRecyclerView() {
+    bd.rvIE2.apply {
+      alpha = 1.0f
+      removeOnItemTouchListener(touchDisabler)
+    }
+  }
   private fun setupSurveyAdapter() {
 //    val surveyAdapter = SurveyRVAdapter { pain, palpation, discomfort ->
 //      val scores = listOf(pain, palpation, discomfort)
@@ -228,18 +253,6 @@ class IExpertFragment : Fragment(), OnFacialPartClickListener, OnSequenceClickLi
 //    bd.rvIE4.adapter = surveyAdapter
   }
 
-  // 3. 결과 팩터 어댑터 설정 함수 (중복 코드 방지 및 직행용)
-  private fun setupFactorAdapter(pain: Int, palpation: Int, discomfort: Int) {
-    val scores = listOf(pain, palpation, discomfort)
-    val factorAdapter = SurveyFactorRVAdapter(this@IExpertFragment, scores)
-
-    bd.rvIE4.layoutManager = GridLayoutManager(context, 3)
-    bd.rvIE4.adapter = factorAdapter
-
-    // 만약 애니메이션 없이 바로 들어왔을 때를 위해 알파값과 가시성 초기화
-    bd.rvIE4.visibility = View.VISIBLE
-    bd.rvIE4.alpha = 1f
-  }
   private fun setRatioBtn() {
     bd.btnIEClean.setOnSingleClickListener {
       ivm.switchedLineOn()
@@ -696,28 +709,6 @@ private fun setInsightBottomSheet() {
       }
     }
   }
-//  override fun onFacialPartClick(part: FacialPart) {
-//    ivm.currentCheckedLines.clear()
-//    Log.v("클릭드", "${part}")
-//    val drawLines = when (part) {
-//      FacialPart.DERIVE -> listOf(DrawLine.NECK, DrawLine.FACE, DrawLine.A_SAGGING_FACE, DrawLine.A_FACIAL_AXIS, DrawLine.A_HORIZON,
-//        DrawLine.A_SHOULDER)
-//      FacialPart.RATIO -> listOf(DrawLine.A_RATIO_HORIZON, DrawLine.A_RATIO_VERTI)
-//      FacialPart.TOP -> listOf(DrawLine.EYE,  DrawLine.EYEBROW,  DrawLine.L_CORNEA)
-//      FacialPart.MIDDLE -> listOf(DrawLine.NOSE,DrawLine.A_ALAR_ORAL, DrawLine.A_SIDE_HEAD, DrawLine.E_CHEEKBONE, )
-//      FacialPart.BOTTOM -> listOf(DrawLine.E_CHEEKS, DrawLine.A_CANTHUS_ORAL, DrawLine.MOUSE)
-//    }
-//
-//    // item 클릭 후 facialPart, Adapter전부 확인
-//    ivm.currentCheckedLines.addAll(drawLines)
-//    svm.updateFacialPart(part)
-//    if (ivm.isAngleModeActive.value) {
-//      ivm.toggleAngleMode()
-//      bd.btnIEAngle.text = "📐 각도계산 켜기"
-//    }
-//    bd.rvIE1.adapter?.notifyDataSetChanged()
-//    setImage()
-//  }
   override fun onSequenceClick(seq: Sequence) {
     ivm.setSeq(seq)
     // 편한상태에서 들어가는 FacialPart init
@@ -739,14 +730,13 @@ private fun setInsightBottomSheet() {
       FacialPart.BOTTOM -> listOf(DrawLine.E_CHEEKS, DrawLine.A_CANTHUS_ORAL, DrawLine.MOUSE)
     }
 
-    // item 클릭 후 facialPart, Adapter전부 확인
     ivm.currentCheckedLines.addAll(drawLines)
     svm.updateFacialPart(part)
     if (ivm.isAngleModeActive.value) {
       ivm.toggleAngleMode()
       bd.btnIEAngle.text = "📐 각도계산 켜기"
     }
-    bd.rvIE1.adapter?.notifyDataSetChanged()
+    bd.rvIE2.adapter?.notifyDataSetChanged()
     setImage()
   }
   private fun releasePlayer() {

@@ -153,25 +153,34 @@ object BitmapUtility {
 			)
 
 
-			val srcWidth = combinedBitmap.width   // 1080
 			val srcHeight = combinedBitmap.height // 1920
+			val targetWidth = 1080
+			val targetHeight = 1440
+			val maxCropHeight = srcHeight - targetHeight // 480px (잘라낼 총 높이)
 
-// 3:4 비율을 맞추기 위한 가로 크기 계산 (1920 기준 -> 1440)
-			val targetWidth = (srcHeight * 3) / 4 // 1440
-			val targetHeight = srcHeight          // 1920
+			val startY = if (faceRect.bottom > faceRect.top) {
+				val faceCenterY = (faceRect.top + faceRect.bottom) / 2f
 
-// 1440x1920 검은색 캔버스 생성
-			val paddedBitmap = Bitmap.createBitmap(targetWidth, targetHeight, Bitmap.Config.ARGB_8888)
-			val canvas = Canvas(paddedBitmap).apply {
-				drawColor(Color.BLACK) // 검은색 배경 채우기
+				// 💡 1. 전체 화면(1920) 대비 얼굴 중심 위치 비율 (0.0 ~ 1.0)
+				val faceRatioY = (faceCenterY / srcHeight).coerceIn(0f, 1f)
+
+				// 💡 2. 위치 비율에 따라 480px을 상/하에 자연스럽게 비례 배분
+				(maxCropHeight * faceRatioY).toInt()
+			} else {
+				maxCropHeight / 2 // 240 (기본 중앙)
 			}
 
-// 좌우 여백(각 180px) 중앙 배치
-			val leftOffset = (targetWidth - srcWidth) / 2f
-			canvas.drawBitmap(combinedBitmap, leftOffset, 0f, null)
+			val finalCroppedBitmap = Bitmap.createBitmap(
+				combinedBitmap,
+				0,
+				startY,
+				targetWidth,
+				targetHeight
+			)
+//			val resolutedBitmap = applyUnsharpMask(finalCroppedBitmap)
 
 			Triple(
-				paddedBitmap,
+				finalCroppedBitmap.copy(finalCroppedBitmap.config ?: Bitmap.Config.ARGB_8888, true),
 				textBoxes,
 				faceRect
 			)
@@ -1740,9 +1749,9 @@ object BitmapUtility {
 	private fun calculateFinalPixel(
 		rawX: Float,
 		rawY: Float,
-		isPortrait: Boolean = true
+		upscaleFactor : Float = 1f,
+		isPortrait: Boolean = true,
 	): PointF {
-		val upscaleFactor = 2.25f
 
 		// 1. 2.25배 업스케일 적용
 		val upscaledX = rawX * upscaleFactor
@@ -2105,35 +2114,35 @@ object BitmapUtility {
 				if (rawData.isNotEmpty()) {
 					textBoxes.add(TextBoxData(
 						anchorX = 0f, anchorY = 0f,
-						targetGridIndex = 30, // 하단 중앙
+						targetGridIndex = 25, // 하단 중앙
 						info = TextDrawInfo("", listOf(
-							TextItem("", "${verticalRatio[0]}"),
+							TextItem("", "${verticalRatio[0]}%"),
 						))
 					))
 					textBoxes.add(TextBoxData(
 						anchorX = 0f, anchorY = 0f,
-						targetGridIndex = 31, // 하단 중앙
+						targetGridIndex = 26, // 하단 중앙
 						info = TextDrawInfo("", listOf(
 							TextItem("", "${verticalRatio[1]}%"),
 						))
 					))
 					textBoxes.add(TextBoxData(
 						anchorX = 0f, anchorY = 0f,
-						targetGridIndex = 32, // 하단 중앙
+						targetGridIndex = 27, // 하단 중앙
 						info = TextDrawInfo("", listOf(
 							TextItem("", "${verticalRatio[2]}%"),
 						))
 					))
 					textBoxes.add(TextBoxData(
 						anchorX = 0f, anchorY = 0f,
-						targetGridIndex = 33, // 하단 중앙
+						targetGridIndex = 28, // 하단 중앙
 						info = TextDrawInfo("", listOf(
 							TextItem("", "${verticalRatio[3]}%"),
 						))
 					))
 					textBoxes.add(TextBoxData(
 						anchorX = 0f, anchorY = 0f,
-						targetGridIndex = 34, // 하단 중앙
+						targetGridIndex = 29, // 하단 중앙
 						info = TextDrawInfo("", listOf(
 							TextItem("", "${verticalRatio[4]}%"),
 						))
@@ -2146,21 +2155,21 @@ object BitmapUtility {
 				if (rawData.isNotEmpty()) {
 					textBoxes.add(TextBoxData(
 						anchorX = 0f, anchorY = 0f,
-						targetGridIndex = 9, // 하단 중앙
+						targetGridIndex = 4, // 하단 중앙
 						info = TextDrawInfo("", listOf(
 							TextItem("", "${verticalRatio[0]}%"),
 						))
 					))
 					textBoxes.add(TextBoxData(
 						anchorX = 0f, anchorY = 0f,
-						targetGridIndex = 19, // 하단 중앙
+						targetGridIndex = 14, // 하단 중앙
 						info = TextDrawInfo("", listOf(
 							TextItem("", "${verticalRatio[1]}%"),
 						))
 					))
 					textBoxes.add(TextBoxData(
 						anchorX = 0f, anchorY = 0f,
-						targetGridIndex = 29, // 하단 중앙
+						targetGridIndex = 24, // 하단 중앙
 						info = TextDrawInfo("", listOf(
 							TextItem("", "${verticalRatio[2]}%"),
 						))
@@ -2207,144 +2216,155 @@ object BitmapUtility {
 			}
 		}
 
-		val faceXList = flm.map { it.x }
-		val faceYList = flm.map { it.y }
+		val finalPoints = flm.map { landmark ->
+			calculateFinalPixel(landmark.x, landmark.y)
+		}
 
-		val minX = faceXList.minOrNull() ?: 0f
-		val maxX = faceXList.maxOrNull() ?: 0f
-		val minY = faceYList.minOrNull() ?: 0f
-		val maxY = faceYList.maxOrNull() ?: 0f
+// 2. 최종 픽셀 좌표계 기준으로 Top, Bottom, Left, Right 추출
+		val minX = finalPoints.minOf { it.x }
+		val maxX = finalPoints.maxOf { it.x }
+		val minY = finalPoints.minOf { it.y }
+		val maxY = finalPoints.maxOf { it.y }
 
-// 2. 아까 만든 calculateFinalPixel 함수를 이용해 최종 비트맵 픽셀 좌표로 변환
-		val topLeft = calculateFinalPixel(minX, minY)
-		val bottomRight = calculateFinalPixel(maxX, maxY)
-
-// 3. FaceRect 객체 생성 (이걸 Fragment에서 OverlayView로 전달해야 함)
+// 3. 정확한 FaceRect 생성
 		val faceRect = TextBoxOverlayView.FaceRect(
-			left = topLeft.x,
-			top = topLeft.y,
-			right = bottomRight.x,
-			bottom = bottomRight.y
+			left = minX,
+			top = minY,
+			right = maxX,
+			bottom = maxY
 		)
 		return Pair(textBoxes, faceRect)
 	}
+
+//	fun upscaleWithLanczos(srcBitmap: Bitmap, targetWidth: Int, targetHeight: Int): Bitmap {
+//		val srcMat = Mat()
+//		val dstMat = Mat()
 //
-//	private fun calculateBoxHeight(info: TextDrawInfo): Float {
-//		val padding = 12f
-//		val lineSpacing = 8f
+//		// 1. Bitmap -> Mat 변환
+//		Utils.bitmapToMat(srcBitmap, srcMat)
 //
-//		val titleBounds = Rect()
-//		textPaint.getTextBounds(info.title, 0, info.title.length, titleBounds)
+//		// 2. Lanczos-4 고화질 보간 리사이징
+//		val targetSize = Size(targetWidth.toDouble(), targetHeight.toDouble())
+//		Imgproc.resize(srcMat, dstMat, targetSize, 0.0, 0.0, Imgproc.INTER_LANCZOS4)
 //
-//		val itemsHeight = info.items.size * (titleBounds.height() + lineSpacing)
+//		// 3. Mat -> 새 Bitmap 생성 및 복사
+//		val resultBitmap = Bitmap.createBitmap(targetWidth, targetHeight, srcBitmap.config ?: Bitmap.Config.ARGB_8888)
+//		Utils.matToBitmap(dstMat, resultBitmap)
 //
-//		return titleBounds.height() + lineSpacing + itemsHeight + padding * 2
+//		// 4. 네이티브 메모리 해제
+//		srcMat.release()
+//		dstMat.release()
+//
+//		return resultBitmap
+//	}
+//	fun applySuperResolution(
+//		context: Context,
+//		srcBitmap: Bitmap,
+//		modelFileName: String = "ESPCN_x2.pb",
+//		algorithm: String = "espcn", // "espcn", "fsrcnn"
+//		scale: Int = 2
+//	): Bitmap {
+//		val modelPath = getModelPath(context, modelFileName)
+//
+//		// 1. SuperRes 인스턴스 생성 및 모델 로드
+//		val sr = DnnSuperResImpl.create()
+//		sr.readModel(modelPath)
+//		sr.setModel(algorithm, scale)
+//
+//		val srcMat = Mat()
+//		val bgrMat = Mat()
+//		val dstMat = Mat()
+//		val finalRgbaMat = Mat()
+//
+//		// 2. Bitmap -> Mat 변환 (DNN 모델은 BGR 3채널을 사용)
+//		Utils.bitmapToMat(srcBitmap, srcMat)
+//		Imgproc.cvtColor(srcMat, bgrMat, Imgproc.COLOR_RGBA2BGR)
+//
+//		// 3. AI 기반 업스케일링 추론
+//		sr.upsample(bgrMat, dstMat)
+//
+//		// 4. BGR -> RGBA 변환 후 Bitmap 생성
+//		Imgproc.cvtColor(dstMat, finalRgbaMat, Imgproc.COLOR_BGR2RGBA)
+//		val resultBitmap = Bitmap.createBitmap(finalRgbaMat.cols(), finalRgbaMat.rows(), Bitmap.Config.ARGB_8888)
+//		Utils.matToBitmap(finalRgbaMat, resultBitmap)
+//
+//		// 5. Native 메모리 해제
+//		srcMat.release()
+//		bgrMat.release()
+//		dstMat.release()
+//		finalRgbaMat.release()
+//
+//		return resultBitmap
 //	}
 //
-//	private fun drawTextBoxWithBackground(canvas: Canvas, info: TextDrawInfo, offsetY: Float = 0f) {
-//		val padding = 12f
-//		val lineSpacing = 8f
-//		val labelValueSpacing = 8f
+//	fun applySharpening(srcBitmap: Bitmap, intensity: Double = 1.2): Bitmap {
+//		val srcMat = Mat()
+//		val blurred = Mat()
+//		val sharpMat = Mat()
 //
-//		// 타이틀 bounds
-//		val titleBounds = Rect()
-//		textPaint.getTextBounds(info.title, 0, info.title.length, titleBounds)
+//		Utils.bitmapToMat(srcBitmap, srcMat)
 //
-//		// 각 아이템의 bounds 계산
-//		val itemBounds = info.items.map { item ->
-//			val labelBounds = Rect()
-//			val valueBounds = Rect()
-//			if (item.label.isNotEmpty()) {
-//				textPaint.getTextBounds(item.label, 0, item.label.length, labelBounds)
-//			}
-//			textPaint.getTextBounds(item.value, 0, item.value.length, valueBounds)
-//			Pair(labelBounds, valueBounds)
-//		}
+//		// 1. 가우시안 블러로 저주파(부드러운) 성분 추출
+//		Imgproc.GaussianBlur(srcMat, blurred, Size(0.0, 0.0), 2.5)
 //
-//		// 전체 박스 크기 계산
-//		val maxItemWidth = itemBounds.maxOfOrNull { (labelBounds, valueBounds) ->
-//			val labelW = labelBounds.width()
-//			val valueW = valueBounds.width()
-//			if (labelW > 0) {
-//				labelW + labelValueSpacing.toInt() + valueW
-//			} else {
-//				valueW
-//			}
-//		} ?: 0
-//		val boxWidth = maxOf(titleBounds.width(), maxItemWidth).toFloat()
+//		// 2. 원본과 블러의 차이(고주파 엣지)를 증폭해 합성: src * (1 + a) - blur * a
+//		Core.addWeighted(srcMat, 1.0 + intensity, blurred, -intensity, 0.0, sharpMat)
 //
-//		val titleHeight = titleBounds.height()
-//		val itemsHeight = itemBounds.sumOf { maxOf(it.first.height(), it.second.height()) } +
-//			(info.items.size - 1) * lineSpacing
-//		val totalHeight = titleHeight + lineSpacing + itemsHeight
+//		val resultBitmap = Bitmap.createBitmap(
+//			srcBitmap.width,
+//			srcBitmap.height,
+//			srcBitmap.config ?: Bitmap.Config.ARGB_8888
+//		)
+//		Utils.matToBitmap(sharpMat, resultBitmap)
 //
-//		// Anchor에 따른 시작 위치 (기준점 기준으로 박스가 어느 방향에 위치하는지)
-//		val (boxLeft, boxTop) = when (info.anchor) {
-//			EdgePosition.TOP -> {
-//				// 기준점이 박스 위쪽 = 박스가 아래에 위치
-//				Pair(
-//					info.baseX - boxWidth / 2f + info.marginX,
-//					info.baseY + info.marginY + offsetY
-//				)
-//			}
-//			EdgePosition.BOTTOM -> {
-//				// 기준점이 박스 아래쪽 = 박스가 위에 위치
-//				Pair(
-//					info.baseX - boxWidth / 2f + info.marginX,
-//					info.baseY - totalHeight - padding * 2 - info.marginY - offsetY
-//				)
-//			}
-//			EdgePosition.LEFT -> {
-//				// 기준점이 박스 왼쪽 = 박스가 오른쪽에 위치
-//				Pair(
-//					info.baseX + info.marginX + offsetY,
-//					info.baseY - totalHeight / 2f - padding + info.marginY
-//				)
-//			}
-//			EdgePosition.RIGHT -> {
-//				// 기준점이 박스 오른쪽 = 박스가 왼쪽에 위치
-//				Pair(
-//					info.baseX - boxWidth - padding * 2 - info.marginX - offsetY,
-//					info.baseY - totalHeight / 2f - padding + info.marginY
-//				)
-//			}
-//		}
+//		srcMat.release()
+//		blurred.release()
+//		sharpMat.release()
 //
-//		// 박스 그리기
-//		val boxRight = boxLeft + boxWidth + padding * 2
-//		val boxBottom = boxTop + totalHeight + padding * 2
-//		val radius = 8f
+//		return resultBitmap
+//	}
+//	fun applyUnsharpMask(srcBitmap: Bitmap, amount: Double = 1.5): Bitmap {
+//		val srcMat = Mat()
+//		val blurred = Mat()
+//		val sharpMat = Mat()
 //
-//		canvas.drawRoundRect(boxLeft, boxTop, boxRight, boxBottom, radius, radius, bgPaint)
+//		Utils.bitmapToMat(srcBitmap, srcMat)
 //
-//		// 타이틀 그리기 (중앙 정렬)
-//		val titleX = boxLeft + (boxWidth - titleBounds.width()) / 2f + padding
-//		val titleY = boxTop + padding + titleBounds.height()
-//		canvas.drawText(info.title, titleX, titleY, textPaint)
+//		// 가우시안 블러로 저주파(부드러운) 성분 추출
+//		Imgproc.GaussianBlur(srcMat, blurred, Size(0.0, 0.0), 3.0)
 //
-//		// 각 아이템 그리기
-//		var currentY = titleY + lineSpacing
-//		info.items.forEachIndexed { index, item ->
-//			val (labelBounds, valueBounds) = itemBounds[index]
+//		// 원본 + (원본 - 블러) * amount
+//		Core.addWeighted(srcMat, 1.0 + amount, blurred, -amount, 0.0, sharpMat)
 //
-//			if (item.label.isNotEmpty()) {
-//				// 레이블이 있는 경우 (왼쪽 정렬)
-//				val labelX = boxLeft + padding
-//				val labelY = currentY + labelBounds.height()
-//				canvas.drawText(item.label, labelX, labelY, textPaint)
+//		val resultBitmap = Bitmap.createBitmap(srcBitmap.width, srcBitmap.height, srcBitmap.config ?: Bitmap.Config.ARGB_8888)
+//		Utils.matToBitmap(sharpMat, resultBitmap)
 //
-//				// 값 (오른쪽 정렬)
-//				val valueX = boxRight - padding - valueBounds.width()
-//				val valueY = currentY + valueBounds.height()
-//				canvas.drawText(item.value, valueX, valueY, textPaint)
-//			} else {
-//				// 레이블이 없는 경우 (중앙 정렬)
-//				val valueX = boxLeft + (boxWidth - valueBounds.width()) / 2f + padding
-//				val valueY = currentY + valueBounds.height()
-//				canvas.drawText(item.value, valueX, valueY, textPaint)
-//			}
+//		srcMat.release(); blurred.release(); sharpMat.release()
+//		return resultBitmap
+//	}
+//	fun applyClahe(srcBitmap: Bitmap): Bitmap {
+//		val srcMat = Mat()
+//		val yuvMat = Mat()
+//		val channels = ArrayList<Mat>()
 //
-//			currentY += maxOf(labelBounds.height(), valueBounds.height()) + lineSpacing
-//		}
+//		Utils.bitmapToMat(srcBitmap, srcMat)
+//		Imgproc.cvtColor(srcMat, yuvMat, Imgproc.COLOR_RGBA2RGB)
+//		Imgproc.cvtColor(yuvMat, yuvMat, Imgproc.COLOR_RGB2YUV)
+//
+//		Core.split(yuvMat, channels)
+//
+//		// Y채널에 CLAHE 적용
+//		val clahe = Imgproc.createCLAHE(2.0, Size(8.0, 8.0))
+//		clahe.apply(channels[0], channels[0])
+//
+//		Core.merge(channels, yuvMat)
+//		Imgproc.cvtColor(yuvMat, srcMat, Imgproc.COLOR_YUV2RGB)
+//
+//		val resultBitmap = Bitmap.createBitmap(srcBitmap.width, srcBitmap.height, srcBitmap.config ?: Bitmap.Config.ARGB_8888)
+//		Utils.matToBitmap(srcMat, resultBitmap)
+//
+//		srcMat.release(); yuvMat.release()
+//		channels.forEach { it.release() }
+//		return resultBitmap
 //	}
 }

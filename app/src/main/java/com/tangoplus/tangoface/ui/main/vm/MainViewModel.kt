@@ -1,6 +1,8 @@
 package com.tangoplus.tangoface.ui.main.vm
 
+import android.app.ActivityManager
 import android.content.Context
+import android.hardware.usb.UsbDevice
 import android.net.Uri
 import android.util.Log
 import androidx.lifecycle.LiveData
@@ -21,12 +23,20 @@ import com.tangoplus.tangoface.domain.vo.Sequence
 import com.tangoplus.tangoface.ui.info.vo.DateDisplay
 import com.tangoplus.tangoface.ui.info.vo.Factor
 import com.tangoplus.tangoface.ui.info.vo.HistoryMappingItem
+import com.tangoplus.tangoface.ui.main.vo.AlertItem
 import com.tangoplus.tangoface.ui.main.vo.UserItem
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
+import java.lang.Math.random
 import java.text.Collator
 import java.util.Locale
 
@@ -253,5 +263,84 @@ class MainViewModel : ViewModel() {
 	val currentBowResult = MutableLiveData<FaceResult>()
 	var tempServerSnAfterMeasure = 0
 
+	private var alertJob: Job? = null
+	private val _currentAlert = MutableStateFlow<AlertItem?>(null)
+	val currentAlert: StateFlow<AlertItem?> = _currentAlert.asStateFlow()
+
+	// 앱 실행 후 최초 1회 강조 연출 여부
+	var isInitialAlertHighlighted = false
+		private set
+
+	fun markAlertHighlighted() {
+		isInitialAlertHighlighted = true
+	}
+
+	private var alertIndex = 0
+	private fun getMemoryUsage(context: Context): Int {
+		val actManager = context.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
+		val memInfo = ActivityManager.MemoryInfo()
+		actManager.getMemoryInfo(memInfo)
+		val totalMem = memInfo.totalMem.toDouble()
+		val availMem = memInfo.availMem.toDouble()
+		val usedMem = totalMem - availMem
+		return ((usedMem / totalMem) * 100).toInt()
+	}
+
+	fun startAlertRolling(context: Context) {
+		alertJob?.cancel()
+		alertJob = viewModelScope.launch {
+			while (isActive) {
+				val memUsage = getMemoryUsage(context)
+				val memGuide = if (memUsage >= 88) "RAM 사용량이 ${memUsage}%로 높습니다. 백그라운드 앱을 정리해 주세요."
+				else "현재 RAM ${memUsage}%로 쾌적합니다. 측정을 시작해 보세요."
+				val deviceConnect = if (isDepthConnected.value) "3D 뎁스 카메라 정상 연결 (측정 준비 완료)"
+				else "연결된 3D 카메라 장치가 없습니다."
+				val measureCountDesc = if (dailyMeasureCount == 0) "오늘 검사 기록이 없습니다. 하단에서 모드를 선택해 주세요."
+				else "오늘 총 ${dailyMeasureCount}건의 분석이 완료되었습니다."
+
+				val alertList = listOf(
+					AlertItem("시스템 메모리", memGuide),
+					AlertItem("장비 상태", deviceConnect),
+					AlertItem("AI 가이드", guideComments.random()),
+					AlertItem("오늘의 통계", measureCountDesc)
+				)
+
+				_currentAlert.value = alertList[alertIndex]
+				alertIndex = (alertIndex + 1) % alertList.size
+
+				// 최초 강조 중일 때는 텍스트를 읽을 수 있게 첫 주기만 살짝 길게(4.5초) 유지
+				val delayTime = if (!isInitialAlertHighlighted) 4500L else 3500L
+				delay(delayTime)
+			}
+		}
+	}
+
+	val isAlertShow = MutableLiveData(false)
+	private val _isDepthConnected = MutableStateFlow(false)
+	val isDepthConnected: StateFlow<Boolean> = _isDepthConnected.asStateFlow()
+
+	fun updateUsbDeviceList(deviceList: HashMap<String, UsbDevice>?) {
+		// 장치명 또는 제품명 검사
+		val isConnected = deviceList?.values?.any { device ->
+			device.deviceName.contains("Orbbec Gemini 336") ||
+				device.productName?.contains("Orbbec Gemini 336") == true
+		} ?: false
+
+		_isDepthConnected.value = isConnected
+	}
+	var dailyMeasureCount = 0
+
+	val guideComments = listOf(
+		"정밀한 턱관절 분석을 위해 정밀 검사 모드를 권장합니다.",
+		"턱관절 비대칭 및 수평축 진단에는 페이스 보우가 효과적입니다.",
+		"정확한 3D 뎁스 측정을 위해 카메라와 30~60cm 거리를 유지해 주세요.",
+		"측정 시 안경이나 마스크를 벗으면 분석 정확도가 향상됩니다.",
+		"빠른 윤곽 밸런스 체크가 필요할 땐 간편 검사를 활용해 보세요.",
+		"이전 측정 데이터와 비교해 안면 비대칭 개선도를 확인할 수 있습니다.",
+		"측정 중에는 정면을 응시하고 자연스러운 무표정을 유지해 주세요.",
+		"3D 스캔 중 고개를 움직이지 않으면 오차 범위를 최소화할 수 있습니다.",
+		"턱관절 개구 장애 의심 시 정밀 검사를 추천합니다.",
+		"주기적인 검사는 턱관절 불균형 및 자세 변화 추적에 도움이 됩니다."
+	)
 
 }

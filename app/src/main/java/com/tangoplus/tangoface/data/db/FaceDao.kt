@@ -42,6 +42,15 @@ interface FaceDao {
 	)
 	suspend fun getUserCount(): Int
 
+	@Query(
+		"""
+			SELECT COUNT(DISTINCT temp_server_sn)
+			FROM t_face_static
+			WHERE activated = 1
+			AND reg_date = date(reg_date) = date('now', 'localtime')
+		"""
+	)
+	suspend fun getDailyMeasureCount() : Int
 	// -------------# 회원관리할 때 user-guest 가릴거 없이 가져오기 #---------------
 	@Query(
 		"""
