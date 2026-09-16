@@ -109,4 +109,19 @@ class InformationViewModel : ViewModel() {
 	fun setCurrentBowItem(item: BowItem) {
 		_currentBowItem.value = item
 	}
+
+	fun clearExpertData() {
+		// 1. 대용량 좌표 데이터 해제
+		videoCoordinates = null
+		coordinates1 = null
+		coordinates2 = null
+		leftTrajectory = null
+		rightTrajectory = null
+		currentCheckedLines.clear()
+
+		// 2. 도구/모드 상태 초기화
+		if (_isAngleModeActive.value) {
+			_isAngleModeActive.value = false
+		}
+	}
 }

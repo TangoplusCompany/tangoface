@@ -3,7 +3,7 @@
              xmlns:app="http://schemas.android.com/apk/res-auto" xmlns:tools="http://schemas.android.com/tools"
              android:layout_width="match_parent"
              android:layout_height="match_parent"
-             tools:context=".ui.measure.type.MBowFragment">
+             tools:context=".ui.measure.MBowFragment">
 
     <androidx.constraintlayout.widget.ConstraintLayout
             android:layout_width="match_parent"
@@ -108,7 +108,7 @@
                 android:layout_width="128dp"
                 android:layout_height="128dp"
                 android:layout_margin="10dp"
-                android:background="@drawable/bckgnd_20"
+                android:background="@drawable/bg_20"
                 android:backgroundTint="#65FFFFFF"
                 android:visibility="invisible"
                 app:layout_constraintBottom_toBottomOf="parent"

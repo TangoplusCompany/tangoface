@@ -1,6 +1,5 @@
 package com.tangoplus.tangoface.ui.info
 
-import android.R.attr.alpha
 import android.annotation.SuppressLint
 import android.graphics.PointF
 import android.os.Bundle
@@ -29,7 +28,6 @@ import com.google.android.exoplayer2.upstream.DefaultDataSourceFactory
 import com.google.android.exoplayer2.video.VideoSize
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.tangoplus.tangoface.R
-import com.tangoplus.tangoface.data.db.AfterSurvey
 import com.tangoplus.tangoface.data.db.FaceDao
 import com.tangoplus.tangoface.data.db.FaceDatabase
 import com.tangoplus.tangoface.data.db.FaceInsight
@@ -69,7 +67,6 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
-import kotlin.collections.get
 import kotlin.getValue
 
 class IExpertFragment : Fragment(), OnFacialPartClickListener, OnSequenceClickListener  {
@@ -83,6 +80,28 @@ class IExpertFragment : Fragment(), OnFacialPartClickListener, OnSequenceClickLi
   private var exoPause: ImageButton? = null
   private val onPlayerReady = MutableLiveData(false)
   private var playBackPosition = 0L
+
+  override fun onDestroyView() {
+    super.onDestroyView()
+
+    // 1. 플레이어 완전 해제
+    releasePlayer()
+    bd.pvIE.player = null
+
+    // 2. 고화질 비트맵 및 오버레이 정리
+    bd.ssivIE.recycle()
+    bd.ovIE.clear()
+
+    // 3. 실행 중인 애니메이션/루프 Job 취소
+    bounceJob?.cancel()
+    typingJob?.cancel()
+    bd.tvIEScrollHint.animate().cancel()
+
+    // 4. Activity-scoped ViewModel 잔여 데이터 초기화
+    ivm.clearExpertData()
+    svm.updateFacialPart(FacialPart.DERIVE)
+    svm.updateSequence(Sequence.COMFORT)
+  }
 
   override fun onCreateView(
     inflater: LayoutInflater, container: ViewGroup?,
@@ -160,25 +179,6 @@ class IExpertFragment : Fragment(), OnFacialPartClickListener, OnSequenceClickLi
       layoutManager = fLayoutManager
     }
     startScrollHintAnimation()
-
-    val serverSn = mvm.currentResult.value?.tempServerSn
-
-    if (serverSn != null) {
-      lifecycleScope.launch {
-        val fDao = FaceDatabase.getDatabase(requireContext()).faceDao()
-        val savedSurvey = fDao.getAfterSurvey(serverSn)
-
-        if (savedSurvey != null) {
-          // [경로 A] 이미 데이터가 존재하는 경우 -> 바로 결과 화면 노출
-        } else {
-          // [경로 B] 데이터가 없는 경우 -> 설문 조사 화면 노출
-          setupSurveyAdapter()
-        }
-      }
-    } else {
-      // serverSn이 없을 때의 예외 처리 (설문 유도 등)
-      setupSurveyAdapter()
-    }
   }
   // 1. 터치 차단 리스너 정의
   private val touchDisabler = object : RecyclerView.SimpleOnItemTouchListener() {
@@ -697,7 +697,8 @@ private fun setInsightBottomSheet() {
         videoH = temp
       }
 
-      requireActivity().runOnUiThread {
+      activity?.runOnUiThread {
+        if (!isAdded) return@runOnUiThread
         bd.ovIE.setResults(
           faceLandmarkResult,
           videoW,

@@ -6,6 +6,7 @@ import android.animation.ValueAnimator
 import android.content.Context
 import android.graphics.BlurMaskFilter
 import android.graphics.Canvas
+import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.Path
 import android.graphics.PointF
@@ -16,6 +17,7 @@ import android.view.animation.AccelerateDecelerateInterpolator
 import androidx.core.graphics.plus
 import androidx.core.graphics.times
 import androidx.core.graphics.toColorInt
+import androidx.core.view.animation.PathInterpolatorCompat
 import com.tangoplus.tangoface.domain.opencv.HsvColorTracker
 import com.tangoplus.tangoface.domain.util.BitmapUtility.drawExtendedLine
 import com.tangoplus.tangoface.domain.vision.face.FaceLandmarkResult
@@ -63,12 +65,6 @@ class OverlayView(context: Context?, attrs: AttributeSet?) :
 		this.onScanFinishedListener = listener
 	}
 
-
-	private var trailPaint = Paint().apply {
-		style = Paint.Style.FILL
-		isAntiAlias = true
-	}
-
 	fun setVerti(isSuccess: Boolean) {
 		verticalLineSuccess = isSuccess
 	}
@@ -109,6 +105,17 @@ class OverlayView(context: Context?, attrs: AttributeSet?) :
 	enum class RunningMode {
 		IMAGE, VIDEO, LIVE_STREAM
 	}
+	private val scanLinePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+		color = Color.parseColor("#B0FF00")
+		strokeWidth = 4f
+		style = Paint.Style.STROKE
+		maskFilter = BlurMaskFilter(14f, BlurMaskFilter.Blur.NORMAL)
+	}
+	private val trailPaint = Paint(Paint.ANTI_ALIAS_FLAG)
+
+	// 랜드마크 인덱스 -> 마지막으로 파동이 닿은 시각(ms). trail fade용
+	private val lastLitTime = HashMap<Int, Long>()
+	private val trailDurationMs = 900L
 
 	private fun initPaints() {
 
@@ -158,7 +165,6 @@ class OverlayView(context: Context?, attrs: AttributeSet?) :
 			maskFilter = BlurMaskFilter(12f, BlurMaskFilter.Blur.SOLID)
 		}
 	}
-
 	override fun draw(canvas: Canvas) {
 		super.draw(canvas)
 
@@ -180,38 +186,79 @@ class OverlayView(context: Context?, attrs: AttributeSet?) :
 		)
 
 		if (isScanning) {
-			val faceLandmarks = results?.landmarks ?: return
-
-			faceLandmarks.forEach { landmark ->
-				val px = landmark.x * scaledImageWidth + offsetX
-				val py = landmark.y * scaledImageHeight + offsetY
-
-				// 중심점(currentScanY)과 현재 랜드마크의 Y축 거리 계산
-				val yDistance = Math.abs(currentScanY - py)
-
-				val alpha: Int
-				if (yDistance < waveHeight) {
-					// 파도 범위 안: 거리에 비례하여 중앙일수록 진하게 (제곱근 사용으로 더 극적인 대비)
-					val progress = (1f - (yDistance / waveHeight)).toDouble().pow(2.0).toFloat()
-					alpha = (progress * 255f).toInt().coerceIn(0, 255)
-				} else {
-					// 파도 범위 밖: 투명
-					alpha = 0
-				}
-
-				// 완전히 투명하지 않은 점들만 캔버스에 그리기
-				if (alpha > 5) {
-					dotPaint.alpha = alpha
-					canvas.drawCircle(px, py, dotRadius, dotPaint)
-				}
-			}
+			drawScanEffect(canvas, scaledImageWidth, scaledImageHeight, offsetX, offsetY)
 		}
 	}
 //    val faceOutLineIndexes = listOf(
 //        151, 108, 69, 104, 68, 71, 139, 34, 227, 137, 177, 215, 138,135, 169, 170, 140, 171,
 //        175, 396, 369, 395, 394, 364, 367, 435, 401, 366, 447, 264, 368, 301, 298, 333, 299, 337, 151
 //    )
+fun drawScanEffect(
+	canvas: Canvas,
+	scaledImageWidth : Float,
+	scaledImageHeight: Float,
+	offsetX: Float,
+	offsetY: Float
+	) {
+	if (!isScanning) return
+	val faceLandmarks = results?.landmarks ?: return
+	val centerX = width / 2f
+	val now = System.currentTimeMillis()
 
+	// ---- 1) 랜드마크 점 + trail ----
+	faceLandmarks.forEachIndexed { index, landmark ->
+		val px = landmark.x * scaledImageWidth + offsetX
+		val py = landmark.y * scaledImageHeight + offsetY + OBGLView.yCorrectionOffset
+
+		val distFromCenter = (px - centerX) / (scaledImageWidth / 2f)
+		val curveOffset = (distFromCenter * distFromCenter) * 35f
+		val waveEffectiveY = currentScanY - curveOffset
+		// 대각선(NW->SE)으로 바꾸려면 위 두 줄 대신:
+		// val diag = (px + py) / 1.4142f
+		// val waveEffectiveY = currentScanY - (diag - py) // 스케일은 별도 조정 필요
+
+		val deltaY = py - waveEffectiveY
+
+		when {
+			deltaY in -waveThickness..waveThickness -> {
+				// 파동이 지금 지나가는 중 -> 가장 밝고 큼
+				val ratio = 1f - (Math.abs(deltaY) / waveThickness)
+				val dynamicRadius = dotRadius + (3.5f * ratio)
+				pointPaint.color = Color.parseColor("#B0FF00")
+				pointPaint.alpha = (80 + (175 * ratio)).toInt()
+				canvas.drawCircle(px, py, dynamicRadius, pointPaint)
+				lastLitTime[index] = now
+			}
+			deltaY > waveThickness -> {
+				// 아직 파동이 안 닿은 영역 -> 은은한 기본 점
+				pointPaint.color = Color.parseColor("#40FFFFFF")
+				pointPaint.alpha = 30
+				canvas.drawCircle(px, py, dotRadius, pointPaint)
+			}
+			else -> {
+				// 파동이 이미 지나간 영역 -> trail로 서서히 페이드
+				val litAt = lastLitTime[index]
+				if (litAt != null) {
+					val elapsed = now - litAt
+					if (elapsed < trailDurationMs) {
+						val fadeRatio = 1f - (elapsed / trailDurationMs.toFloat())
+						trailPaint.color = Color.parseColor("#B0FF00")
+						trailPaint.alpha = (fadeRatio * 150).toInt()
+						canvas.drawCircle(px, py, dotRadius + 1.5f * fadeRatio, trailPaint)
+					} else {
+						pointPaint.color = Color.parseColor("#40FFFFFF")
+						pointPaint.alpha = 30
+						canvas.drawCircle(px, py, dotRadius, pointPaint)
+					}
+				} else {
+					pointPaint.color = Color.parseColor("#40FFFFFF")
+					pointPaint.alpha = 30
+					canvas.drawCircle(px, py, dotRadius, pointPaint)
+				}
+			}
+		}
+	}
+}
 	private fun drawFaceLandmarks(
 		canvas: Canvas,
 		faceLandmarks: List<FaceLandmarkResult.FaceLandmark>,
@@ -657,53 +704,52 @@ class OverlayView(context: Context?, attrs: AttributeSet?) :
 		layoutParams = params
 	}
 
+	// 스캔 이징 및 곡면 파동 제어
+	private val waveInterpolator = PathInterpolatorCompat.create(0.2f, 0f, 0.2f, 1f) // Fast-Out Slow-In
+	private val waveThickness = 120f // 스캔 영향 범위 (두께)
+
+	// 레이저 라인 & 글로우 페인트
+	private val laserPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+		style = Paint.Style.STROKE
+		strokeWidth = 3f
+		color = Color.parseColor("#B0FF00") // accent / normal 네온 컬러
+	}
+
+	private val pointPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+		style = Paint.Style.FILL
+	}
+
 	fun startScanAnimation() {
-		// 🕊️ 중복 실행 방지: 이미 스캔 중이면 새로 시작하지 않음
 		if (isScanning) return
+		val faceLandmarks = results?.landmarks ?: return
+		if (faceLandmarks.isEmpty()) return
 
-		val currentResults = results ?: return
-		val faceLandmarks = currentResults.landmarks
-		if (faceLandmarks.isNullOrEmpty()) return
+		val scaledHeight = imageHeight * scaleFactor
+		val offsetY = (height - scaledHeight) / 2f
 
-		val scaledImageHeight = imageHeight * scaleFactor
-		val offsetY = (height - scaledImageHeight) / 2f
-
-		var minY = Float.MAX_VALUE
-		var maxY = Float.MIN_VALUE
-
-		// 얼굴의 가장 높은 곳과 낮은 곳 Y좌표 계산
-		faceLandmarks.forEach { lm ->
-			val y = lm.y * scaledImageHeight + offsetY
-			if (y < minY) minY = y
-			if (y > maxY) maxY = y
-		}
-
-		// 파도가 완전히 지나갈 수 있도록 상하 여유 공간 추가
-		scanMinY = minY - waveHeight
-		scanMaxY = maxY + waveHeight
+		val yCoords = faceLandmarks.map { it.y * scaledHeight + offsetY }
+		scanMinY = (yCoords.minOrNull() ?: 0f) - waveThickness
+		scanMaxY = (yCoords.maxOrNull() ?: 0f) + waveThickness
 
 		isScanning = true
 		isStopRequested = false
 		currentRepeatCount = 0
 
 		scanAnimator?.cancel()
-
 		scanAnimator = ValueAnimator.ofFloat(scanMinY, scanMaxY).apply {
-			duration = 1800 // 점을 훑는 시간 (1.8초)
-			interpolator = AccelerateDecelerateInterpolator()
-			repeatMode = ValueAnimator.RESTART // 위에서 아래로만
-			repeatCount = ValueAnimator.INFINITE // 무한 반복
+			duration = 1400 // 1.4초로 살짝 템포 업
+			interpolator = waveInterpolator
+			repeatMode = ValueAnimator.RESTART
+			repeatCount = ValueAnimator.INFINITE
 
 			addUpdateListener { animator ->
 				currentScanY = animator.animatedValue as Float
-				invalidate() // 위치가 바뀔 때마다 다시 그리기
+				invalidate()
 			}
 
 			addListener(object : AnimatorListenerAdapter() {
 				override fun onAnimationRepeat(animation: Animator) {
 					currentRepeatCount++
-
-					// 1회 이상 파도가 지나갔고, 외부에서 중지 요청이 왔다면 멈춤
 					if (isStopRequested && currentRepeatCount >= 1) {
 						animation.cancel()
 					}
@@ -713,9 +759,7 @@ class OverlayView(context: Context?, attrs: AttributeSet?) :
 					isScanning = false
 					currentRepeatCount = 0
 					isStopRequested = false
-					invalidate() // 마지막 찌꺼기 점들을 지우기 위해 화면 갱신
-
-					// Activity에 애니메이션이 완전히 종료되었음을 알림
+					invalidate()
 					onScanFinishedListener?.invoke()
 				}
 			})

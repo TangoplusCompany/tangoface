@@ -1,4 +1,4 @@
-package com.tangoplus.tangoface.ui.measure.type
+package com.tangoplus.tangoface.ui.measure
 
 import android.animation.ValueAnimator
 import android.annotation.SuppressLint
@@ -76,6 +76,7 @@ class MNormalFragment : Fragment() {
       override fun onFinish() {
         Log.v("카운트 끝", "${mvm.face2DResult}, 현재 seq: ${mvm.currentSeq}")
         if (mvm.face2DResult?.landmarks?.isNotEmpty() == true) {
+          mvm.startScan()
           timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"))
           hideViews()
           playSound(R.raw.camera_shutter)
@@ -118,6 +119,7 @@ class MNormalFragment : Fragment() {
           Toast.makeText(requireContext(), "얼굴 인식에 문제가 발생했습니다. 다시 시도해주세요", Toast.LENGTH_SHORT).show()
           updateUI()
           setPreviousStep()
+          mvm.stopScan()
         }
       }
     }
@@ -284,7 +286,7 @@ class MNormalFragment : Fragment() {
       ContextCompat.getDrawable(
         requireActivity(),
         when (mvm.currentSeq) {
-          com.tangoplus.tangoface.domain.vo.Sequence.COMFORT -> R.drawable.drawable_seq_0
+          Sequence.COMFORT -> R.drawable.drawable_seq_0
           else -> R.drawable.drawable_seq_6
         }
       )
@@ -339,6 +341,8 @@ class MNormalFragment : Fragment() {
   }
 
   private fun updateUI() {
+    mvm.stopScan()
+
     val isProcessing = mvm.moveToNextSeq()
     if (!isProcessing) {
       setGuideAnimation(mvm.currentSeq, true)

@@ -15,6 +15,9 @@ import androidx.core.content.IntentCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import com.google.mediapipe.framework.image.BitmapImageBuilder
 import com.google.mediapipe.framework.image.MPImage
 import com.google.mediapipe.tasks.vision.core.RunningMode
@@ -64,9 +67,7 @@ import com.tangoplus.tangoface.domain.util.LandmarkUtility.scaleAndCropIntrinsic
 import com.tangoplus.tangoface.domain.util.clearAll
 import com.tangoplus.tangoface.domain.vo.MeasureType
 import com.tangoplus.tangoface.ui.main.vm.MainViewModel
-import com.tangoplus.tangoface.ui.measure.type.MBowFragment
-import com.tangoplus.tangoface.ui.measure.type.MExpertFragment
-import com.tangoplus.tangoface.ui.measure.type.MNormalFragment
+import kotlinx.coroutines.launch
 import kotlin.use
 
 class DepthCameraActivity : BaseActivity(), FaceLandmarkerHelper.LandmarkerListener {
@@ -559,6 +560,22 @@ class DepthCameraActivity : BaseActivity(), FaceLandmarkerHelper.LandmarkerListe
 		bd.tvGoGallery.setOnSingleClickListener {
 			showGoMainDialog(this)
 		}
+		bd.overlay.setOnScanFinishedListener {
+			mvm.notifyScanFinished()
+		}
+
+		// 2. Fragment에서 보낸 스캔 시작/종료 명령 감지
+		lifecycleScope.launch {
+			repeatOnLifecycle(Lifecycle.State.STARTED) {
+				mvm.scanEvent.collect { event ->
+					when (event) {
+						is MeasureViewModel.ScanEvent.Start -> bd.overlay.startScanAnimation()
+						is MeasureViewModel.ScanEvent.Stop -> bd.overlay.stopScanAnimation()
+					}
+				}
+			}
+		}
+
 	}
 
 	override fun onError(error: String, errorCode: Int) {

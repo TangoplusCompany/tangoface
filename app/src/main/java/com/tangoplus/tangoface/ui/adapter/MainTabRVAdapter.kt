@@ -24,52 +24,37 @@ class MainTabRVAdapter(private val context: Context, private val tabs : List<Str
 //  val imgs = listOf(R.drawable.poster_main_0)
 
   val descs = listOf(
-    "사진 1장을 불러와\n" +
-      "내 정면 얼굴을 쉽고 가볍게 확인",
-    "전문 장비(페이스 보우) 기반\n" +
-      "턱관절 수평축 및 비대칭 분석",
-    "다각도 3D 스캔 (정면·개구·목폄)\n" +
-      "관절 건강까지 포함한 종합 진단",
-    "3D 카메라 실시간 측정\n" +
-      "정면과 목 자세 중심의 빠른 분석"
-  )
-  val timeSeqs = listOf(
     // 1. 사진 검사
-    "⏱️ : 약 15초\n" +
-      "📋 : [1단계] 사진 업로드"
-      ,
+    "기존 사진 1장으로 정면 얼굴 비율을 가볍게 확인해요.\n" +
+      "⏱️ 약 15초 · 사진 1장 업로드",
 
     // 2. 페이스 보우
-    "⏱️ : 약 30초\n" +
-      "📋 : [1단계] 페이스 보우 착용" ,
-
+    "전용 페이스 보우를 착용해 턱관절 수평축과 비대칭을 측정해요.\n" +
+      "⏱️ 약 30초 · 장비 착용 후 정면 스캔",
 
     // 3. 정밀 검사
-    "⏱️ : 약 1분\n" +
-      "📋 : [4단계] 정면 ➔ 교합 ➔ 턱 가측(좌) ➔ 턱 가측(우)" ,
-
+    "3D 다각도 스캔으로 턱관절과 안면 밸런스를 종합 진단해요.\n" +
+      "⏱️ 약 1분 · 정면 ➔ 교합 ➔ 턱 가측(좌/우) 4단계",
 
     // 4. 간편 검사
-    "⏱️ : 약 40초\n" +
-      "📋 : [2단계] 정면 ➔ 목폄 자세"
-
+    "3D 카메라로 정면과 목 자세를 빠르고 간편하게 분석해요.\n" +
+      "⏱️ 약 40초 · 정면 ➔ 목폄 2단계"
   )
   inner class MainTabViewHoler(v: View) : RecyclerView.ViewHolder(v) {
     val clMTI : ConstraintLayout = v.findViewById(R.id.clMTI)
     val tvMTIDesc : TextView = v.findViewById(R.id.tvMTIDesc)
     val tvMTITitle : TextView = v.findViewById(R.id.tvMTITitle)
-    val tvMTITimeSeq : TextView = v.findViewById(R.id.tvMTITimeSeq)
     val ivMTI : ImageView = v.findViewById(R.id.ivMTI)
     val sflMTI : ShimmerFrameLayout = v.findViewById(R.id.sflMTI)
     val btnMTI : TextView = v.findViewById(R.id.btnMTI)
 
     fun bind(currentItem : String, idx: Int) {
-      val sizeInPx = (64 * context.resources.displayMetrics.density).toInt()
-
-      ivMTI.layoutParams = ivMTI.layoutParams.apply {
-        width = sizeInPx
-        height = sizeInPx
-      }
+//      val sizeInPx = (92 * context.resources.displayMetrics.density).toInt()
+//
+//      ivMTI.layoutParams = ivMTI.layoutParams.apply {
+//        width = sizeInPx
+//        height = sizeInPx
+//      }
 
       tvMTITitle.text = currentItem
       val typeDrawable = ContextCompat.getDrawable(context,
@@ -81,7 +66,6 @@ class MainTabRVAdapter(private val context: Context, private val tabs : List<Str
         }
       )
       tvMTIDesc.text = descs[idx]
-      tvMTITimeSeq.text = timeSeqs[idx]
       ivMTI.setImageDrawable(typeDrawable)
       ImageViewCompat.setImageTintList(ivMTI, ColorStateList.valueOf(ContextCompat.getColor(context, R.color.accent100)))
       clMTI.setOnSingleClickListener {

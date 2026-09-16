@@ -73,7 +73,9 @@ import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import kotlin.use
 import androidx.fragment.app.FragmentActivity
+import androidx.lifecycle.LiveData
 import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.viewModelScope
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MimeTypes
 import androidx.media3.common.audio.ChannelMixingAudioProcessor
@@ -115,6 +117,8 @@ import com.tangoplus.tangoface.orbbec.vo.ScaledIntrinsic
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.launch
 import kotlin.collections.listOf
 import kotlin.io.use
@@ -168,6 +172,55 @@ class MeasureViewModel : ViewModel() {
 		return progressSeqs.indexOf(currentSeq)
 	}
 
+	// overlay scan 효과
+	sealed interface ScanEvent {
+		object Start : ScanEvent
+		object Stop : ScanEvent
+	}
+
+	private val _scanEvent = MutableSharedFlow<ScanEvent>()
+	val scanEvent = _scanEvent.asSharedFlow()
+
+	// 2. Activity(Overlay) -> Fragment: 스캔 애니메이션 종료 알림
+	private val _scanFinished = MutableSharedFlow<Unit>()
+	val scanFinished = _scanFinished.asSharedFlow()
+
+	fun startScan() {
+		viewModelScope.launch { _scanEvent.emit(ScanEvent.Start) }
+	}
+
+	fun stopScan() {
+		viewModelScope.launch { _scanEvent.emit(ScanEvent.Stop) }
+	}
+
+	fun notifyScanFinished() {
+		viewModelScope.launch { _scanFinished.emit(Unit) }
+	}
+
+	// 턱 가측이동
+	// 1. 자동 재생 단계 (0 ~ 6)
+	private val _currentGuideStep = MutableLiveData(0)
+	val currentGuideStep: LiveData<Int> = _currentGuideStep
+
+	// 2. 수동 뷰페이저 페이지 (0 ~ 3)
+	private val _manualPageStep = MutableLiveData(0)
+	val manualPageStep: LiveData<Int> = _manualPageStep
+
+	// 자동 재생 인덱스 갱신
+	fun setGuideStep(step: Int) {
+		_currentGuideStep.value = step
+	}
+
+	// 수동 페이지 인덱스 갱신
+	fun setManualPageStep(page: Int) {
+		_manualPageStep.value = page
+	}
+
+	// 다이얼로그 재진입 시 처음부터 시작하도록 초기화
+	fun resetGuideStep() {
+		_currentGuideStep.value = 0
+		_manualPageStep.value = 0
+	}
 	// ----------# flag들 #-----------
 
 	// 🍿🍿🍿🍿🍿 results들 🍿🍿🍿🍿🍿
@@ -1925,13 +1978,7 @@ class MeasureViewModel : ViewModel() {
 	private var videoTrackIndex = -1
 	var recordingStartTime: Long? = null
 	private var timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"))
-	@SuppressLint("SuspiciousIndentation")
-  fun stopVideoRecording(activity: FragmentActivity) {
-		recordingJob?.cancel()
-		isRecording = false
-		cleanup()
-		releaseVideoRecording(activity)
-	}
+
 
 	private fun startRecordingMaxTimer(activity: FragmentActivity) {
 		activity.lifecycleScope.launch(Dispatchers.Main) {
@@ -2146,7 +2193,7 @@ class MeasureViewModel : ViewModel() {
 									CoroutineScope(Dispatchers.IO).launch {
 										try {
 											processAndSaveFrameData(Sequence.OCCLUSAL, activity, bitmapCopy, finalDepthData, rawH, rawW, face2DCopy)
-											resultBundleToJson(Sequence.OCCLUSAL)
+											resultBundleToJson(Sequence.OCCLUSAL) // staticJA들어감
 										} finally {
 											bitmapCopy.recycle()
 										}

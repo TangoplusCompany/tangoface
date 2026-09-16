@@ -28,9 +28,9 @@ import androidx.core.view.WindowInsetsControllerCompat
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import com.tangoplus.tangoface.data.db.FaceDatabase
 import com.tangoplus.tangoface.R
 import com.tangoplus.tangoface.data.db.FaceDao
-import com.tangoplus.tangoface.data.db.FaceDatabase
 import com.tangoplus.tangoface.databinding.ActivityMainBinding
 import com.tangoplus.tangoface.domain.util.FileUtility.backupUserData
 import com.tangoplus.tangoface.domain.util.PermissionUtility.getAllPermissions
@@ -42,7 +42,6 @@ import com.tangoplus.tangoface.ui.info.MeasureHistoryFragment
 import com.tangoplus.tangoface.ui.main.vm.FragmentViewModel
 import com.tangoplus.tangoface.ui.main.vm.MainViewModel
 import com.tangoplus.tangoface.ui.settings.SettingsFragment
-import com.tangoplus.tangoface.ui.settings.StatisticsFragment
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext

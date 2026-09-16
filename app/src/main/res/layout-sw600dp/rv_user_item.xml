@@ -10,7 +10,7 @@
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_margin="10dp"
-        android:background="@drawable/bckgnd_12"
+        android:background="@drawable/bg_12"
         android:backgroundTint="@color/bg300"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
@@ -26,11 +26,11 @@
             android:layout_marginBottom="20dp"
             android:background="@drawable/bg_stroke_1_8_800_600"
             android:padding="16dp"
-            android:tint="@color/accent100"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent"
-            app:srcCompat="@drawable/ic_normal" />
+            app:srcCompat="@drawable/ic_normal"
+            app:tint="@color/accent100" />
 
         <LinearLayout
             android:id="@+id/linearLayout"

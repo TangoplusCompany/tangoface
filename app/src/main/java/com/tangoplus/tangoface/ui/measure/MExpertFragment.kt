@@ -1,4 +1,4 @@
-package com.tangoplus.tangoface.ui.measure.type
+package com.tangoplus.tangoface.ui.measure
 
 import android.animation.ValueAnimator
 import android.annotation.SuppressLint
@@ -15,7 +15,9 @@ import android.view.ViewGroup
 import android.widget.Toast
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.activityViewModels
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import com.tangoplus.tangoface.R
 import com.tangoplus.tangoface.data.db.FaceDao
 import com.tangoplus.tangoface.data.db.FaceDatabase
@@ -41,6 +43,7 @@ import com.tangoplus.tangoface.ui.measure.vm.InputViewModel
 import com.tangoplus.tangoface.ui.measure.vm.MeasureViewModel
 import com.tangoplus.tangoface.ui.settings.GyroDialogFragment
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
@@ -123,6 +126,7 @@ class MExpertFragment : Fragment() {
               }
 
               else -> {
+                mvm.startScan()
                 playSound(R.raw.camera_shutter)
                 lifecycleScope.launch {
                   viewModel.setContourSave(true) // 컨투어를 위한 shortArray 추출 및 저장
@@ -164,6 +168,7 @@ class MExpertFragment : Fragment() {
           Toast.makeText(requireContext(), "얼굴 인식에 문제가 발생했습니다. 다시 시도해주세요", Toast.LENGTH_SHORT).show()
           updateUI()
           setPreviousStep()
+          mvm.stopScan()
         }
       }
     }
@@ -275,9 +280,11 @@ class MExpertFragment : Fragment() {
     bd.tvMEPrevious.setOnSingleClickListener {
       showPreviousDialog(requireActivity(), { setPreviousStep() })
     }
-    bd.tvMEGyro.setOnSingleClickListener {
-      val gyro = GyroDialogFragment()
-      gyro.show(requireActivity().supportFragmentManager, "gyroDialogFragment")
+    bd.tvMEGuide.setOnSingleClickListener {
+      val dialog  = JawGuideDialogFragment()
+      dialog.show(requireActivity().supportFragmentManager, "")
+//      val gyro = GyroDialogFragment()
+//      gyro.show(requireActivity().supportFragmentManager, "")
     }
   }
 
@@ -329,7 +336,7 @@ class MExpertFragment : Fragment() {
     bd.llMELookUpContainer.visibility = View.INVISIBLE
   }
   private fun setPreviousStep() {
-    mvm.moveToPreviousSeq()
+    if (mvm.currentSeq != Sequence.JAW_RIGHT_TILT) mvm.moveToPreviousSeq()
 
     // -----------# frame -> fdgv 변경하기 #--------
     Log.v("이전seq", "${mvm.progressSeqs}/${mvm.currentSeq} : ${mvm.allSeqs}")
@@ -363,13 +370,23 @@ class MExpertFragment : Fragment() {
 
     val ci =  mvm.getSeqIndex()
     mvm.tempStaticJo = null
-    mvm.staticJA.remove(ci)
-    mvm.coordinatesJA.remove(ci)
-    mvm.plrJA.remove(ci)
-    mvm.mediaFileNames.removeAt(ci)
+    if (mvm.currentSeq == Sequence.JAW_LEFT_TILT) {
+      mvm.isOcclusalSaved = false
+      repeat(3) {
+        if (mvm.staticJA.length() > 0) mvm.staticJA.remove(mvm.staticJA.length() - 1)
+        if (mvm.coordinatesJA.length() > 0) mvm.coordinatesJA.remove(mvm.coordinatesJA.length() - 1)
+        if (mvm.plrJA.length() > 0) mvm.plrJA.remove(mvm.plrJA.length() - 1)
+        if (mvm.mediaFileNames.isNotEmpty()) mvm.mediaFileNames.removeAt(mvm.mediaFileNames.size - 1)
+      }
+    } else {
+      mvm.staticJA.remove(ci)
+      mvm.coordinatesJA.remove(ci)
+      mvm.plrJA.remove(ci)
+      mvm.mediaFileNames.removeAt(ci)
+    }
     Log.v("그외STATIC삭제", "${mvm.tempStaticJo}, ${mvm.staticJA.length()}, ${mvm.coordinatesJA.length()}, ${mvm.plrJA.length()}, ${mvm.mediaFileNames}")
     isCountDown = false
-//    bd.tvGoGallery.isEnabled = true
+
   }
 
   private fun setGuideAnimation(seq: Sequence, isEnded: Boolean) {
@@ -403,6 +420,7 @@ class MExpertFragment : Fragment() {
   }
 
   private fun updateUI() {
+    mvm.stopScan()
     val isProcessing = mvm.moveToNextSeq()
     if (!isProcessing) {
       setGuideAnimation(mvm.currentSeq, true)
@@ -422,6 +440,14 @@ class MExpertFragment : Fragment() {
       viewModel.setCountDownFlag(false)
       bd.ivMEFrame.visibility = View.VISIBLE
       startFadeIn(bd.ivMEFrame)
+
+      if (mvm.currentSeq == Sequence.JAW_LEFT_TILT) {
+        lifecycleScope.launch {
+          delay(750)
+          val dialog  = JawGuideDialogFragment()
+          dialog.show(requireActivity().supportFragmentManager, "")
+        }
+      }
       when (mvm.currentSeq) {
         Sequence.JAW_LEFT_TILT, Sequence.JAW_RIGHT_TILT -> bd.ivMEFrame.setImageDrawable(
           ContextCompat.getDrawable(
@@ -469,17 +495,17 @@ class MExpertFragment : Fragment() {
 
   private fun setJawTiltGuideText(step: Sequence) {
     val guideText = when (step) {
-      Sequence.JAW_LEFT_TILT -> "1. 미소지은 상태로 턱을 왼쪽으로 끝까지 움직이세요\n2. 입을 최대한 벌려주세요\n3. 입을 다물어 측정을 완료하세요"
-      Sequence.JAW_RIGHT_TILT -> "1. 미소지은 상태로 턱을 오른쪽으로 끝까지 움직이세요\n2. 입을 최대한 벌려주세요\n3. 입을 다물어 측정을 완료하세요"
+      Sequence.JAW_LEFT_TILT -> "1. 이빨을 맞물리려고 유지한 상태로\n아랫턱을 왼쪽으로 끝까지 움직여주세요|2. 입을 최대한 벌려주세요|3. 벌린 입을 앙다물면\n턱 가측 이동 단계가 종료됩니다."
+      Sequence.JAW_RIGHT_TILT -> "1. 이빨을 맞물리려고 유지한 상태로\n아랫턱을 오른쪽으로 끝까지 움직여주세요|2. 입을 최대한 벌려주세요|3. 벌린 입을 앙다물면\n턱 가측 이동 단계가 종료됩니다."
       else -> return
     }
 
     cancelJawTiltGuideText()
-    val lines = guideText.split("\n")
+    val lines = guideText.split("|")
     var accumulatedDelay = 0L
 
     lines.forEachIndexed { index, line ->
-      val currentDelay = if (index == 0) 1750L else 1400L
+      val currentDelay = 2000L
       val runnable = Runnable {
         bd.tvMESeqGuide.text = line
       }

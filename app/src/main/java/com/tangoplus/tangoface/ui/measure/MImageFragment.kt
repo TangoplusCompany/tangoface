@@ -1,4 +1,4 @@
-package com.tangoplus.tangoface.ui.measure.type
+package com.tangoplus.tangoface.ui.measure
 
 import android.app.Activity
 import android.content.res.ColorStateList
@@ -39,10 +39,8 @@ import com.tangoplus.tangoface.domain.vision.pose.PoseLandmarkerHelper
 import com.tangoplus.tangoface.domain.vo.MeasureType
 import com.tangoplus.tangoface.domain.vo.Sequence
 import com.tangoplus.tangoface.ui.adapter.MeasureImageRVAdapter
-import com.tangoplus.tangoface.ui.adapter.MeasureImageVPAdapter
 import com.tangoplus.tangoface.ui.main.MainActivity
 import com.tangoplus.tangoface.ui.main.vm.MainViewModel
-import com.tangoplus.tangoface.ui.measure.UserSetupDialogFragment
 import com.tangoplus.tangoface.ui.measure.vm.InputViewModel
 import com.tangoplus.tangoface.ui.measure.vm.MeasureImageViewModel
 import com.tangoplus.tangoface.ui.measure.vm.MeasureViewModel
@@ -86,7 +84,7 @@ class MImageFragment : Fragment() {
 			bannerView = bd.guideBanner1.root,
 			closeButton = bd.guideBanner1.btnCloseGuide,
 			textView = bd.guideBanner1.tvGuideText,
-			message = "🔔뎁스카메라를 사용하지 않아 얼굴 크기 등 실제 길이 확인은 제한될 수 있습니다",
+			message = "🔔 뎁스카메라를 사용하지 않아 얼굴 크기 등 실제 길이 확인은 제한될 수 있습니다",
 			prefKey = "measureImageGuide"
 		)
 

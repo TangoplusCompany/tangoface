@@ -3,7 +3,7 @@
              xmlns:app="http://schemas.android.com/apk/res-auto" xmlns:tools="http://schemas.android.com/tools"
              android:layout_width="match_parent"
              android:layout_height="match_parent"
-             tools:context=".ui.measure.type.MExpertFragment">
+             tools:context=".ui.measure.MExpertFragment">
 
     <androidx.constraintlayout.widget.ConstraintLayout
             android:layout_width="match_parent"
@@ -108,7 +108,7 @@
                 android:layout_width="128dp"
                 android:layout_height="128dp"
                 android:layout_margin="10dp"
-                android:background="@drawable/bckgnd_20"
+                android:background="@drawable/bg_20"
                 android:backgroundTint="#65FFFFFF"
                 android:visibility="invisible"
                 app:layout_constraintBottom_toBottomOf="parent"
@@ -174,18 +174,19 @@
                     android:textSize="24dp"
                     app:layout_constraintEnd_toEndOf="parent"
                     app:layout_constraintTop_toTopOf="parent" />
+
             <TextView
-                    android:id="@+id/tvMEGyro"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="20dp"
-                    android:layout_marginTop="10dp"
-                    android:gravity="center"
-                    android:text="수평계"
-                    android:textColor="@color/white"
-                    android:textSize="24sp"
-                    app:layout_constraintStart_toStartOf="parent"
-                    app:layout_constraintTop_toTopOf="parent"/>
+                android:id="@+id/tvMEGuide"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="20dp"
+                android:layout_marginTop="10dp"
+                android:gravity="center"
+                android:text="턱 가측 이동 가이드 확인"
+                android:textColor="@color/white"
+                android:textSize="24sp"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent" />
         </androidx.constraintlayout.widget.ConstraintLayout>
 
         <TextView

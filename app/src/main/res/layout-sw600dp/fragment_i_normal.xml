@@ -71,7 +71,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginStart="10dp"
-                        android:background="@drawable/bckgnd_12"
+                        android:background="@drawable/bg_12"
                         android:backgroundTint="#1A140000"
                         android:gravity="center_vertical"
                         android:padding="10dp"
@@ -194,7 +194,7 @@
                     android:layout_marginStart="10dp"
                     android:layout_marginTop="10dp"
                     android:layout_marginEnd="10dp"
-                    android:background="@drawable/bckgnd_20"
+                    android:background="@drawable/bg_20"
                     android:backgroundTint="@color/bg700"
                     app:layout_constraintEnd_toEndOf="parent"
                     app:layout_constraintStart_toStartOf="parent"
@@ -263,7 +263,7 @@
             android:id="@+id/bsIN"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:background="@drawable/bckgnd_top_20"
+            android:background="@drawable/bg_top_20"
             android:backgroundTint="@color/bg500"
             android:clickable="true"
             android:focusable="true"
@@ -405,7 +405,7 @@
                     app:layout_constraintBottom_toBottomOf="parent"
                     app:layout_constraintEnd_toEndOf="parent"
                     app:layout_constraintStart_toStartOf="parent"
-                    app:layout_constraintTop_toBottomOf="@+id/sflI" />
+                    app:layout_constraintTop_toBottomOf="@+id/sflIN" />
 
         </androidx.constraintlayout.widget.ConstraintLayout>
 

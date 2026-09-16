@@ -67,6 +67,26 @@ class INormalFragment : Fragment(), OnFacialPartClickListener {
 	private val msvm : MeasureViewModel by viewModels()
 	private lateinit var fDao: FaceDao
 
+	override fun onDestroyView() {
+		super.onDestroyView()
+
+		// 1. 고화질 비트맵 및 오버레이 정리
+		bd.ssivIN.recycle()
+		bd.tbovIN.setTextBoxes(emptyList())
+
+		// 2. 실행 중인 무한 루프 Job 및 애니메이션 취소
+		bounceJob?.cancel()
+		typingJob?.cancel()
+		bd.tvINScrollHint.animate().cancel()
+		bd.sflIN.stopShimmer()
+
+		// 3. Shared ViewModel 상태 초기화
+		if (ivm.isAngleModeActive.value) {
+			ivm.toggleAngleMode()
+		}
+		svm.updateFacialPart(FacialPart.DERIVE)
+	}
+
 	override fun onCreateView(
 		inflater: LayoutInflater, container: ViewGroup?,
 		savedInstanceState: Bundle?
@@ -75,11 +95,6 @@ class INormalFragment : Fragment(), OnFacialPartClickListener {
 		return bd.root
 	}
 
-
-	override fun onDestroyView() {
-		super.onDestroyView()
-		bd.ssivIN.recycle()
-	}
 
 	override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
 		super.onViewCreated(view, savedInstanceState)

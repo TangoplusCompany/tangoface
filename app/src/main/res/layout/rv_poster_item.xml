@@ -12,7 +12,7 @@
         android:layout_margin="20dp"
         app:cardCornerRadius="20dp"
         app:cardElevation="0dp"
-        app:layout_constraintDimensionRatio="H,16:9"
+        app:layout_constraintDimensionRatio="H,256:389"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent">

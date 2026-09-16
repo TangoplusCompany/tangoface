@@ -145,11 +145,4 @@ interface FaceDao {
 	@Query("SELECT COUNT(DISTINCT local_sn) FROM t_face_pre_checklist")
 	suspend fun getPreChecklistCount(): Int
 
-
-	// ------------# expert survey #--------------
-	@Insert
-	suspend fun insertAfterSurvey(survey: AfterSurvey): Long
-
-	@Query("SELECT * FROM t_after_survey WHERE server_sn = :serverSn")
-	suspend fun getAfterSurvey(serverSn: Int): AfterSurvey?
 }

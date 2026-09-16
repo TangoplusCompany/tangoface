@@ -23,7 +23,7 @@ import com.tangoplus.tangoface.ui.listener.OnUserClickListener
 import com.tangoplus.tangoface.ui.main.MainActivity
 import com.tangoplus.tangoface.ui.main.vm.MainViewModel
 import com.tangoplus.tangoface.ui.main.vo.UserItem
-import com.tangoplus.tangoface.ui.measure.type.MImageFragment
+import com.tangoplus.tangoface.ui.measure.MImageFragment
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext

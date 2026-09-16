@@ -108,7 +108,7 @@ class PosterManageFragment : Fragment(), OnPosterClickListener {
 				setToolbarTitle("포스터 영역 선택")
 			}
 			val ratio = (activity as MainActivity).getFlMainSize()?.let { (width, height) ->
-				if (MyApplication.isTablet()) Pair(16f, 9f) else Pair(width.toFloat(), height.toFloat())
+				if (MyApplication.isTablet()) Pair(9f, 16f) else Pair(width.toFloat(), height.toFloat())
 			} ?: Pair(1f, 1f)
 
 			UCrop.of(sourceUri, destinationUri)

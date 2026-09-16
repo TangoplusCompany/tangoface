@@ -17,6 +17,12 @@ class PreferenceUtility(context: Context) {
 	private val fPrefs = context.getSharedPreferences("flicker_prefs", Context.MODE_PRIVATE)
 	private val veloPrefs = context.getSharedPreferences("velocity_prefs", Context.MODE_PRIVATE)
 	private val pPrefs = context.getSharedPreferences("poster_prefs", Context.MODE_PRIVATE)
+	private val appPrefs = context.getSharedPreferences("app_prefs", Context.MODE_PRIVATE)
+
+	companion object {
+		private const val KEY_FIRST_RAM_BALLOON_SHOWN = "is_first_ram_balloon_shown"
+	}
+
 	private val KEY_LAST_SN = "last_temp_server_sn"
 	private val KEY_LAST_COUNT = "last_data_count"
 	fun setNextTempServerSn() {
@@ -153,4 +159,14 @@ class PreferenceUtility(context: Context) {
 	fun getSlideVelocity(): Float {
 		return veloPrefs.getFloat("SLIDE_VELOCITY" , 7.0f)
 	}
+
+	fun isFirstRamBalloonShown(): Boolean {
+		return appPrefs.getBoolean(KEY_FIRST_RAM_BALLOON_SHOWN, false)
+	}
+
+	// 노출 완료 플래그 저장
+	fun setFirstRamBalloonShown() {
+		appPrefs.edit { putBoolean(KEY_FIRST_RAM_BALLOON_SHOWN, true) }
+	}
+
 }

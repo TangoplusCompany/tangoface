@@ -1,4 +1,4 @@
-package com.tangoplus.tangoface.ui.measure.type
+package com.tangoplus.tangoface.ui.measure
 
 import android.annotation.SuppressLint
 import android.content.Intent
