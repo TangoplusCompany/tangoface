@@ -34,6 +34,7 @@ import com.skydoves.balloon.createBalloon
 import com.tangoplus.tangoface.R
 import com.tangoplus.tangoface.data.db.FaceDatabase
 import com.tangoplus.tangoface.databinding.FragmentMainBinding
+import com.tangoplus.tangoface.domain.util.FileUtility.setOnSingleClickListener
 import com.tangoplus.tangoface.domain.util.PreferenceUtility
 import com.tangoplus.tangoface.domain.vo.MeasureType
 import com.tangoplus.tangoface.ui.adapter.MainTabRVAdapter
@@ -131,6 +132,11 @@ class MainFragment : Fragment(), OnMainTabClickListener {
 			val balloon = createRamInfoBalloon()
 			balloon.showAlignBottom(bd.tvMRam)
 		}
+
+		bd.clMNotice.setOnSingleClickListener {
+			selectedMeasureType = MeasureType.SCAN
+			checkStoragePermission()
+		}
 	}
 
 	private fun setAdapter() {
@@ -225,6 +231,7 @@ class MainFragment : Fragment(), OnMainTabClickListener {
 				return
 			}
 			tabs[3] -> selectedMeasureType = MeasureType.BOW
+
 		}
 		checkStoragePermission()
 	}

@@ -60,14 +60,19 @@ import java.nio.ByteBuffer
 import kotlin.lazy
 import kotlin.math.abs
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import com.orbbec.obsensor.AccelFrame
 import com.orbbec.obsensor.VideoStreamProfile
+import com.orbbec.obsensor.types.AccelFullScaleRange
+import com.orbbec.obsensor.types.IMUSampleRate
 import com.tangoplus.tangoface.domain.opencv.HsvColorTracker
 import com.tangoplus.tangoface.domain.util.LandmarkUtility.colorFrameToBitmapSafe
 import com.tangoplus.tangoface.domain.util.LandmarkUtility.scaleAndCropIntrinsicCenterCrop
 import com.tangoplus.tangoface.domain.util.clearAll
 import com.tangoplus.tangoface.domain.vo.MeasureType
 import com.tangoplus.tangoface.ui.main.vm.MainViewModel
+import com.tangoplus.tangoface.ui.measure.vm.ScanViewModel
 import kotlinx.coroutines.launch
+import kotlin.math.atan2
 import kotlin.use
 
 class DepthCameraActivity : BaseActivity(), FaceLandmarkerHelper.LandmarkerListener {
@@ -80,6 +85,7 @@ class DepthCameraActivity : BaseActivity(), FaceLandmarkerHelper.LandmarkerListe
 	private val viewModel: MainViewModel by viewModels()
 	private val mvm: MeasureViewModel by viewModels()
 	private val ivm: InputViewModel by viewModels()
+	private val svm: ScanViewModel by viewModels()
 	private val faceBlendshapesResultAdapter by lazy {
 		FaceBlendshapesResultAdapter()
 	}
@@ -448,6 +454,46 @@ class DepthCameraActivity : BaseActivity(), FaceLandmarkerHelper.LandmarkerListe
 					} finally {
 						depthFrame?.close()
 					}
+
+					if (mvm.measureType == MeasureType.SCAN) {
+						val accelSensor = mvm.mDevice?.getSensor(SensorType.ACCEL)
+						if (accelSensor != null) {
+							val accelProfileList = accelSensor.streamProfileList
+							val accelProfile = accelProfileList.getAccelStreamProfile(
+								AccelFullScaleRange.FS_UNKNOWN,
+								IMUSampleRate.ODR_50_HZ
+							)
+
+							accelSensor.start(accelProfile) { frame ->
+								val accelFrame = frame.`as`<AccelFrame>(FrameType.ACCEL)
+								if (accelFrame != null) {
+									val currentTime = System.currentTimeMillis()
+
+									if (currentTime - svm.lastUpdateTime >= 80) {
+										svm.lastUpdateTime = currentTime
+
+										val accelData = accelFrame.getAccelData()
+										val ax = accelData[0]
+										val ay = accelData[1]
+										val az = accelData[2]
+
+										val pitchRad = atan2(-ax.toDouble(), sqrt((ay * ay + az * az).toDouble()))
+										val pitchDeg = Math.toDegrees(pitchRad)
+
+										val rollRad = atan2(ay.toDouble(), az.toDouble())
+										var rollDeg = Math.toDegrees(rollRad)
+
+										rollDeg -= 90.0
+										if (rollDeg > 180) rollDeg -= 360
+										if (rollDeg < -180) rollDeg += 360
+
+										svm.currentPitch = String.format("Pitch: %.1f°", pitchDeg )
+									}
+									accelFrame.close() // 프레임 메모리 해제 필수
+								}
+							}
+						}
+					}
 				}
 			} catch (e: com.orbbec.obsensor.OBException) {
 				val msg = e.message.orEmpty()
@@ -510,6 +556,7 @@ class DepthCameraActivity : BaseActivity(), FaceLandmarkerHelper.LandmarkerListe
 			MeasureType.NORMAL -> MNormalFragment()
 			MeasureType.EXPERT -> MExpertFragment()
 			MeasureType.BOW -> MBowFragment()
+			MeasureType.SCAN -> MScanFragment()
 			else -> MNormalFragment()
 		}
 		supportFragmentManager.beginTransaction().apply {
@@ -529,7 +576,6 @@ class DepthCameraActivity : BaseActivity(), FaceLandmarkerHelper.LandmarkerListe
 
 		mvm.initMeasure.observe(this) {
 			if (it) {
-
 				initSettings()
 				mvm.initMeasure.value = false
 			}

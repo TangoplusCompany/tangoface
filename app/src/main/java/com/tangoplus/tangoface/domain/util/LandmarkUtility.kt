@@ -638,6 +638,4 @@ object LandmarkUtility {
 			height = targetHeight
 		)
 	}
-
-
 }

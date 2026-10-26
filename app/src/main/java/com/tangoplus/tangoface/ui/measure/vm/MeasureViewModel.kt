@@ -131,13 +131,15 @@ class MeasureViewModel : ViewModel() {
 		MeasureType.NORMAL to listOf(Sequence.COMFORT, Sequence.NECK_EXTENTION),
 		MeasureType.EXPERT to Sequence.entries.filter { it != Sequence.BOW },
 		MeasureType.BOW to listOf(Sequence.BOW),
-		MeasureType.IMAGE to listOf(Sequence.COMFORT)
+		MeasureType.IMAGE to listOf(Sequence.COMFORT),
+		MeasureType.SCAN to listOf(Sequence.COMFORT)
 	)
 	private val progressSeqMap = mapOf(
 		MeasureType.NORMAL to listOf(Sequence.COMFORT, Sequence.NECK_EXTENTION),
 		MeasureType.EXPERT to Sequence.entries.filter { it != Sequence.BOW && it != Sequence.JAW_OPENING && it != Sequence.OCCLUSAL },
 		MeasureType.BOW to listOf(Sequence.BOW),
 		MeasureType.IMAGE to listOf(Sequence.COMFORT),
+		MeasureType.SCAN to listOf(Sequence.COMFORT)
 	)
 	var measureType: MeasureType? = null
 
