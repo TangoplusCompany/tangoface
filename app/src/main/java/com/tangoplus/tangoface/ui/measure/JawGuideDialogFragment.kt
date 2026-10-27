@@ -15,6 +15,7 @@ import androidx.viewpager2.widget.ViewPager2
 import com.tangoplus.tangoface.R
 import com.tangoplus.tangoface.databinding.FragmentJawGuideDialogBinding
 import com.tangoplus.tangoface.domain.util.FileUtility.setOnSingleClickListener
+import com.tangoplus.tangoface.orbbec.application.MyApplication
 import com.tangoplus.tangoface.ui.adapter.ManualVPAdapter
 import com.tangoplus.tangoface.ui.measure.vm.MeasureViewModel
 import kotlinx.coroutines.delay
@@ -210,12 +211,24 @@ class JawGuideDialogFragment : DialogFragment() {
 
 	override fun onStart() {
 		super.onStart()
-		// 기기 화면 가로 0.5, 세로 0.5 크기 적용
 		dialog?.window?.let { window ->
 			val metrics = resources.displayMetrics
+			val isLandscape = resources.configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
+
+			val widthRatio: Float
+			val heightRatio: Float
+
+			if (MyApplication.isTablet() && isLandscape) {
+				widthRatio = 0.5f
+				heightRatio = 0.8f
+			} else {
+				widthRatio = 0.7f
+				heightRatio = 0.5f
+			}
+
 			window.setLayout(
-				(metrics.widthPixels * 0.7f).toInt(),
-				(metrics.heightPixels * 0.5f).toInt()
+				(metrics.widthPixels * widthRatio).toInt(),
+				(metrics.heightPixels * heightRatio).toInt()
 			)
 			window.setBackgroundDrawableResource(android.R.color.transparent)
 		}

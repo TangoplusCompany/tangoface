@@ -1,6 +1,7 @@
 package com.tangoplus.tangoface.ui.info
 
 import android.annotation.SuppressLint
+import android.content.res.Configuration
 import android.graphics.PointF
 import android.os.Bundle
 import android.util.Log
@@ -135,7 +136,9 @@ class IExpertFragment : Fragment(), OnFacialPartClickListener, OnSequenceClickLi
   }
 
   private fun setAdapter() {
-    val gLayoutManager6 = GridLayoutManager(context, 6)
+    val isLandscape = resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+    val layoutCount = if (MyApplication.isTablet() && isLandscape) 3 else 6
+    val gLayoutManager6 = GridLayoutManager(context, layoutCount)
     val sAdapter = SequenceSelectRVAdapter(svm)
     sAdapter.onSequenceClickListener = this@IExpertFragment
     bd.rvIE1.apply {

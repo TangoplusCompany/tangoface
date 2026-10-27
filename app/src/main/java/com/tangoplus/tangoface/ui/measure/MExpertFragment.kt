@@ -190,9 +190,7 @@ class MExpertFragment : Fragment() {
     bd.btnMEShooting.setOnSingleClickListener {
       if (bd.btnMEShooting.text == "결과보기") {
 
-        // 💡 [단계 1] 클릭 즉시 메인 스레드에서 버튼을 비활성화하여 중복 터치를 차단합니다.
         bd.btnMEShooting.isEnabled = false
-        // (선택) 로딩 바를 보여주거나 시각적 피드백을 주면 더 좋습니다.
 
         if (ivm.birthdayValue.value == "날짜 선택") {
           ivm.birthdayValue.value = ""
@@ -428,6 +426,9 @@ class MExpertFragment : Fragment() {
       bd.btnMEShooting.apply {
         text = "결과보기"
         isEnabled = true
+        width = 200
+        height = 120
+        background = ContextCompat.getDrawable(context, R.drawable.color_gradation_accent_64)
       }
 
       mCountDown.cancel()
@@ -474,6 +475,11 @@ class MExpertFragment : Fragment() {
           startLookUpAnimation()
         }
         else -> {}
+      }
+      bd.btnMEShooting.apply {
+        width = 150
+        height = 150
+        background = ContextCompat.getDrawable(context, R.drawable.btn_camera)
       }
     }
 

@@ -128,7 +128,6 @@ public class OBGLView extends GLSurfaceView {
 	 * @param frameW frame width
 	 * @param frameH frame height
 	 */
-	public static float yCorrectionOffset = 0f;
 
 	private void updateGLSurfaceViewSize(int frameW, int frameH) {
 		ViewGroup parent = (ViewGroup) this.getParent();
@@ -173,17 +172,24 @@ public class OBGLView extends GLSurfaceView {
 			}
 		}
 		Log.d("DEBUG_SIZE", "Target size = " + targetWidth + "x" + targetHeight);
-		yCorrectionOffset = (float)(targetHeight - parent.getHeight()) / 4f;
+
+
 		ViewGroup.LayoutParams params = this.getLayoutParams();
 		params.width = targetWidth;
 		params.height = targetHeight;
 
 		if (params instanceof ViewGroup.MarginLayoutParams) {
 			ViewGroup.MarginLayoutParams mlp = (ViewGroup.MarginLayoutParams) params;
-			mlp.leftMargin = 0;
-			mlp.rightMargin = 0;
-			mlp.topMargin = 0;
-			mlp.bottomMargin = 0;
+
+			// 💡 핵심: 부모 뷰(화면)를 뚫고 나가는 넘치는 크기(오버플로우) 계산
+			int overflowX = targetWidth - parent.getWidth();
+			int overflowY = targetHeight - parent.getHeight();
+
+			// 💡 상하좌우를 똑같이 자르기 위해, 넘치는 크기의 '절반'만큼 마이너스(-) 마진을 주어 정중앙에 배치
+			mlp.leftMargin = -(overflowX / 2);
+			mlp.rightMargin = -(overflowX / 2);
+			mlp.topMargin = -(overflowY / 2);
+			mlp.bottomMargin = -(overflowY / 2);
 		}
 		this.setLayoutParams(params);
 	}

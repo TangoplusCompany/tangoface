@@ -28,6 +28,7 @@ import androidx.core.view.WindowInsetsControllerCompat
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import com.google.android.material.navigation.NavigationBarView
 import com.tangoplus.tangoface.data.db.FaceDatabase
 import com.tangoplus.tangoface.R
 import com.tangoplus.tangoface.data.db.FaceDao
@@ -111,13 +112,12 @@ class MainActivity : AppCompatActivity() {
 				.replace(R.id.flMain, MainFragment())
 				.commit()
 		}
-
-		bd.bnv.setOnItemSelectedListener {
-			startLongVibrate(this@MainActivity)
+		val navView = bd.bnv as NavigationBarView
+		navView.setOnItemSelectedListener {
 			setCurrentFragment(it.itemId)
 			true
 		}
-		bd.bnv.setOnItemReselectedListener { setCurrentFragment(it.itemId) }
+		navView.setOnItemReselectedListener { setCurrentFragment(it.itemId) }
 
 
 		if (!hasPermissions(this)) {
@@ -603,7 +603,8 @@ class MainActivity : AppCompatActivity() {
 
 	// informationFragment로 바로 가는 함수
 	fun navigateToMeasureHistoryInformation(measureType: Int) {
-		bd.bnv.selectedItemId = R.id.nav_measure_history
+		val navView = bd.bnv as NavigationBarView
+		navView.selectedItemId = R.id.nav_measure_history
 
 		supportFragmentManager.executePendingTransactions()
 

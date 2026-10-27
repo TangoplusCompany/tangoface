@@ -71,38 +71,7 @@
                     app:layout_constraintWidth_percent="0.75"/>
 
         </androidx.constraintlayout.widget.ConstraintLayout>
-        <LinearLayout
-                android:id="@+id/llMBLookUpContainer"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:elevation="10dp"
-                android:gravity="center"
-                android:orientation="vertical"
-                android:visibility="invisible"
-                app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintHorizontal_bias="0.8"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toTopOf="parent"
-                app:layout_constraintVertical_bias="0.5" app:layout_constraintBottom_toTopOf="@+id/constraintLayout1">
 
-            <TextView
-                    android:id="@+id/tvMBLookUpArrow"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:paddingTop="24dp"
-                    android:text="↑"
-                    android:textColor="#FFFFFF"
-                    android:textSize="86sp"
-                    android:textStyle="bold"/>
-
-            <TextView
-                    android:id="@+id/tvMBLookUpEyes"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="-12dp"
-                    android:text="👀"
-                    android:textSize="48sp"/>
-        </LinearLayout>
         <androidx.constraintlayout.widget.ConstraintLayout
                 android:id="@+id/clMBCountDown"
                 android:layout_width="128dp"
@@ -161,32 +130,6 @@
                     app:layout_constraintTop_toTopOf="parent"
                     app:layout_constraintWidth_percent="0.6"/>
 
-            <TextView
-                    android:id="@+id/tvMBSeqCount"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="10dp"
-                    android:layout_marginEnd="20dp"
-                    android:gravity="center"
-                    android:paddingStart="10dp"
-                    android:paddingEnd="10dp"
-                    android:text="1. 정면 > 2. 목 폄 상태"
-                    android:textColor="@color/white"
-                    android:textSize="24dp"
-                    app:layout_constraintEnd_toEndOf="parent"
-                    app:layout_constraintTop_toTopOf="parent" />
-            <TextView
-                    android:id="@+id/tvMBGyro"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="20dp"
-                    android:layout_marginTop="10dp"
-                    android:gravity="center"
-                    android:text="수평계"
-                    android:textColor="@color/white"
-                    android:textSize="24sp"
-                    app:layout_constraintStart_toStartOf="parent"
-                    app:layout_constraintTop_toTopOf="parent"/>
         </androidx.constraintlayout.widget.ConstraintLayout>
 
 

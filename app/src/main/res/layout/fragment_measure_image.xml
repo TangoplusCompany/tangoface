@@ -34,24 +34,6 @@
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@id/textView7" />
 
-        <TextView
-            android:id="@+id/tvMIGuide"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:background="@drawable/bg_20"
-            android:backgroundTint="@color/bg500"
-            android:gravity="center"
-            android:lineSpacingExtra="4dp"
-            android:padding="10dp"
-            android:text="하단의 + 버튼을 눌러 사진을 업로드 해주세요\n🔔 업로드 시 어깨와 얼굴이 잘리지 않게 주의해주세요"
-            android:textColor="@color/subColor100"
-            android:textSize="14sp"
-            app:layout_constraintBottom_toBottomOf="@+id/rvMI"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="parent"
-            app:layout_constraintVertical_bias="0.45" />
-
         <androidx.recyclerview.widget.RecyclerView
             android:id="@+id/rvMI"
             android:layout_width="0dp"

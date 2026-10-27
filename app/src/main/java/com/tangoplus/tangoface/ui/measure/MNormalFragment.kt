@@ -118,7 +118,6 @@ class MNormalFragment : Fragment() {
         } else {
           Toast.makeText(requireContext(), "얼굴 인식에 문제가 발생했습니다. 다시 시도해주세요", Toast.LENGTH_SHORT).show()
           updateUI()
-          setPreviousStep()
           mvm.stopScan()
         }
       }
@@ -222,10 +221,6 @@ class MNormalFragment : Fragment() {
           startTimer()
         }
       }
-    }
-    bd.tvMNGyro.setOnSingleClickListener {
-      val gyro = GyroDialogFragment()
-      gyro.show(requireActivity().supportFragmentManager, "gyroDialogFragment")
     }
   }
 
@@ -350,6 +345,9 @@ class MNormalFragment : Fragment() {
       bd.btnMNShooting.apply {
         text = "결과보기"
         isEnabled = true
+        width = 200
+        height = 120
+        background = ContextCompat.getDrawable(context, R.drawable.color_gradation_accent_64)
       }
 
       mCountDown.cancel()
@@ -364,6 +362,11 @@ class MNormalFragment : Fragment() {
         ContextCompat.getDrawable(requireContext(), R.drawable.drawable_seq_6)
       )
       startLookUpAnimation()
+      bd.btnMNShooting.apply {
+        width = 150
+        height = 150
+        background = ContextCompat.getDrawable(context, R.drawable.btn_camera)
+      }
     }
 
     bd.btnMNShooting.apply {

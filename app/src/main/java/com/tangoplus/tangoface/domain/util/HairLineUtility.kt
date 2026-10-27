@@ -112,6 +112,9 @@ object HairLineUtility {
 		val matLab = Mat()
 		Imgproc.cvtColor(matRgb, matLab, Imgproc.COLOR_RGB2Lab)
 
+		val matGray = Mat()
+		Imgproc.cvtColor(matRgb, matGray, Imgproc.COLOR_RGB2GRAY)
+
 		try {
 			val point10 = faceLandmarks.landmarks[10]
 			val point9  = faceLandmarks.landmarks[9]
@@ -139,11 +142,13 @@ object HairLineUtility {
 				// ★ 단순화된 탐색: 위로 올라가면서 Lab 거리가 threshold 넘으면 머리카락
 				val foundY = findHairColorTransition(
 					matLab    = matLab,
+					matGray = matGray,
 					centerX   = sampleX,
 					startY    = searchEnd,   // 랜드마크 바로 위부터
 					endY      = searchStart, // 화면 최상단까지
 					skinLab   = skinColorLab,
-					threshold = skinHairLabThreshold,
+					colorThreshold = skinHairLabThreshold,
+					textureThreshold = 15.0,
 					sustainLen = sustainLength
 				)
 
@@ -205,14 +210,30 @@ object HairLineUtility {
 	// ★ 새로운 단순 탐색 함수
 	private fun findHairColorTransition(
 		matLab: Mat,
+		matGray: Mat, // Imgproc.COLOR_RGB2GRAY로 미리 변환된 흑백 Mat 전달
 		centerX: Int,
 		startY: Int,
 		endY: Int,
 		skinLab: Scalar,
-		threshold: Double = 25.0,
-		sustainLen: Int = 3,
-		maxThreshold: Double = 80.0  // ★ 추가: 이 이상이면 배경으로 판단 → 스킵
+		colorThreshold: Double = 20.0,
+		textureThreshold: Double = 15.0, // 질감 변화 임계값
+		sustainLen: Int = 3
 	): Int? {
+		val height = startY - endY + 1
+		if (height <= 0) return null
+
+		// 1. JNI 호출 최소화: 필요한 열(Column) 데이터 한 번에 추출
+		val colLab = Mat()
+		val colGray = Mat()
+		matLab.submat(endY, startY + 1, centerX, centerX + 1).copyTo(colLab)
+		matGray.submat(endY, startY + 1, centerX, centerX + 1).copyTo(colGray)
+
+		val labData = ByteArray(height * 3)
+		val grayData = ByteArray(height)
+		colLab.get(0, 0, labData)
+		colGray.get(0, 0, grayData)
+		colLab.release(); colGray.release()
+
 		val skinL = skinLab.`val`[0]
 		val skinA = skinLab.`val`[1]
 		val skinB = skinLab.`val`[2]
@@ -220,15 +241,28 @@ object HairLineUtility {
 		var sustainCount = 0
 		var firstHairY = -1
 
-		for (y in startY downTo endY) {
-			val pixel = matLab.get(y, centerX) ?: continue
-			val dist = labDistance(pixel[0], pixel[1], pixel[2], skinL, skinA, skinB)
+		// 2. Y를 거꾸로(아래에서 위로) 탐색 (배열 인덱스는 역순)
+		for (i in height - 1 downTo 1) {
+			val y = endY + i
 
-			if (dist in threshold..maxThreshold) {  // ★ threshold ~ maxThreshold 사이만 머리카락
+			// 색상 거리 계산
+			val idx = i * 3
+			val l = labData[idx].toInt() and 0xFF
+			val a = labData[idx + 1].toInt() and 0xFF
+			val b = labData[idx + 2].toInt() and 0xFF
+			val colorDist = labDistance(l.toDouble(), a.toDouble(), b.toDouble(), skinL, skinA, skinB)
+
+			// 텍스처 계산 (간단한 수직 1D Gradient - 머리카락 경계는 수직 변화율이 큼)
+			val p1 = grayData[i].toInt() and 0xFF
+			val p2 = grayData[i - 1].toInt() and 0xFF
+			val textureGrad = abs(p1 - p2).toDouble()
+
+			// 3. 색상이 임계치를 넘거나, 질감(경계선)이 확연히 나타날 때 카운트
+			if (colorDist > colorThreshold || textureGrad > textureThreshold) {
 				if (sustainCount == 0) firstHairY = y
 				sustainCount++
+
 				if (sustainCount >= sustainLen) {
-					Log.v("색변화", "x=$centerX y=$firstHairY dist=${"%.2f".format(dist)} threshold=$threshold")
 					return firstHairY
 				}
 			} else {

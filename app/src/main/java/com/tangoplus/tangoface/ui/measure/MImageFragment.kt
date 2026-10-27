@@ -238,8 +238,7 @@ class MImageFragment : Fragment() {
 
 		setAdapter()
 		mivm.imagePath.observe(viewLifecycleOwner) { path ->
-			// 1. 기존 가이드 텍스트 숨김 처리 (하나라도 있으면 숨김)
-			bd.tvMIGuide.visibility = if (path == null) View.GONE else View.VISIBLE
+
 
 			setAdapter()
 

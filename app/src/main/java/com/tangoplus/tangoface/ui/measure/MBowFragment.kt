@@ -213,10 +213,6 @@ class MBowFragment : Fragment() {
       }
     }
 
-    bd.tvMBGyro.setOnSingleClickListener {
-      val gyro = GyroDialogFragment()
-      gyro.show(requireActivity().supportFragmentManager, "gyroDialogFragment")
-    }
   }
 
   private fun hideViews() {
@@ -257,20 +253,26 @@ class MBowFragment : Fragment() {
       bd.btnMBShooting.apply {
         text = "결과보기"
         isEnabled = true
+        width = 200
+        height = 120
+        background = ContextCompat.getDrawable(context, R.drawable.color_gradation_accent_64)
       }
 
       mCountDown.cancel()
       Log.v("몇단계?", "Max repeats reached, stopping the loop")
     } else {
       setGuideAnimation(mvm.currentSeq, false)
-      val seqCount = "${mvm.getSeqIndex() + 1}. ${mvm.currentSeq.displayName} / ${mvm.allSeqs.size}"
-      bd.tvMBSeqCount.text = seqCount
       viewModel.setCountDownFlag(false)
       bd.ivMBFrame.visibility = View.VISIBLE
       startFadeIn(bd.ivMBFrame)
       bd.ivMBFrame.setImageDrawable(
         ContextCompat.getDrawable(requireContext(), R.drawable.drawable_seq_6)
       )
+      bd.btnMBShooting.apply {
+        width = 150
+        height = 150
+        background = ContextCompat.getDrawable(context, R.drawable.btn_camera)
+      }
     }
     bd.btnMBShooting.apply {
       isEnabled = true

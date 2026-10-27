@@ -11,6 +11,7 @@ import android.graphics.Paint
 import android.graphics.Path
 import android.graphics.PointF
 import android.util.AttributeSet
+import android.util.Log
 import android.view.View
 import android.view.ViewGroup
 import android.view.animation.AccelerateDecelerateInterpolator
@@ -208,7 +209,7 @@ fun drawScanEffect(
 	// ---- 1) 랜드마크 점 + trail ----
 	faceLandmarks.forEachIndexed { index, landmark ->
 		val px = landmark.x * scaledImageWidth + offsetX
-		val py = landmark.y * scaledImageHeight + offsetY + OBGLView.yCorrectionOffset
+		val py = landmark.y * scaledImageHeight + offsetY
 
 		val distFromCenter = (px - centerX) / (scaledImageWidth / 2f)
 		val curveOffset = (distFromCenter * distFromCenter) * 35f
@@ -281,7 +282,7 @@ fun drawScanEffect(
 					val horizontalPoints = horizontalEarFlapIndexes.map { landmarkIndex ->
 						val landmark = faceLandmarks[landmarkIndex]
 						val x = landmark.x * imageWidth * scaleFactor + offsetX
-						val y = landmark.y * imageHeight * scaleFactor + offsetY + OBGLView.yCorrectionOffset
+						val y = landmark.y * imageHeight * scaleFactor + offsetY
 						PointF(x, y)
 					}
 					if (horizontalPoints.isNotEmpty()) {
@@ -309,7 +310,7 @@ fun drawScanEffect(
 					val verticalPoints = verticalIndexes.map { landmarkIndex ->
 						val landmark = faceLandmarks[landmarkIndex]
 						val x = landmark.x * imageWidth * scaleFactor + offsetX
-						val y = landmark.y * imageHeight * scaleFactor + offsetY + OBGLView.yCorrectionOffset
+						val y = landmark.y * imageHeight * scaleFactor + offsetY
 						PointF(x, y)
 					}
 					if (verticalPoints.isNotEmpty()) {
@@ -404,7 +405,7 @@ fun drawScanEffect(
 					val horizontalPoints = horizontalEarFlapIndexes.map { landmarkIndex ->
 						val landmark = faceLandmarks[landmarkIndex]
 						val x = landmark.x * imageWidth * scaleFactor + offsetX
-						val y = landmark.y * imageHeight * scaleFactor + offsetY + OBGLView.yCorrectionOffset
+						val y = landmark.y * imageHeight * scaleFactor + offsetY
 						PointF(x, y)
 					}
 					if (horizontalPoints.isNotEmpty()) {
@@ -432,7 +433,7 @@ fun drawScanEffect(
 					val verticalPoints = verticalIndexes.map { landmarkIndex ->
 						val landmark = faceLandmarks[landmarkIndex]
 						val x = landmark.x * imageWidth * scaleFactor + offsetX
-						val y = landmark.y * imageHeight * scaleFactor + offsetY + OBGLView.yCorrectionOffset
+						val y = landmark.y * imageHeight * scaleFactor + offsetY
 						PointF(x, y)
 					}
 					if (verticalPoints.isNotEmpty()) {
@@ -553,7 +554,7 @@ fun drawScanEffect(
 		}
 
 		val sortedPoints = targetPoints
-			.map { PointF(it.x, it.y - 40f) } // 💡 Y축 -40 오프셋 적용
+			.map { PointF(it.x, it.y + targetOffsetY) } // 💡 Y축 -40 오프셋 적용
 			.sortedBy { it.x }                // 💡 X값 작은 순서대로 정렬
 
 		val targetsLinePath = Path()
