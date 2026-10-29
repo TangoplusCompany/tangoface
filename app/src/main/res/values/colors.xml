@@ -12,11 +12,19 @@
     <color name="bg15">#26121212</color>
 
     <color name="accent">#FF0055</color>
-    <color name="accent100">#FFF8F8</color>
-    <color name="accent300">#FF8C98</color>
-    <color name="accent500">#D00043</color>
+    <color name="accent100">#FFECED</color>
+    <color name="accent200">#FFDADB</color>
+    <color name="accent300">#FF8794</color>
+    <color name="accent400">#FF516F</color>
+    <color name="accent500">#EC004E</color>
+    <color name="accent600">#BE003D</color>
+    <color name="accent700">#91002D</color>
+    <color name="accent800">#472F34</color>
+    <color name="accent900">#40000F</color>
+
     <color name="accent10">#19FF0055</color>
     <color name="accent30">#4CFF0055</color>
+    <color name="accent50">#7FFF0055</color>
     <color name="accent300_80">#CDFF8C98</color>
     <color name="subAccent">#FF95A6</color>
     <color name="accent_foreground">#76696D</color>
@@ -31,6 +39,7 @@
     <color name="subColor700">#545353</color>
     <color name="subColor900">#181717</color>
     <color name="rippleColor">#33FFFDFD</color>
+    <color name="rippleColorDark">#33000000</color>
 
 
     <color name="red">#FF5449</color>

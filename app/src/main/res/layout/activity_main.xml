@@ -22,20 +22,25 @@
             app:layout_constraintTop_toTopOf="parent"></FrameLayout>
 
         <com.google.android.material.bottomnavigation.BottomNavigationView
-            android:id="@+id/bnv"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_gravity="bottom"
-            android:background="@drawable/color_gradation_bg_alpha"
-            app:itemActiveIndicatorStyle="@style/App.CustomIndicator"
-            app:itemIconTint="@color/bnb_icon_color"
-            app:itemRippleColor="@color/accent10"
-            app:itemTextColor="@color/white"
-            app:labelVisibilityMode="labeled"
-            app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:menu="@menu/bottom_nav_menu" />
+                android:id="@+id/bnv"
+                android:layout_width="match_parent"
+                android:layout_height="88dp" android:layout_gravity="bottom"
+                android:background="@drawable/color_gradation_bg_alpha"
+                app:itemActiveIndicatorStyle="@style/App.CustomIndicator"
+                app:itemIconSize="36dp"
+                app:itemIconTint="@color/bnb_icon_color"
+                app:itemRippleColor="@color/accent10"
+                app:itemTextColor="@color/white"
+                app:labelVisibilityMode="labeled"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:menu="@menu/bottom_nav_menu"
+                android:paddingTop="4dp"
+                android:paddingBottom="4dp"
+                app:itemPaddingTop="4dp" app:itemPaddingBottom="4dp"
+                app:itemTextAppearanceActive="@style/App.BottomNavText"
+                app:itemTextAppearanceInactive="@style/App.BottomNavText"/>
     </androidx.constraintlayout.widget.ConstraintLayout>
 
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

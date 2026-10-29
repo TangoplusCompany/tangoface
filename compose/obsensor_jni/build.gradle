@@ -1,0 +1,68 @@
+import java.text.SimpleDateFormat
+
+plugins {
+    id 'com.android.library'
+}
+
+def libVersionCode = 2025041301
+def libVersionName = "2.0.4"
+println("libVersionCode: ${libVersionCode}, libVersionName: ${libVersionName}")
+
+android {
+    namespace 'com.orbbec.obsensor'
+    compileSdk 36
+
+    buildFeatures {
+        buildConfig = true
+    }
+
+    defaultConfig {
+        minSdk 29
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+        consumerProguardFiles "consumer-rules.pro"
+
+        externalNativeBuild {
+            cmake {
+                arguments "-DOBSENSOR_JNI_DIR=${getProjectDir().absolutePath}",
+                        "-DANDROID_STL=c++_shared",
+                        "-DANDROID_ARM_NEON=TRUE"
+                cppFlags "-std=c++11", "-fopenmp"
+                abiFilters "arm64-v8a", "armeabi-v7a"
+            }
+        }
+
+        buildConfigField("int", "VERSION_CODE", "${libVersionCode}")
+        buildConfigField("String", "VERSION_NAME", "\"${libVersionName}\"")
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+    }
+
+    sourceSets {
+        main {
+            jniLibs.srcDirs = ['libs']
+        }
+    }
+
+    externalNativeBuild {
+        cmake {
+            path "src/main/cpp/CMakeLists.txt"
+            version "3.18.1"
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+
+    ndkVersion "${ob_ndk_version}"
+
+    lint {
+        abortOnError = false
+    }
+}

@@ -1,0 +1,154 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context=".ui.info.IBowDialogFragment">
+
+    <androidx.core.widget.NestedScrollView
+        android:id="@+id/nsvIB"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="@drawable/bg_20"
+        android:backgroundTint="@color/bg"
+        android:fillViewport="true">
+
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:id="@+id/clIBImage"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent">
+
+            <androidx.cardview.widget.CardView
+                android:id="@+id/cardView2"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_margin="10dp"
+                app:cardBackgroundColor="#00FFFFFF"
+                app:cardCornerRadius="20dp"
+                app:cardElevation="0dp"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent">
+
+                <androidx.constraintlayout.widget.ConstraintLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content">
+
+                    <com.davemorrissey.labs.subscaleview.SubsamplingScaleImageView
+                        android:id="@+id/ssivIB"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:visibility="visible"
+                        app:layout_constraintEnd_toEndOf="parent"
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintTop_toTopOf="parent" />
+
+                    <com.tangoplus.tangoface.ui.view.TextBoxOverlayView
+                        android:id="@+id/tbovIN"
+                        android:layout_width="0dp"
+                        android:layout_height="0dp"
+                        app:layout_constraintBottom_toBottomOf="@id/ssivIB"
+                        app:layout_constraintEnd_toEndOf="@id/ssivIB"
+                        app:layout_constraintStart_toStartOf="@id/ssivIB"
+                        app:layout_constraintTop_toTopOf="@id/ssivIB" />
+
+                    <com.tangoplus.tangoface.ui.view.AngleMeasureView
+                        android:id="@+id/amvIB"
+                        android:layout_width="0dp"
+                        android:layout_height="0dp"
+                        app:layout_constraintBottom_toBottomOf="@id/ssivIB"
+                        app:layout_constraintEnd_toEndOf="@id/ssivIB"
+                        app:layout_constraintStart_toStartOf="@id/ssivIB"
+                        app:layout_constraintTop_toTopOf="@id/ssivIB" />
+
+                    <TextView
+                        android:id="@+id/tvIBInfo"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="20dp"
+                        android:layout_marginTop="20dp"
+                        android:background="@drawable/bg_12"
+                        android:backgroundTint="@color/bg15"
+                        android:gravity="center_vertical"
+                        android:padding="5dp"
+                        android:text="이강휘, 010-4544-9999"
+                        android:textColor="@color/white"
+                        android:textSize="14sp"
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintTop_toTopOf="parent" />
+
+                    <ImageButton
+                        android:id="@+id/ibtnBDExit"
+                        android:layout_width="48dp"
+                        android:layout_height="48dp"
+                        android:layout_marginEnd="20dp"
+                        android:background="@drawable/effect_20"
+                        android:backgroundTint="@color/transparent"
+                        android:src="@drawable/ic_exit"
+                        app:layout_constraintBottom_toBottomOf="@+id/tvIBInfo"
+                        app:layout_constraintEnd_toEndOf="parent"
+                        app:layout_constraintTop_toTopOf="@+id/tvIBInfo" />
+                </androidx.constraintlayout.widget.ConstraintLayout>
+
+            </androidx.cardview.widget.CardView>
+
+            <LinearLayout
+                android:id="@+id/linearLayout9"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_gravity="bottom|end"
+                android:layout_margin="10dp"
+                android:orientation="vertical"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintEnd_toEndOf="parent">
+
+                <TextView
+                    android:id="@+id/btnIBClean"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="bottom|end"
+                    android:layout_weight="1"
+                    android:background="@drawable/effect_20"
+                    android:backgroundTint="#1A140000"
+                    android:gravity="center"
+                    android:text="🔍 가이드라인 끄기"
+                    android:textColor="@color/white"
+                    android:textSize="18sp" android:padding="10dp" android:layout_marginBottom="10dp"/>
+
+
+                <TextView
+                    android:id="@+id/btnIBGrid"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="bottom|end"
+                    android:layout_weight="1.1"
+                    android:background="@drawable/effect_20"
+                    android:backgroundTint="#1A140000"
+                    android:gravity="center"
+                    android:text="ꖛ 그리드 끄기 "
+                    android:textColor="@color/white"
+                    android:textSize="18sp" android:padding="10dp" android:layout_marginBottom="10dp"/>
+
+                <TextView
+                    android:id="@+id/btnIBAngle"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="bottom|end"
+                    android:layout_weight="1.1"
+                    android:background="@drawable/effect_20"
+                    android:backgroundTint="#1A140000"
+                    android:gravity="center"
+                    android:text="📐 각도계산 켜기"
+                    android:textColor="@color/white"
+                    android:textSize="18sp" android:padding="10dp" android:layout_marginBottom="10dp"/>
+
+            </LinearLayout>
+
+        </androidx.constraintlayout.widget.ConstraintLayout>
+    </androidx.core.widget.NestedScrollView>
+
+</androidx.constraintlayout.widget.ConstraintLayout>

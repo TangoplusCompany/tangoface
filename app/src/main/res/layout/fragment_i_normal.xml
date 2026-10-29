@@ -46,8 +46,8 @@
                         app:layout_constraintStart_toStartOf="parent"
                         app:layout_constraintTop_toTopOf="parent" />
 
-                    <com.tangoplus.facebeautyexpert.ui.view.TextBoxOverlayView
-                        android:id="@+id/ovIN"
+                    <com.tangoplus.tangoface.ui.view.TextBoxOverlayView
+                        android:id="@+id/tbovIN"
                         android:layout_width="0dp"
                         android:layout_height="0dp"
                         app:layout_constraintBottom_toBottomOf="@id/ssivIN"
@@ -55,7 +55,7 @@
                         app:layout_constraintStart_toStartOf="@id/ssivIN"
                         app:layout_constraintTop_toTopOf="@id/ssivIN" />
 
-                    <com.tangoplus.facebeautyexpert.ui.view.AngleMeasureView
+                    <com.tangoplus.tangoface.ui.view.AngleMeasureView
                         android:id="@+id/amvIN"
                         android:layout_width="0dp"
                         android:layout_height="0dp"
@@ -71,7 +71,7 @@
                         android:layout_height="wrap_content"
                         android:layout_marginStart="10dp"
                         android:layout_marginTop="20dp"
-                        android:background="@drawable/bckgnd_12"
+                        android:background="@drawable/bg_12"
                         android:backgroundTint="@color/bg15"
                         android:gravity="center_vertical"
                         android:padding="5dp"
@@ -207,7 +207,7 @@
                 android:layout_marginStart="10dp"
                 android:layout_marginTop="10dp"
                 android:layout_marginEnd="10dp"
-                android:background="@drawable/bckgnd_20"
+                android:background="@drawable/bg_20"
                 android:backgroundTint="@color/bg700"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
@@ -276,7 +276,7 @@
         android:id="@+id/bsIN"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:background="@drawable/bckgnd_top_20"
+        android:background="@drawable/bg_top_20"
         android:backgroundTint="@color/bg500"
         android:clickable="true"
         android:focusable="true"
@@ -418,7 +418,7 @@
                 app:layout_constraintBottom_toBottomOf="parent"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toBottomOf="@+id/sflI" />
+                app:layout_constraintTop_toBottomOf="@+id/sflIN" />
 
         </androidx.constraintlayout.widget.ConstraintLayout>
 

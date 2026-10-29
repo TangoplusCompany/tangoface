@@ -4,12 +4,13 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    tools:context=".ui.statistics.GyroDialogFragment">
+    tools:context=".ui.settings.GyroDialogFragment">
 
     <androidx.constraintlayout.widget.ConstraintLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:background="@drawable/bckgnd_20">
+        android:background="@drawable/bg_20"
+        android:backgroundTint="@color/bg500">
 
         <androidx.constraintlayout.widget.ConstraintLayout
             android:id="@+id/clMTD1"
@@ -42,7 +43,8 @@
                 android:layout_marginTop="30dp"
                 android:layout_marginEnd="60dp"
                 android:layout_marginBottom="40dp"
-                android:background="@drawable/bckgnd_stroke_2_20"
+                android:background="@drawable/bg_stroke_2_20"
+                android:backgroundTint="@color/bg300"
                 app:layout_constraintBottom_toTopOf="@+id/btnMSDConfirm1"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
@@ -67,7 +69,7 @@
                 android:layout_height="4dp"
                 android:layout_marginStart="5dp"
                 android:layout_marginEnd="5dp"
-                app:cardBackgroundColor="@color/red"
+                app:cardBackgroundColor="@color/accent300_80"
                 app:cardElevation="0dp"
                 app:dividerColor="@color/red"
                 app:layout_constraintBottom_toBottomOf="@+id/constraintLayout28"
@@ -83,7 +85,7 @@
                 android:layout_height="0dp"
                 android:layout_marginTop="10dp"
                 android:layout_marginBottom="10dp"
-                app:cardBackgroundColor="@color/red"
+                app:cardBackgroundColor="@color/accent300_80"
                 app:cardElevation="0dp"
                 app:dividerColor="@color/red"
                 app:layout_constraintBottom_toTopOf="@+id/btnMSDConfirm1"
@@ -96,7 +98,7 @@
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:background="@drawable/effect_0"
-                android:backgroundTint="@color/black"
+                android:backgroundTint="@color/bg700"
                 android:padding="16dp"
                 android:stateListAnimator="@null"
                 android:text="조정 완료"

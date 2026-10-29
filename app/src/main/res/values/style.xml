@@ -58,6 +58,8 @@
         <item name="android:color">@color/accent</item>
         <item name="android:iconTint">@color/white</item>
         <item name="marginHorizontal">10dp</item>
+        <item name="android:height">45dp</item>
     </style>
-
+    <style name="App.BottomNavText" parent="TextAppearance.Material3.LabelMedium">
+        <item name="android:textSize">16sp</item> </style>
 </resources>

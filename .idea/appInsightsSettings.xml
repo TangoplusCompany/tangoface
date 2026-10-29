@@ -8,8 +8,8 @@
             <InsightsFilterSettings>
               <option name="connection">
                 <ConnectionSetting>
-                  <option name="appId" value="com.tangoplus.facebeautyexpert" />
-                  <option name="mobileSdkAppId" value="1:975609065934:android:877e34e497cbd9df5e3b9f" />
+                  <option name="appId" value="com.tangoplus.tangoface" />
+                  <option name="mobileSdkAppId" value="1:975609065934:android:43bbdf09797a56215e3b9f" />
                   <option name="projectId" value="face-expert-ae569" />
                   <option name="projectNumber" value="975609065934" />
                 </ConnectionSetting>

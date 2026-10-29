@@ -1,5 +1,7 @@
 # TangoFace Android 얼굴분석 앱 
 
+
+
 ## 개발 환경
 
 | 항목                        | 버전                                  |
@@ -22,18 +24,24 @@
 project-root/
 ├── app/                        # 메인 앱 모듈
 │   ├── src/main/cpp/           # Native C++ 코드 (CMake)
-│   ├── libs/                   # 로컬 .aar 라이브러리
-│   └── build.gradle.kts        # 앱 빌드 설정
+│   └── libs/                   # 로컬 .aar 라이브러리
 ├── obsensor_jni/               # OrbbecSDK JNI 라이브러리 모듈 (Orbbec SDK)
 │   └── build.gradle            # JNI 모듈 빌드 설정
-├── keystore/
-│   └── signature.properties    # 서명 키 설정 (Git 제외)
-├── gradle/
-│   └── libs.versions.toml      # Version Catalog
 └── build.gradle.kts            # 루트 빌드 설정
 ```
 
 ---
+## model 
+
+
+| 모델                        | 링크                                                                                                                                  |
+|---------------------------|-------------------------------------------------------------------------------------------------------------------------------------|
+| ESPCN_x2.pb               | https://github.com/fannymonori/TF-ESPCN/blob/master/export/ESPCN_x2.pb                                                              |
+| face_landmarker.task      | https://github.com/google-ai-edge/mediapipe-samples/blob/main/examples/face_landmarker/ios/FaceLandmarker/face_landmarker.task      |
+| pose_landmarker_full.task | https://github.com/google-ai-edge/mediapipe-samples/blob/main/examples/pose_landmarker/ios/PoseLandmarker/pose_landmarker_full.task |
+
+
+--- 
 
 ## 빌드 방법
 
@@ -44,18 +52,6 @@ project-root/
   - Android Studio → SDK Manager → SDK Tools → NDK (Side by side)
 - CMake `3.18.1` 설치
   - Android Studio → SDK Manager → SDK Tools → CMake
-
-### 2. 빌드 실행
-
-```bash
-# Debug 빌드
-./gradlew assembleDebug
-
-# Release 빌드
-./gradlew assembleRelease
-```
-
----
 
 ## 주요 라이브러리
 

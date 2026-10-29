@@ -111,4 +111,25 @@ public class CameraIntrinsic implements ByteConversion {
                 ", mHeight=" + mHeight +
                 '}';
     }
+
+    public CameraIntrinsic createRotated90() {
+        CameraIntrinsic rotated = new CameraIntrinsic();
+
+        // 1. fx, fy 초점거리 스왑
+        rotated.mFx = this.mFy;
+        rotated.mFy = this.mFx;
+
+        // 2. 중심점(cx, cy) 회전축 역산 (회전 전 mHeight 기준)
+        rotated.mCx = (float) this.mHeight - 1f - this.mCy;
+        rotated.mCy = this.mCx;
+
+        // 3. 해상도 가로/세로 스왑
+        rotated.mWidth = this.mHeight;
+        rotated.mHeight = this.mWidth;
+
+        // 만약 SDK 내부에서 mBytes 바이트 배열을 역으로 요구한다면
+        // 여기에 바이트 패킹 로직이 필요할 수 있으나, 일반적으로 3D 계산은 Getter를 참조하므로 이대로 충분합니다.
+
+        return rotated;
+    }
 }

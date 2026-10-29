@@ -16,7 +16,7 @@ val obSignatureProp = Properties().apply {
 }
 
 android {
-    namespace = "com.tangoplus.facebeautyexpert"
+    namespace = "com.tangoplus.tangoface"
     compileSdk = 36
 
     buildFeatures {
@@ -24,7 +24,7 @@ android {
         viewBinding = true
     }
     defaultConfig {
-        applicationId = "com.tangoplus.facebeautyexpert"
+        applicationId = "com.tangoplus.tangoface"
         minSdk = 30
         targetSdk = 36
         versionCode = 1
@@ -74,7 +74,7 @@ android {
             keyPassword = "android"
         }
         create("release") {
-            storeFile = file("../keystore/facebeautyexpert.jks")
+            storeFile = file("../keystore/tangoface.jks")
             storePassword = obSignatureProp.getProperty("STORE_PASSWORD")
             keyAlias = obSignatureProp.getProperty("KEY_ALIAS")
             keyPassword = obSignatureProp.getProperty("KEY_PASSWORD")
@@ -99,8 +99,8 @@ android {
             val outputImpl = this as com.android.build.gradle.internal.api.BaseVariantOutputImpl
             val buildTypeName = buildType.name
             val fileName = when (buildTypeName) {
-                "release" -> "face_analyzer_expert_release.apk"
-                "debug" -> "FaceBeautyExpert_v${versionName}_${versionCode}_beta.apk"
+                "release" -> "tangoface_release.apk"
+                "debug" -> "Tangoface_v${versionName}_${versionCode}_beta.apk"
                 else -> outputImpl.outputFile.name
             }
             outputImpl.outputFileName = fileName
@@ -131,7 +131,10 @@ android {
 //noinspection UseTomlInstead
 dependencies {
     // 외부 라이브러리
-
+    implementation("com.github.Dimezis:BlurView:version-3.2.0")
+//    implementation("org.tensorflow:tensorflow-lite:2.14.0")
+//    implementation("org.tensorflow:tensorflow-lite-support:0.4.4")
+//    implementation("org.tensorflow:tensorflow-lite-gpu:2.14.0")
 //    // Ktor 서버 코어 및 Netty 엔진
 //    implementation("io.ktor:ktor-server-core:2.3.12")
 //    implementation("io.ktor:ktor-server-netty:2.3.12")
