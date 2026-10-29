@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Orbbec 3D Depth Camera / Gemini 336 (Vendor ID: 0x2BC5 = 11205) -->
+    <usb-device vendor-id="11205" />
+</resources>
+

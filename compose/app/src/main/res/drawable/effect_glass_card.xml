@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- 터치(Pressed) 상태: 네온 핑크 발광 효과 -->
+    <item android:state_pressed="true">
+        <shape android:shape="rectangle">
+            <corners android:radius="16dp" />
+            <gradient
+                android:angle="270"
+                android:startColor="@color/accent700"
+                android:endColor="@color/accent900"
+                android:type="linear" />
+            <stroke
+                android:width="1.5dp"
+                android:color="@color/accent" />
+        </shape>
+    </item>
+
+    <!-- 기본 상태 -->
+    <item android:drawable="@drawable/bg_glass_card" />
+</selector>

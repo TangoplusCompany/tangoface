@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ripple xmlns:android="http://schemas.android.com/apk/res/android"
+    android:color="#40000000"> <!-- 눌렀을 때 어두워지는 반투명 검정색 -->
+
+    <!-- 기존 버튼 모양 -->
+    <item>
+        <layer-list>
+            <!-- 바깥쪽 테두리 원 -->
+            <item>
+                <shape android:shape="oval">
+                    <stroke android:width="6dp" android:color="#D3D3D3" />
+                    <solid android:color="@android:color/transparent" />
+                </shape>
+            </item>
+
+            <!-- 안쪽 채워진 작은 원 -->
+            <item android:top="12dp" android:bottom="12dp" android:left="12dp" android:right="12dp">
+                <shape android:shape="oval">
+                    <solid android:color="#FFFFFF" />
+                </shape>
+            </item>
+        </layer-list>
+    </item>
+</ripple>
