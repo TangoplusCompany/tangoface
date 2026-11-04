@@ -83,8 +83,7 @@ class IImageFragment : Fragment(), OnFacialPartClickListener {
 
         val fd = FaceDatabase.getDatabase(requireContext())
         fDao = fd.faceDao()
-        ivm.currentCheckedLines.addAll(listOf(DrawLine.NECK, DrawLine.FACE, DrawLine.A_SAGGING_FACE, DrawLine.A_FACIAL_AXIS, DrawLine.A_HORIZON))
-
+        ivm.resetState(listOf(DrawLine.NECK, DrawLine.FACE, DrawLine.A_SAGGING_FACE, DrawLine.A_FACIAL_AXIS, DrawLine.A_HORIZON))
         setUserInfo()
         setResult()
         setRatioBtn()

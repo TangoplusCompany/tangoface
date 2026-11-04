@@ -149,10 +149,12 @@ class MBowFragment : Fragment() {
           val allSeqs = mvm.allSeqs
           val staticJos = mutableListOf<JSONObject>()
 
-          allSeqs.forEachIndexed { index, sequence ->
-            val staticJSON = mvm.setJo(mvm.staticJA.getJSONObject(index), sequence, ivm, prefsUtil, true)
-            staticJos.add(staticJSON)
-//						Log.v("staticJSON", "$staticJSON")
+          val usedSeqs = mutableListOf<Sequence>()   // staticJos와 같은 순서로 쌓을 시퀀스
+
+          allSeqs.forEach { sequence ->
+            val raw = mvm.staticMap[sequence] ?: return@forEach
+            staticJos.add(mvm.setJo(raw, sequence, ivm, prefsUtil, true))
+            usedSeqs.add(sequence)
           }
 //					Log.v("staticJson까보기0", "${staticJos.size}")
 
@@ -170,29 +172,29 @@ class MBowFragment : Fragment() {
           }
 
           // data
-          Log.v("mvm.plrJA", "${mvm.plrJA.length()}")
           val mergedJOBeforeFileName = mutableListOf<JSONObject>()
           for (i in 0 until staticJos.size) {
-            val currentStatic = transStatics[i]
+            val sequence = usedSeqs[i]
             val mergedJSON = JSONObject().apply {
               put("data", JSONObject(transStatics[i].toJsonString()))
+              put("face_landmark", mvm.coordinatesMap[sequence])
+              put("pose_landmark", mvm.plrMap[sequence])
 
-              Log.v("LEN", "i=$i, coordinatesLen=${mvm.coordinatesJA.length()}, plrLen=${mvm.plrJA.length()}, mediaNames=${mvm.mediaFileNames.size}")
-              put("face_landmark", mvm.coordinatesJA.optJSONArray(i))
-              put("pose_landmark", mvm.plrJA.optJSONArray(i))
-              put("bow_landmark", mvm.resultTargetFs)
+              if (sequence == Sequence.COMFORT) {
+                put("hairline_landmark", mvm.hairLineMap[sequence])
+              }
             }
             mergedJOBeforeFileName.add(mergedJSON)
-            Log.v("json저장 전", "seq: $i")
+
+            val fileName = mvm.mediaFileNameMap[sequence] ?: continue
             val jsonPath = mvm.saveJsonToStorage(
               requireActivity(),
               mergedJSON,
-              mvm.mediaFileNames[i].replace(".webp", "").replace(".mp4", "")
+              fileName.replace(".webp", "").replace(".mp4", "")
             )
 
-
-            mergedJOBeforeFileName[i].put("json_file_name", jsonPath)
-            mvm.mergedJA.put(mergedJOBeforeFileName[i])
+            mergedJSON.put("json_file_name", jsonPath)
+            mvm.mergedJA.put(mergedJSON)
           }
 
           Log.v("mvm.mergedJson", "${mvm.mergedJA.length()}")
@@ -281,8 +283,6 @@ class MBowFragment : Fragment() {
       viewModel.finishSequence()
     }, 1500)
     isCountDown = false
-//    bd.tvGoGallery.isEnabled = true
-    Log.v("업데이트UI", "${mvm.plrJA.length()}")
   }
 
 

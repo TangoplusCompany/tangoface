@@ -1,6 +1,7 @@
 package com.tangoplus.tangoface.domain.util
 
 import android.content.Context
+import android.content.res.Configuration
 import android.util.Log
 import androidx.core.content.edit
 import com.google.gson.Gson
@@ -114,7 +115,14 @@ class PreferenceUtility(context: Context) {
 
 		Log.v("포스터", "최초 실행: 기본 포스터를 생성합니다.")
 
-		val defaultResIds = listOf(R.drawable.poster_main_0, R.drawable.poster_main_1)
+		val isTabletLandscape = context.resources.configuration.smallestScreenWidthDp >= 600 &&
+			context.resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+
+		val defaultResIds = if (isTabletLandscape) {
+			listOf(R.drawable.poster_main_0_landscape, R.drawable.poster_main_1_landscape)
+		} else {
+			listOf(R.drawable.poster_main_0, R.drawable.poster_main_1)
+		}
 		val defaultPaths = mutableListOf<String>()
 
 		defaultResIds.forEachIndexed { index, resId ->

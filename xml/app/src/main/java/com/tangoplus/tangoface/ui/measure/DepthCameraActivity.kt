@@ -896,7 +896,7 @@ class DepthCameraActivity : BaseActivity(), FaceLandmarkerHelper.LandmarkerListe
 //		}
 //		val seqCount = "${mvm.getSeqIndex() + 1} / ${mvm.allSeqs.size}"
 //		bd.tvSeqCount.text = seqCount
-		mvm.mediaFileNames.clear()
+		mvm.mediaFileNameMap.clear()
 		mvm.currentCoordinate = mutableListOf()
 		ivm.nameValue.value = ""
 		ivm.mobileValue.value = ""
@@ -927,11 +927,11 @@ class DepthCameraActivity : BaseActivity(), FaceLandmarkerHelper.LandmarkerListe
 		viewModel.setGuideTextFlag(false)
 		viewModel.setCountDownFlag(false)
 		viewModel.setTextAnimationFlag(false)
-		mvm.staticJA.clearAll()
-		mvm.coordinatesJA.clearAll()
-		mvm.mediaFileNames.clear()
-		mvm.plrJA.clearAll()
-		mvm.hairLineJA.clearAll()
+		mvm.staticMap.clear()
+		mvm.coordinatesMap.clear()
+		mvm.mediaFileNameMap.clear()
+		mvm.plrMap.clear()
+		mvm.hairLineMap.clear()
 		mvm.inputWidth = 0
 		mvm.inputHeight = 0
 		mvm.overlayW = 0f

@@ -3,6 +3,7 @@ package com.tangoplus.tangoface.ui.info
 import android.os.Bundle
 import android.text.Editable
 import android.text.TextWatcher
+import android.util.Log
 import androidx.fragment.app.Fragment
 import android.view.LayoutInflater
 import android.view.View
@@ -86,6 +87,23 @@ class MeasureHistoryFragment : Fragment(), OnUserClickListener {
 				}
 			} else {
 				val result = mvm.convertToFaceResult(requireContext(), fDao, tempServerSn)
+
+				val keys = listOf(
+					"comfort_alar_horizontal_angle",
+					"neck_extention_ear_horizontal_angle",
+					"occlusal_eye_horizontal_angle",
+					"jaw_left_tilt_left_mandibular_distance",
+					"jaw_right_tilt_left_mandibular_distance",
+					"jaw_opening_lips_distance"
+				)
+
+				val arr = result.results
+				for (i in 0 until arr.length()) {
+					val d = arr.getJSONObject(i).optJSONObject("data") ?: arr.getJSONObject(i)
+					val nonZero = keys.filter { d.optDouble(it, 0.0) != 0.0 }
+					Log.v("값확인", "i=$i, seq=${result.seqs.elementAtOrNull(i)}, 값 있는 키=$nonZero")
+				}
+
 				withContext(Dispatchers.Main) {
 					mvm.currentResult.value = result
 					activity?.let { fa -> fa.supportFragmentManager.beginTransaction().apply {

@@ -54,6 +54,7 @@ import com.tangoplus.tangoface.domain.vo.Sequence
 import com.tangoplus.tangoface.ui.info.vo.LineType
 import com.tangoplus.tangoface.ui.view.TextBoxOverlayView
 import kotlinx.coroutines.withContext
+import java.io.File
 
 object BitmapUtility {
 	data class DrawImageUiModel(
@@ -140,6 +141,7 @@ object BitmapUtility {
 				isGridLineOn = isGridLineOn,
 				isMoireOn = isMoireOn
 			)
+			Log.v("lines", "BitmapUtility => ${ivm.currentCheckedLines}" )
 			val (combinedBitmap, textBoxes, faceRect) = combineImageAndOverlay(
 				DrawImageUiModel(
 					fragment,
@@ -388,7 +390,6 @@ object BitmapUtility {
 					150f,
 					redPaint,
 				)
-
 
 				// width
 				val leftIndex = listOf(162, 127,234, 93, 132, 58, 172, 136)
@@ -1519,25 +1520,35 @@ object BitmapUtility {
 		val fr = dim.faceResult
 
 		val seq = dim.seq
-		val seqss = fr.seqs // 0 1 2 3 4 5 6 7 8 9
+		val seqss = fr.seqs
+		Log.v("seqss", "$seqss ${dim.seq}")
 		val seqIndex = seqss.indexOf(dim.seq)
 
 		val keys = when (dl) {
+
 			DrawLine.A_SAGGING_FACE -> when (seq) {
 				Sequence.COMFORT -> listOf("comfort_left_sagging_scale", "comfort_right_sagging_scale")
+				Sequence.NECK_EXTENTION -> listOf("")
+				Sequence.OCCLUSAL -> listOf("")
 				else -> listOf()
 			}
 			DrawLine.A_SHOULDER -> when (seq) {
 				Sequence.COMFORT -> listOf("comfort_shoulder_horizontal_angle")
-				else -> listOf("neck_extention_shoulder_horizontal_angle")
+				Sequence.NECK_EXTENTION -> listOf("neck_extention_shoulder_horizontal_angle")
+				Sequence.OCCLUSAL -> listOf("")
+				else -> listOf()
 			}
 			DrawLine.NECK -> when (seq) {
 				Sequence.COMFORT -> listOf("comfort_neck_vertical_angle", "comfort_neck_length")
-				else -> listOf("neck_extention_neck_vertical_angle")
+				Sequence.NECK_EXTENTION -> listOf("neck_extention_neck_vertical_angle")
+				Sequence.OCCLUSAL -> listOf("")
+				else -> listOf()
 			}
 			DrawLine.FACE -> when (seq) {
 				Sequence.COMFORT -> listOf("comfort_face_vertical_angle", "comfort_face_width", "comfort_face_height")
-				else -> listOf("neck_extention_face_vertical_angle")
+				Sequence.NECK_EXTENTION -> listOf("neck_extention_face_vertical_angle")
+				Sequence.OCCLUSAL -> listOf("")
+				else -> listOf()
 			}
 			DrawLine.A_HORIZON -> when (seq) {
 				Sequence.COMFORT -> listOf(
@@ -1546,8 +1557,17 @@ object BitmapUtility {
 					"comfort_tip_of_lips_horizontal_angle",
 					"comfort_tip_of_chin_horizontal_angle"
 				)
-				else -> listOf("neck_extention_ear_horizontal_angle", "neck_extention_shoulder_horizontal_angle")
+				Sequence.NECK_EXTENTION -> listOf("neck_extention_ear_horizontal_angle", "neck_extention_shoulder_horizontal_angle")
+				Sequence.OCCLUSAL -> listOf(
+					"occlusal_eye_horizontal_angle",
+					"comfort_earflaps_horizontal_angle",
+					"occlusal_tip_of_lips_horizontal_angle",
+					"occlusal_tip_of_chin_horizontal_angle"
+				)
+				else -> listOf()
 			}
+
+			// 상안부
 			DrawLine.EYE ->
 				when (seq) {
 					Sequence.COMFORT -> listOf(
@@ -1617,6 +1637,7 @@ object BitmapUtility {
 				Sequence.COMFORT -> listOf("comfort_left_cheekbone_extent","comfort_right_cheekbone_extent")
 				else -> listOf()
 			}
+			// occlusal 했을 떄
 			DrawLine.MOUSE -> when (seq) {
 				Sequence.COMFORT -> listOf(
 					"comfort_left_mouse_corner_angle",
@@ -1645,7 +1666,16 @@ object BitmapUtility {
 			DrawLine.A_BOW -> if (seq == Sequence.BOW) {
 				listOf("bow_eye_horizontal_angle", "bow_tip_of_lips_horizontal_angle", "bow_tip_of_chin_horizontal_angle")
 			} else listOf()
+
+			DrawLine.A_LIPS -> if (seq == Sequence.JAW_OPENING) {
+				listOf("jaw_opening_lips_vertical_angle")
+			} else listOf()
+
+			DrawLine.D_LIPS -> if (seq == Sequence.JAW_OPENING) {
+				listOf("jaw_opening_lips_distance")
+			} else listOf()
 		}
+
 
 		val jsonObject = fr.results.getJSONObject(seqIndex)
 		val dataObject = jsonObject.getJSONObject("data")
@@ -1780,7 +1810,6 @@ object BitmapUtility {
 		val flm = dim.lms.faceLandmarks.landmarks
 		val plm = dim.lms.poseLandmarks.landmarks
 		val textBoxes = mutableListOf<TextBoxData>()
-
 		if (flm.isNotEmpty()) {
 			if (dl.contains(DrawLine.A_SAGGING_FACE)) {
 				val boxLocation = flm[152]
@@ -1871,11 +1900,20 @@ object BitmapUtility {
 								TextItem("입술:", "${rawData.getOrNull(2) ?: ""}º"),
 								TextItem("턱:", "${rawData.getOrNull(3) ?: ""}º")
 							)
-						} else  listOf(
-							TextItem("눈:", "${rawData.getOrNull(0) ?: ""}º"),
-							TextItem("귀:", "${rawData.getOrNull(1) ?: ""}º"),
-						))
-
+						} else if (dim.seq == Sequence.OCCLUSAL) {
+							listOf(
+								TextItem("눈:", "${rawData.getOrNull(0) ?: ""}º"),
+								TextItem("귀:", "${rawData.getOrNull(1) ?: ""}º"),
+								TextItem("입술:", "${rawData.getOrNull(2) ?: ""}º"),
+								TextItem("턱:", "${rawData.getOrNull(3) ?: ""}º")
+							)
+						} else {
+							listOf(
+								TextItem("눈:", "${rawData.getOrNull(0) ?: ""}º"),
+								TextItem("귀:", "${rawData.getOrNull(1) ?: ""}º")
+							)
+						}
+						)
 					))
 				}
 			}
@@ -2076,12 +2114,9 @@ object BitmapUtility {
 					val v3 = if (v30 == null || v10 == "0") "🚫" else v30 + "cm"
 					val v4 = if (v40 == null || v20 == "0") "🚫" else v40 + "cm"
 
-
-
-
 					textBoxes.add(TextBoxData(
 						anchorX = mousePos.x, anchorY = mousePos.y,
-						targetGridIndex = 27, // 하단 중앙
+						targetGridIndex = 27,
 						info = TextDrawInfo("입 정보", listOf(
 							TextItem("인중 길이:", v1),
 							TextItem("입 길이", v2),
@@ -2105,8 +2140,35 @@ object BitmapUtility {
 						))
 					))
 				}
-
 			}
+			// jaw_opening
+			if (dl.contains(DrawLine.A_LIPS)) {
+				val mousePos = calculateFinalPixel(flm[17].x, flm[17].y,)
+				val rawData = extractRawData(dim, DrawLine.A_LIPS)
+				if (rawData.isNotEmpty()) {
+					textBoxes.add(TextBoxData(
+						anchorX = mousePos.x, anchorY = mousePos.y,
+						targetGridIndex = 33, // 하단 중앙
+						info = TextDrawInfo("개구", listOf(
+							TextItem("개구 각도", "${rawData.getOrNull(0)}"),
+						))
+					))
+				}
+			}
+			if (dl.contains(DrawLine.D_LIPS)) {
+				val mousePos = calculateFinalPixel(flm[291].x, flm[291].y,)
+				val rawData = extractRawData(dim, DrawLine.D_LIPS)
+				if (rawData.isNotEmpty()) {
+					textBoxes.add(TextBoxData(
+						anchorX = mousePos.x, anchorY = mousePos.y,
+						targetGridIndex = 34, // 하단 중앙
+						info = TextDrawInfo("개구", listOf(
+							TextItem("개구 입 크기", "${rawData.getOrNull(0)}"),
+						))
+					))
+				}
+			}
+
 			if (dl.contains(DrawLine.A_RATIO_VERTI)) {
 				val rawData = extractRawData(dim, DrawLine.A_RATIO_VERTI)
 

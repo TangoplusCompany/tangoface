@@ -3,6 +3,7 @@ package com.tangoplus.tangoface.ui.measure.vm
 import android.annotation.SuppressLint
 import android.content.ContentValues
 import android.content.Context
+import android.content.res.Configuration
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Canvas
@@ -120,6 +121,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.launch
+import java.util.concurrent.ConcurrentHashMap
 import kotlin.collections.listOf
 import kotlin.io.use
 import kotlin.math.roundToInt
@@ -236,32 +238,29 @@ class MeasureViewModel : ViewModel() {
 
 //	val resultTargetFs = JSONArray()
 //	val hsvColorJo = JSONObject()
-//	val hsvFLCoordinatesJA = JSONArray() // 484개의 얼굴좌표 담는 곳
-//	val hsvPLCoordinatesJA = JSONArray()
+//	val hsvFLCoordinatesMap = JSONArray() // 484개의 얼굴좌표 담는 곳
+//	val hsvPLCoordinatesMap = JSONArray()
 //	var hsvMediaFileName = ""
 
-	// 결과값 임시로 담을 곳 (영상 녹화가 끝나면 초기화)
-	var tempStaticJo: JSONObject? = null
 
 	// 중간 임시 저장 좌표들 ( seq 1개씩만 )
-	var tempCoordinateJA = JSONArray()
-	var tempHairLineJA = JSONArray()
+	var tempCoordinateMap = JSONArray()
+	var tempHairLineMap = JSONArray()
 	// ------------------------# 측정 1개당 값들이 들어가는 곳 전부 index == 6 #------------------------
 	// 측정값들 담기 🪷🪷🪷entity column datas 🪷🪷🪷
-	val staticJA = JSONArray()
+	val staticMap = ConcurrentHashMap<Sequence, JSONObject>()
 
-	// 파일로 만들기 전 6단계 전부 들어가는 곳
-	var coordinatesJA = JSONArray()
+	var coordinatesMap = ConcurrentHashMap<Sequence, JSONArray>()
 
 	// static 데이터 + 좌표값 통합된 JSON
-	val mediaFileNames = mutableListOf<String>()
+	val mediaFileNameMap = ConcurrentHashMap<Sequence, String>()
 
 	// 포즈랜드마크 전부
-	val plrJA = JSONArray()
+	val plrMap = ConcurrentHashMap<Sequence, JSONArray>()
 	// 그 외 추가할 것 헤어라인 등
-	var hairLineJA = JSONArray()
+	var hairLineMap = ConcurrentHashMap<Sequence, JSONArray>()
 
-	// 현재 얼굴 좌표들 전부 담는 곳 (형식은 coordinatesJA와 같음)
+	// 현재 얼굴 좌표들 전부 담는 곳 (형식은 coordinatesMap와 같음)
 	var currentCoordinate = mutableListOf<Pair<Float, Float>>() // 절대 좌표
 	var relativeCoordinate = mutableListOf<Pair<Float, Float>>() // 상대좌표
 	var current3DCoordinate = mutableListOf<Triple<Float, Float, Float>>() // 절대 좌표
@@ -272,7 +271,7 @@ class MeasureViewModel : ViewModel() {
 	var currentUUID = ""
 
 	// -------# pose landmark #-------
-	var tempPlrJA = JSONArray()
+	var tempPlrMap = JSONArray()
 	val currentPlrCoordinate = mutableListOf<Pair<Float, Float>>()
 	val current3DPlrCoordinate = mutableListOf<Triple<Float, Float, Float>>() // 절대 좌표
 	val currentHairLine3DCoordinate = mutableListOf<Triple<Float, Float, Float>>()
@@ -281,10 +280,10 @@ class MeasureViewModel : ViewModel() {
 	var currentTarget: List<HsvColorTracker.Target> = listOf() // 페이스 보우의 3가지 빨간 점이 tracking되는 상황
 	val resultTargetFs = JSONArray()
 //	val hsvColorJo = JSONObject()
-//	val hsvFLCoordinatesJA = JSONArray() // 484개의 얼굴좌표 담는 곳
+//	val hsvFLCoordinatesMap = JSONArray() // 484개의 얼굴좌표 담는 곳
 //
 
-	var videoTempCoordinatesJA = JSONArray()
+	var videoTempCoordinatesMap = JSONArray()
 	// ----------------# 헤어라인 #---------------
 	var latestDepthData: ShortArray? = null
 	var latestDepthWidth: Int = 0
@@ -350,7 +349,7 @@ class MeasureViewModel : ViewModel() {
 		* */
 //            Log.v("현재렌즈위치", "$cameraFacing == 정면${CameraSelector.LENS_FACING_FRONT}, 후면${CameraSelector.LENS_FACING_BACK}")
 		// 비우기
-		tempCoordinateJA = JSONArray()
+		tempCoordinateMap = JSONArray()
 		when (seq) {
 			Sequence.JAW_LEFT_TILT, Sequence.JAW_RIGHT_TILT -> {
 				flr.forEachIndexed { index, faceLandmark ->
@@ -373,13 +372,13 @@ class MeasureViewModel : ViewModel() {
 						put(rounded3DY)
 						put(rounded3DZ)
 					}
-					tempCoordinateJA.put(ja)
+					tempCoordinateMap.put(ja)
 
 					// 상대좌표
 					relativeCoordinate.add(Pair(1f - faceLandmark.x, faceLandmark.y))
 				}
 				// seq 1개의 좌표를 담고 tempCoordinates는 초기화
-				videoTempCoordinatesJA.put(tempCoordinateJA)
+				videoTempCoordinatesMap.put(tempCoordinateMap)
 			}
 
 			else -> {
@@ -413,7 +412,7 @@ class MeasureViewModel : ViewModel() {
 						put(rounded3DY)
 						put(rounded3DZ)
 					}
-					tempCoordinateJA.put(ja)
+					tempCoordinateMap.put(ja)
 
 					// 절대좌표
 					currentCoordinate.add(Pair(scaledX, scaledY))
@@ -427,8 +426,7 @@ class MeasureViewModel : ViewModel() {
 					}
 				}
 				// seq 1개의 좌표를 담고 tempCoordinates는 초기화
-				coordinatesJA.put(tempCoordinateJA)
-				Log.v("좌표들", "$seq => ${coordinatesJA.length()}")
+				coordinatesMap[seq] = (tempCoordinateMap)
 			}
 		}
 
@@ -783,8 +781,8 @@ class MeasureViewModel : ViewModel() {
 
 			}
 
-			staticJA.put(tempStatic)
-			Log.v("스태틱저장", "0: 스태틱 저장 ${staticJA.length()}")
+			staticMap[seq] = tempStatic
+			Log.v("스태틱저장", "0: 스태틱 저장 ${staticMap.size}")
 		}
 
 		// ℹ️ℹ️ EXPERT ️ℹ️ℹ️
@@ -880,9 +878,8 @@ class MeasureViewModel : ViewModel() {
 				put("occlusal_right_cheekbone_extent", cheekboneExtents.first)
 			}
 			// 측정 값 초기화
-			tempStaticJo = tempStatic
-			staticJA.put(tempStaticJo)
-			Log.v("occlusal", "occlusal 저장 끝 크기 ${staticJA.length()}")
+			staticMap[seq] = tempStatic
+			Log.v("occlusal", "occlusal 저장 끝 크기 ${tempStatic.length()}")
 
 			Log.v(
 				"교합상태",
@@ -893,78 +890,72 @@ class MeasureViewModel : ViewModel() {
 
 		// ℹ️ℹ️ TILT ️ℹ️ℹ️
 		if (seq == Sequence.JAW_LEFT_TILT) {
-			if (tempStaticJo == null) {
-				// tilt
-				val tiltNoseChinAngle =
-					calculateSlope(vmFlr[1].first, vmFlr[1].second, vmFlr[152].first, vmFlr[152].second)
-				val tiltTipOfLipsAngle =
-					calculateSlope(vmFlr[61].first, vmFlr[61].second, vmFlr[291].first, vmFlr[291].second)
-				val mandibularDistance = Pair(
-					getNormalizedDistance(
-						Pair(vmFlr[13].first, vmFlr[13].second),
-						Pair(vmFlr[58].first, vmFlr[58].second)
-					),
-					getNormalizedDistance(
-						Pair(vmFlr[13].first, vmFlr[13].second),
-						Pair(vmFlr[288].first, vmFlr[288].second)
-					)
+			// tilt
+			val tiltNoseChinAngle =
+				calculateSlope(vmFlr[1].first, vmFlr[1].second, vmFlr[152].first, vmFlr[152].second)
+			val tiltTipOfLipsAngle =
+				calculateSlope(vmFlr[61].first, vmFlr[61].second, vmFlr[291].first, vmFlr[291].second)
+			val mandibularDistance = Pair(
+				getNormalizedDistance(
+					Pair(vmFlr[13].first, vmFlr[13].second),
+					Pair(vmFlr[58].first, vmFlr[58].second)
+				),
+				getNormalizedDistance(
+					Pair(vmFlr[13].first, vmFlr[13].second),
+					Pair(vmFlr[288].first, vmFlr[288].second)
 				)
+			)
 
 
-				// 양쪾을 벌렸을 때 7.2 안벌렸을 때 4.6
-				val tempStatic = JSONObject().apply {
-					put("jaw_left_tilt_nose_chin_vertical_angle", tiltNoseChinAngle)
-					put("jaw_left_tilt_tip_of_lips_horizontal_angle", tiltTipOfLipsAngle)
-					put("jaw_left_tilt_left_mandibular_distance", mandibularDistance.second)
-					put("jaw_left_tilt_right_mandibular_distance", mandibularDistance.first)
+			// 양쪾을 벌렸을 때 7.2 안벌렸을 때 4.6
+			val tempStatic = JSONObject().apply {
+				put("jaw_left_tilt_nose_chin_vertical_angle", tiltNoseChinAngle)
+				put("jaw_left_tilt_tip_of_lips_horizontal_angle", tiltTipOfLipsAngle)
+				put("jaw_left_tilt_left_mandibular_distance", mandibularDistance.second)
+				put("jaw_left_tilt_right_mandibular_distance", mandibularDistance.first)
 
-				}
-				// 측정 값 초기화
-				tempStaticJo = tempStatic
-				staticJA.put(tempStaticJo)
-				Log.v(
-					"왼쪽 턱 쏠림 각도들",
-					"noseChinAngle: $tiltNoseChinAngle tipOfLipsAngle: $tiltTipOfLipsAngle  mandibularDistance: $mandibularDistance"
-				)
 			}
+			// 측정 값 초기화
+			staticMap[seq] = tempStatic
+			Log.v(
+				"왼쪽 턱 쏠림 각도들",
+				"noseChinAngle: $tiltNoseChinAngle tipOfLipsAngle: $tiltTipOfLipsAngle  mandibularDistance: $mandibularDistance"
+			)
 		}
 
 		if (seq == Sequence.JAW_RIGHT_TILT) {
-			if (tempStaticJo == null) {
-				val tiltNoseChinAngle =
-					calculateSlope(vmFlr[1].first, vmFlr[1].second, vmFlr[152].first, vmFlr[152].second)
-				val tiltTipOfLipsAngle =
-					calculateSlope(vmFlr[61].first, vmFlr[61].second, vmFlr[291].first, vmFlr[291].second)
-				val mandibularDistance = Pair(
-					getNormalizedDistance(
-						Pair(vmFlr[13].first, vmFlr[13].second),
-						Pair(vmFlr[58].first, vmFlr[58].second)
-					),
-					getNormalizedDistance(
-						Pair(vmFlr[13].first, vmFlr[13].second),
-						Pair(vmFlr[288].first, vmFlr[288].second)
-					)
+			val tiltNoseChinAngle =
+				calculateSlope(vmFlr[1].first, vmFlr[1].second, vmFlr[152].first, vmFlr[152].second)
+			val tiltTipOfLipsAngle =
+				calculateSlope(vmFlr[61].first, vmFlr[61].second, vmFlr[291].first, vmFlr[291].second)
+			val mandibularDistance = Pair(
+				getNormalizedDistance(
+					Pair(vmFlr[13].first, vmFlr[13].second),
+					Pair(vmFlr[58].first, vmFlr[58].second)
+				),
+				getNormalizedDistance(
+					Pair(vmFlr[13].first, vmFlr[13].second),
+					Pair(vmFlr[288].first, vmFlr[288].second)
 				)
+			)
 
-				// 양쪾을 벌렸을 때 7.2 안벌렸을 때 4.6
-				val tempStatic = JSONObject().apply {
-					put("jaw_right_tilt_nose_chin_vertical_angle", tiltNoseChinAngle)
-					put("jaw_right_tilt_tip_of_lips_horizontal_angle", tiltTipOfLipsAngle)
-					put("jaw_right_tilt_left_mandibular_distance", mandibularDistance.second)
-					put("jaw_right_tilt_right_mandibular_distance", mandibularDistance.first)
+			// 양쪾을 벌렸을 때 7.2 안벌렸을 때 4.6
+			val tempStatic = JSONObject().apply {
+				put("jaw_right_tilt_nose_chin_vertical_angle", tiltNoseChinAngle)
+				put("jaw_right_tilt_tip_of_lips_horizontal_angle", tiltTipOfLipsAngle)
+				put("jaw_right_tilt_left_mandibular_distance", mandibularDistance.second)
+				put("jaw_right_tilt_right_mandibular_distance", mandibularDistance.first)
 
-				}
-				tempStaticJo = tempStatic
-				staticJA.put(tempStaticJo)
-				Log.v(
-					"오른쪽 턱 쏠림 각도들",
-					"noseChinAngle: $tiltNoseChinAngle tipOfLipsAngle: $tiltTipOfLipsAngle  mandibularDistance: $mandibularDistance"
-				)
-				Log.v(
-					"오른쪽 턱 쏠림 각도들",
-					"staticJA크기: ${staticJA.length()}"
-				)
 			}
+			staticMap[seq] = tempStatic
+			Log.v(
+				"오른쪽 턱 쏠림 각도들",
+				"noseChinAngle: $tiltNoseChinAngle tipOfLipsAngle: $tiltTipOfLipsAngle  mandibularDistance: $mandibularDistance"
+			)
+			Log.v(
+				"오른쪽 턱 쏠림 각도들",
+				"staticMap크기: ${staticMap.size}"
+			)
 		}
 
 
@@ -991,12 +982,12 @@ class MeasureViewModel : ViewModel() {
 				put("neck_extention_neck_vertical_angle", neckVerticalAngle)
 				put("neck_extention_face_vertical_angle", faceVerticalAngle)
 			}
-			staticJA.put(tempStatic)
+			staticMap[seq]  =tempStatic
 			Log.v(
 				"고개 젖힘",
 				"shoulderHorizontalAngle: $shoulderHorizontalAngle earHorizontalAngle: $earHorizontalAngle  neckVerticalAngle: $neckVerticalAngle"
 			)
-			Log.v("스태틱저장", "1: 스태틱 저장 ${staticJA.length()}")
+			Log.v("스태틱저장", "1: 스태틱 저장 ${staticMap.size}")
 		}
 	}
 
@@ -1045,6 +1036,7 @@ class MeasureViewModel : ViewModel() {
 		fileName: String,
 		flh: FaceLandmarkerHelper,
 		poseLandmarker: PoseLandmarkerHelper,
+		seq: Sequence,
 		isImage: Boolean,
 		isFromCamra: Boolean = true
 	): Boolean {
@@ -1181,7 +1173,7 @@ class MeasureViewModel : ViewModel() {
 										put(rounded3DY)
 										put(rounded3DZ)
 									}
-									tempHairLineJA.put(pointJA)
+									tempHairLineMap.put(pointJA)
 									currentHairLine2DCoordinate.add(Pair(hp.point2D.x, hp.point2D.y))
 									currentHairLine3DCoordinate.add(Triple(hp.point3D.x, hp.point3D.y, hp.point3D.z))
 							}
@@ -1202,14 +1194,14 @@ class MeasureViewModel : ViewModel() {
 									put(rounded3DZ)
 								}
 
-								tempHairLineJA.put(pointJA)
+								tempHairLineMap.put(pointJA)
 								currentHairLine2DCoordinate.add(Pair(hp2d.point.x, hp2d.point.y))
 							}
 						}
 
-						hairLineJA.put(tempHairLineJA)
-						Log.v("mvmhairLineJA", "${hairLineJA}")
-						tempHairLineJA = JSONArray()
+						hairLineMap[seq] = tempHairLineMap
+						Log.v("mvmhairLineMap", "${hairLineMap}")
+						tempHairLineMap = JSONArray()
 					}
 
 					// --------------------------# poselandmark를 잡기 위한 detectAsync #-------------------------
@@ -1218,7 +1210,7 @@ class MeasureViewModel : ViewModel() {
 					if (resultBundle?.results?.first()?.landmarks()?.isNotEmpty() == true) {
 						val plr = resultBundle.results.first().landmarks()[0]
 
-						tempPlrJA = JSONArray()
+						tempPlrMap = JSONArray()
 						plr.forEachIndexed { index, _ ->
 							val swapIndex = if (index >= 7 && index % 2 == 0) index - 1
 							else if (index >= 7) index + 1
@@ -1262,17 +1254,17 @@ class MeasureViewModel : ViewModel() {
 								put(rounded3DY)
 								put(rounded3DZ)
 							}
-							tempPlrJA.put(ja)
+							tempPlrMap.put(ja)
 							currentPlrCoordinate.add(Pair(targetLandmark.x(), targetLandmark.y()))
 							current3DPlrCoordinate.add(Triple(point3D.x, point3D.y, point3D.z))
 						}
 						Log.v("포즈랜드마크", "사이즈: ${currentPlrCoordinate.size}")
-						plrJA.put(tempPlrJA)
+						plrMap[seq] = tempPlrMap
 					} else {
 						withContext(Dispatchers.Main) {
 							Toast.makeText(context, "poselandmark를 찾을 수 없습니다.", Toast.LENGTH_LONG).show()
 						}
-						plrJA.put(tempPlrJA)
+						plrMap[seq] = tempPlrMap
 						Log.e("saveMedia", "poselandmark 검출 실패. 저장을 중단합니다.")
 					}
 					// -------------------------# 목젖 위치를 잡기 위한 detectAsync 끝 #-----------------------
@@ -1281,13 +1273,12 @@ class MeasureViewModel : ViewModel() {
 							bitmap.compress(Bitmap.CompressFormat.WEBP_LOSSY, 100, outputStream)
 							outputStream.flush()
 						}
-						Log.d("SaveMedia", "Image saved to Pictures: ${currentSeq} ->  $fileName$extension")
+						Log.d("SaveMedia", "Image saved to Pictures: ${seq} ->  $fileName$extension")
 					} ?: run {
 						Log.e("SaveMedia", "Failed to create image URI")
 					}
-					mediaFileNames.add("$fileName$extension")
+					mediaFileNameMap[seq] = "$fileName$extension"
 
-					Log.d("SaveMedia", "seqStep: ${currentSeq} vmFileName: ${mediaFileNames}")
 
 					// 임시 파일과 비트맵 정리
 					tempFile.delete()
@@ -1318,12 +1309,12 @@ class MeasureViewModel : ViewModel() {
 								context.contentResolver.update(videoUri, contentValues, null, null)
 								Log.v("영상작업완료 후 plr넣기", "$fileName$extension")
 
-								mediaFileNames.add("$fileName$extension")
-								coordinatesJA.put(videoTempCoordinatesJA)
-								videoTempCoordinatesJA = JSONArray()
+								mediaFileNameMap[seq] = "$fileName$extension"
+								coordinatesMap[seq] = videoTempCoordinatesMap
+								videoTempCoordinatesMap = JSONArray()
 								// 빈 jsonArray를 넣어서 index 갯수 맞추기
-								plrJA.put(JSONArray())
-								Log.v("영상작업완료 후 plr넣기", "${plrJA.length()}")
+								plrMap[seq] = JSONArray()
+								Log.v("영상작업완료 후 plr넣기", "${plrMap.size}")
 							}
 						}
 					}
@@ -1632,7 +1623,7 @@ class MeasureViewModel : ViewModel() {
 
 				// 5. 최종 저장 로직 호출
 				val tempUri = Uri.fromFile(tempFile)
-				val success = saveMediaToStorage(activity, tempUri, name, flh, plh, true, false)
+				val success = saveMediaToStorage(activity, tempUri, name, flh, plh, Sequence.COMFORT,true, false)
 
 				Log.d("scannedImage", "✅ 이미지 저장 완료?: $success: $name")
 				success
@@ -1653,8 +1644,7 @@ class MeasureViewModel : ViewModel() {
 			Sequence.JAW_OPENING -> 4
 			Sequence.BOW -> 5
     }
-		val seqIndex = allSeqs.indexOf(seq)
-		val mediaFileName = mediaFileNames[seqIndex]
+		val mediaFileName = mediaFileNameMap[seq]
 		val measureTypeNum = when (measureType) {
 			MeasureType.NORMAL -> 0
 			MeasureType.EXPERT -> 1
@@ -1664,7 +1654,7 @@ class MeasureViewModel : ViewModel() {
 		return originJo.apply {
 			put("temp_server_sn", prefsUtil.getLastTempServerSn())
 			put("media_file_name", mediaFileName)
-			put("json_file_name", mediaFileName.replace(".webp", ".json").replace(".mp4", ".json"))
+			put("json_file_name", mediaFileName?.replace(".webp", ".json")?.replace(".mp4", ".json"))
 			put("seq", seqInt)
 			put("uuid", currentUUID)
 			put("name", ivm.nameValue.value)
@@ -1768,7 +1758,10 @@ class MeasureViewModel : ViewModel() {
 							depthW = tempW
 							depthH = tempH
 
-							val shiftPixels = 40
+							val isTablet = activity.resources.configuration.smallestScreenWidthDp >= 600
+							val isLandscape = activity.resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+
+							val shiftPixels = if (isTablet && !isLandscape) 40 else 20
 							depthData = shiftDepthUp(rotatedDepth, depthW, depthH, shiftPixels)
 
 							latestDepthData = depthData
@@ -1866,7 +1859,7 @@ class MeasureViewModel : ViewModel() {
 					Log.d("captureImage", "flh=${flh}  plh=${plh}")
 
 					if (flh != null && plh!= null) {
-						val success = saveMediaToStorage(activity, tempUri, name, flh!!, plh!!, true)
+						val success = saveMediaToStorage(activity, tempUri, name, flh!!, plh!!, seq,true)
 						Log.v("saveMedia", "$success")
 						if (seq == Sequence.COMFORT) {
 							val (minDepth, maxDepth) = computeFaceDepthRange(depthData!!, depthW, depthH, faceMaskPath!!)
@@ -1928,7 +1921,7 @@ class MeasureViewModel : ViewModel() {
 					put(rounded3DY)
 					put(rounded3DZ)
 				}
-				tempCoordinateJA.put(ja)
+				tempCoordinateMap.put(ja)
 				// 절대좌표
 				currentCoordinate.add(Pair(scaledX, scaledY))
 				// 상대좌표
@@ -1940,7 +1933,7 @@ class MeasureViewModel : ViewModel() {
 					)
 				)
 			}
-			coordinatesJA.put(tempCoordinateJA)
+			coordinatesMap[currentSeq] = tempCoordinateMap
 			val vmFlr = relativeCoordinate
 			if (targetFs.size >= 3) {
 				val eyeAngle =
@@ -1957,7 +1950,7 @@ class MeasureViewModel : ViewModel() {
 					put("bow_tip_of_chin_horizontal_angle", chinAngle)
 				}
 
-				staticJA.put(tempHsvColorJo)
+				staticMap[currentSeq] = tempHsvColorJo
 			}
 		}
 	}
@@ -2195,7 +2188,7 @@ class MeasureViewModel : ViewModel() {
 									CoroutineScope(Dispatchers.IO).launch {
 										try {
 											processAndSaveFrameData(Sequence.OCCLUSAL, activity, bitmapCopy, finalDepthData, rawH, rawW, face2DCopy)
-											resultBundleToJson(Sequence.OCCLUSAL) // staticJA들어감
+											resultBundleToJson(Sequence.OCCLUSAL) // staticMap들어감
 										} finally {
 											bitmapCopy.recycle()
 										}
@@ -2387,6 +2380,7 @@ class MeasureViewModel : ViewModel() {
 								getFileName(currentSeq),
 								flh!!,
 								plh!!,
+								currentSeq,
 								false
 							)
 
@@ -2489,11 +2483,9 @@ class MeasureViewModel : ViewModel() {
 		Log.d("captureImage", "flh=${flh}  plh=${plh}")
 
 		if (flh != null && plh!= null) {
-			val success = saveMediaToStorage(activity, tempUri, name, flh!!, plh!!, true)
+			val success = saveMediaToStorage(activity, tempUri, name, flh!!, plh!!, seq, true)
 			Log.v("saveMedia", "afterMoire $success")
 		}
-
-		Log.v("순서확인", "${mediaFileNames} | ${coordinatesJA.length()}, ${plrJA.length()}")
 
 		return false
 	}
@@ -2508,7 +2500,7 @@ class MeasureViewModel : ViewModel() {
 			val flr = face2D.landmarks
 
 			// 초기화
-			tempCoordinateJA = JSONArray()
+			tempCoordinateMap = JSONArray()
 			currentCoordinate.clear()
 			relativeCoordinate.clear()
 			current3DCoordinate.clear()
@@ -2539,7 +2531,7 @@ class MeasureViewModel : ViewModel() {
 					put(rounded3DY)
 					put(rounded3DZ)
 				}
-				tempCoordinateJA.put(ja)
+				tempCoordinateMap.put(ja)
 
 				// 절대좌표
 				currentCoordinate.add(Pair(scaledX, scaledY))
@@ -2553,7 +2545,7 @@ class MeasureViewModel : ViewModel() {
 				}
 			}
 			// seq 1개의 좌표를 담고 tempCoordinates는 초기화
-			coordinatesJA.put(tempCoordinateJA)
+			coordinatesMap[seq] = tempCoordinateMap
 
 			// ---------# 편한 상태 #----------
 			val vmFlr = relativeCoordinate
@@ -2606,13 +2598,13 @@ class MeasureViewModel : ViewModel() {
 					put("jaw_opening_left_cheeks_extent", cheeksExtents.first)
 					put("jaw_opening_right_cheeks_extent", cheeksExtents.second)
 				}
-				staticJA.put(tempStatic)
+				staticMap[seq] = tempStatic
 				Log.v(
 					"입 벌림 각도들",
 					"openingLipsDistance: $openingLipsDistance openingLipsAngle: $openingLipsAngle cheeksExtents: $cheeksExtents"
 				)
 			}
-			Log.d("saveJson", "✅ [$seq] 랜드마크 JSON 구조화 완료 coordinatesJA 길이: ${coordinatesJA.length()}")
+			Log.d("saveJson", "✅ [$seq] 랜드마크 JSON 구조화 완료 coordinatesMap 길이: ${coordinatesMap.size}")
 		}
 	}
 

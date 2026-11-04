@@ -113,11 +113,9 @@ class IExpertFragment : Fragment(), OnFacialPartClickListener, OnSequenceClickLi
   }
   override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
     super.onViewCreated(view, savedInstanceState)
-
     val fd = FaceDatabase.getDatabase(requireContext())
     fDao = fd.faceDao()
-    ivm.currentCheckedLines.addAll(listOf(DrawLine.NECK, DrawLine.FACE, DrawLine.A_SAGGING_FACE, DrawLine.A_FACIAL_AXIS, DrawLine.A_HORIZON))
-
+    ivm.resetState(listOf(DrawLine.NECK, DrawLine.FACE, DrawLine.A_SAGGING_FACE, DrawLine.A_FACIAL_AXIS, DrawLine.A_HORIZON))
     setUserInfo()
     setResult()
     setRatioBtn()
@@ -147,21 +145,22 @@ class IExpertFragment : Fragment(), OnFacialPartClickListener, OnSequenceClickLi
     }
 
     val currentSeq = ivm.getSeq()
-    when (currentSeq) {
-      Sequence.COMFORT -> {
-        val gLayoutManager5 = GridLayoutManager(context, 5)
-        val pAdapter = PartSelectRVAdapter(svm)
-        pAdapter.onFacialPartClickListener = this@IExpertFragment
-        bd.rvIE2.apply {
-          adapter = pAdapter
-          layoutManager = gLayoutManager5
-        }
-        enableRecyclerView()
+    if (currentSeq == Sequence.COMFORT) {
+      val gLayoutManager5 = GridLayoutManager(context, 5)
+      val pAdapter = PartSelectRVAdapter(svm)
+      pAdapter.onFacialPartClickListener = this@IExpertFragment
+      bd.rvIE2.apply {
+        adapter = pAdapter
+        layoutManager = gLayoutManager5
       }
+      enableFaceSplitBtns()
+    } else {
+      disableFaceSplitBtns()
+    }
 
+    // 좌우
+    when (currentSeq) {
       Sequence.JAW_LEFT_TILT, Sequence.JAW_RIGHT_TILT -> {
-        disableRecyclerView()
-
         val gLayoutManager2 = GridLayoutManager(context, 2)
         val tAdapter = TrajectoryRVAdapter(ivm)
         bd.rvIE3.apply {
@@ -170,16 +169,14 @@ class IExpertFragment : Fragment(), OnFacialPartClickListener, OnSequenceClickLi
         }
       }
       else -> {
-        disableRecyclerView()
+        val fAdapter = FactorRVAdapter(this@IExpertFragment, mvm.currentResult.value?.factors ?: Factor(
+          FacialAxisShape.DEFAULT, FaceShape.DEFAULT, null,Pair(0f, 0f)))
+        val fLayoutManager = LinearLayoutManager(requireContext(), LinearLayoutManager.VERTICAL, false)
+        bd.rvIE3.apply {
+          adapter = fAdapter
+          layoutManager = fLayoutManager
+        }
       }
-    }
-
-    val fAdapter = FactorRVAdapter(this@IExpertFragment, mvm.currentResult.value?.factors ?: Factor(
-      FacialAxisShape.DEFAULT, FaceShape.DEFAULT, null,Pair(0f, 0f)))
-    val fLayoutManager = LinearLayoutManager(requireContext(), LinearLayoutManager.VERTICAL, false)
-    bd.rvIE3.apply {
-      adapter = fAdapter
-      layoutManager = fLayoutManager
     }
     startScrollHintAnimation()
   }
@@ -189,7 +186,7 @@ class IExpertFragment : Fragment(), OnFacialPartClickListener, OnSequenceClickLi
   }
 
   // 2. 비활성화 (내부 아이템 클릭 + 스크롤 완전 차단 및 반투명)
-  fun disableRecyclerView() {
+  fun disableFaceSplitBtns() {
     bd.rvIE2.apply {
       alpha = 0.25f
       removeOnItemTouchListener(touchDisabler) // 중복 등록 방지
@@ -198,62 +195,11 @@ class IExpertFragment : Fragment(), OnFacialPartClickListener, OnSequenceClickLi
   }
 
   // 3. 활성화 (원상 복구)
-  fun enableRecyclerView() {
+  fun enableFaceSplitBtns() {
     bd.rvIE2.apply {
       alpha = 1.0f
       removeOnItemTouchListener(touchDisabler)
     }
-  }
-  private fun setupSurveyAdapter() {
-//    val surveyAdapter = SurveyRVAdapter { pain, palpation, discomfort ->
-//      val scores = listOf(pain, palpation, discomfort)
-//      val fDao = FaceDatabase.getDatabase(requireContext()).faceDao()
-//
-//      lifecycleScope.launch {
-//        if (mvm.currentResult.value != null) {
-//          val survey = AfterSurvey(
-//            server_sn = mvm.currentResult.value?.tempServerSn!!,
-//            pain_score = pain,
-//            palpation_score = palpation,
-//            discomfort_score = discomfort
-//          )
-//          fDao.insertAfterSurvey(survey)
-//        }
-//      }
-//
-//      // 애니메이션 진행 후 결과 화면으로 전환
-//      bd.rvIE3.animate()
-//        .alpha(0f)
-//        .setDuration(200)
-//        .withEndAction {
-//          bd.rvIE4.visibility = View.GONE
-//
-//          bd.ivCheckFeedback.visibility = View.VISIBLE
-//          bd.ivCheckFeedback.animate()
-//            .scaleX(1f)
-//            .scaleY(1f)
-//            .alpha(1f)
-//            .setDuration(400)
-//            .withEndAction {
-//              bd.ivCheckFeedback.animate()
-//                .scaleX(0f)
-//                .scaleY(0f)
-//                .alpha(0f)
-//                .setStartDelay(300)
-//                .setDuration(300)
-//                .withEndAction {
-//                  bd.ivCheckFeedback.visibility = View.GONE
-//                  // 완료 후 결과 어댑터 세팅 함수 호출
-//                  setupFactorAdapter(pain, palpation, discomfort)
-//                }
-//                .start()
-//            }
-//            .start()
-//        }
-//        .start()
-//    }
-//    bd.rvIE4.layoutManager = LinearLayoutManager(context)
-//    bd.rvIE4.adapter = surveyAdapter
   }
 
   private fun setRatioBtn() {
@@ -279,16 +225,15 @@ class IExpertFragment : Fragment(), OnFacialPartClickListener, OnSequenceClickLi
     val seq = ivm.getSeq()
     if (seq == Sequence.JAW_LEFT_TILT || seq == Sequence.JAW_RIGHT_TILT) {
       val faceStaticJson = mvm.currentResult.value?.results
-      Log.v("길이", "${faceStaticJson?.length()} | video가 어디? object: ${
-        faceStaticJson?.getJSONObject(
-          3
-        )?.getJSONArray("face_landmark")
-      }")
-      ivm.videoCoordinates = faceStaticJson?.optJSONObject(seq.id)?.let { extractVideoCoordinates(it) }
+      val seqList = mvm.currentResult.value?.seqs?.toList() ?: emptyList()
 
-      // trajectory를 그리기 위한 coordinates
-      ivm.coordinates1 =  faceStaticJson?.optJSONObject(2)?.let { extractVideoCoordinates(it) }
-      ivm.coordinates2 =  faceStaticJson?.optJSONObject(3)?.let { extractVideoCoordinates(it) }
+      val leftIdx = seqList.indexOf(Sequence.JAW_LEFT_TILT)
+      val rightIdx = seqList.indexOf(Sequence.JAW_RIGHT_TILT)
+      Log.v("영상좌표", "seq=$seq, idx=${seqList.indexOf(seq)}, left=$leftIdx, right=$rightIdx")
+      ivm.videoCoordinates = faceStaticJson?.optJSONObject(seqList.indexOf(seq))?.let { extractVideoCoordinates(it) }
+
+      ivm.coordinates1 =  faceStaticJson?.optJSONObject(leftIdx)?.let { extractVideoCoordinates(it) }
+      ivm.coordinates2 =  faceStaticJson?.optJSONObject(rightIdx)?.let { extractVideoCoordinates(it) }
       ivm.leftTrajectory = ivm.coordinates1?.map { it[152] }
       ivm.rightTrajectory = ivm.coordinates2?.map { it[152] }
       setVideoUI()
@@ -330,7 +275,6 @@ class IExpertFragment : Fragment(), OnFacialPartClickListener, OnSequenceClickLi
 
 
   private fun setUserInfo() {
-    Log.v("info", "${mvm.currentResult.value?.userName}, ${mvm.currentResult.value?.userMobile}}")
     val name = mvm.currentResult.value?.userName ?: "GUEST"
     val mobile = mvm.currentResult.value?.userMobile ?: ""
     val transformMobile = if (mobile.length == 11 && mobile.startsWith("010")) {
@@ -575,7 +519,11 @@ private fun setInsightBottomSheet() {
   }
 
   private fun setVideoUI() {
-    bd.llIEBtns.visibility = View.GONE
+    bd.llIEBtns.apply {
+      alpha = 0.25f
+    }
+    val imageOverlayBtns = listOf(bd.btnIEMoire, bd.btnIEGrid, bd.btnIEAngle, bd.btnIEClean)
+    imageOverlayBtns.forEach { btn -> btn.isEnabled = false }
 
     bd.ssivIE.apply {
       recycle()
@@ -613,7 +561,11 @@ private fun setInsightBottomSheet() {
   private fun setImageUI() {
     bd.clIEImage.visibility = View.VISIBLE
     bd.clIEVideo.visibility = View.GONE
-    bd.llIEBtns.visibility = View.VISIBLE
+    bd.llIEBtns.apply {
+      alpha = 1.0f
+    }
+    val imageOverlayBtns = listOf(bd.btnIEMoire, bd.btnIEGrid, bd.btnIEAngle, bd.btnIEClean)
+    imageOverlayBtns.forEach { btn -> btn.isEnabled = true }
     bd.ssivIE.apply {
       visibility = View.VISIBLE
     }
@@ -625,7 +577,8 @@ private fun setInsightBottomSheet() {
     simpleExoPlayer = SimpleExoPlayer.Builder(requireContext()).build()
     bd.pvIE.player = simpleExoPlayer
     bd.pvIE.controllerShowTimeoutMs = 1100
-    val uriIdx = if (ivm.getSeq() == Sequence.JAW_LEFT_TILT) 2 else 3
+    val seqList = mvm.currentResult.value?.seqs?.toList() ?: emptyList()
+    val uriIdx = seqList.indexOf(ivm.getSeq())
     val leftUri = mvm.currentResult.value?.mediaUri?.getOrNull(uriIdx)
     val mediaItem = leftUri?.let { MediaItem.fromUri(it) }
     val mediaSource = mediaItem?.let {
@@ -713,21 +666,53 @@ private fun setInsightBottomSheet() {
       }
     }
   }
+
   override fun onSequenceClick(seq: Sequence) {
     ivm.setSeq(seq)
-    // 편한상태에서 들어가는 FacialPart init
-    if (seq == Sequence.COMFORT) svm.updateFacialPart(FacialPart.DERIVE)
+    svm.updateFacialPart(FacialPart.DERIVE)
     svm.updateSequence(seq)
+
+    ivm.currentCheckedLines.clear()
+    when (ivm.getSeq()) {
+      Sequence.OCCLUSAL -> {
+        ivm.currentCheckedLines.addAll(
+          listOf(
+            DrawLine.A_HORIZON,
+          )
+        )
+      }
+      Sequence.JAW_OPENING -> {
+        ivm.currentCheckedLines.addAll(
+          listOf(
+            DrawLine.A_LIPS,
+            DrawLine.D_LIPS,
+          )
+        )
+      }
+      else -> {
+        ivm.currentCheckedLines.addAll(
+          listOf(
+            DrawLine.NECK,
+            DrawLine.FACE,
+            DrawLine.A_SAGGING_FACE,
+            DrawLine.A_FACIAL_AXIS,
+            DrawLine.A_HORIZON,
+            DrawLine.A_SHOULDER
+          )
+        )
+      }
+    }
+
     setResult()
     setAdapter()
+    bd.rvIE2.adapter?.notifyDataSetChanged()
   }
 
   override fun onFacialPartClick(part: FacialPart) {
     ivm.currentCheckedLines.clear()
     Log.v("클릭드", "${part}")
     val drawLines = when (part) {
-      FacialPart.DERIVE -> listOf(DrawLine.NECK, DrawLine.FACE, DrawLine.A_SAGGING_FACE, DrawLine.A_FACIAL_AXIS, DrawLine.A_HORIZON,
-        DrawLine.A_SHOULDER)
+      FacialPart.DERIVE -> listOf(DrawLine.NECK, DrawLine.FACE, DrawLine.A_SAGGING_FACE, DrawLine.A_FACIAL_AXIS, DrawLine.A_HORIZON, DrawLine.A_SHOULDER)
       FacialPart.RATIO -> listOf(DrawLine.A_RATIO_HORIZON, DrawLine.A_RATIO_VERTI)
       FacialPart.TOP -> listOf(DrawLine.EYE,  DrawLine.EYEBROW,  DrawLine.L_CORNEA)
       FacialPart.MIDDLE -> listOf(DrawLine.NOSE,DrawLine.A_ALAR_ORAL, DrawLine.A_SIDE_HEAD, DrawLine.E_CHEEKBONE, )

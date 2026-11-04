@@ -13,7 +13,18 @@ import kotlinx.coroutines.flow.asStateFlow
 
 class InformationViewModel : ViewModel() {
 	val currentCheckedLines = mutableSetOf<DrawLine>()
+	fun resetState(lines: List<DrawLine>) {
+		currentCheckedLines.clear()
+		currentCheckedLines.addAll(lines)
 
+		if (isAngleModeActive.value) toggleAngleMode()
+		if (getMoireOn()) switchedMoireOn()
+		if (!getLineOn()) switchedLineOn()
+		if (!getGridLineOn()) switchedGridLineOn()
+
+		setSeq(Sequence.COMFORT)
+		releaseUnitIdx()
+	}
 	// 체크가 가능한 전체 데이터 VO 항목 담는 곳
 	var currentFaceStaticsItem = mutableListOf<FaceStaticItem>()
 
@@ -117,7 +128,6 @@ class InformationViewModel : ViewModel() {
 		coordinates2 = null
 		leftTrajectory = null
 		rightTrajectory = null
-		currentCheckedLines.clear()
 
 		// 2. 도구/모드 상태 초기화
 		if (_isAngleModeActive.value) {

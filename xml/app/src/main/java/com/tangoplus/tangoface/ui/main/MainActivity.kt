@@ -127,39 +127,6 @@ class MainActivity : AppCompatActivity() {
 				STORAGE_PERMISSION_REQUEST_CODE
 			)
 			requestAllFilesAccess(this@MainActivity)
-		} else {
-			lifecycleScope.launch(Dispatchers.IO) {
-				fDao = FaceDatabase.getDatabase(this@MainActivity).faceDao()
-				val dbDataCount = fDao.getDataCount()
-
-				if (dbDataCount == 0) {
-					Log.v("백업", "DB에 데이터 없음 - 백업 스킵")
-					return@launch
-				}
-
-				prefs = PreferenceUtility(this@MainActivity)
-				val lastBackupCount = prefs.getLastBackupDataCount()
-
-				Log.v("백업", "DB 데이터: $dbDataCount 개, 마지막 백업: $lastBackupCount 개")
-
-				if (lastBackupCount < dbDataCount) {
-					// DB에 새 데이터가 있을 때만 백업
-					val latestFileInfo = getLatestMeasurementFiles()
-
-					if (latestFileInfo != null) {
-						Log.v("백업", "백업 시작: ${latestFileInfo.allFiles.size}개 파일")
-						backupLatestMeasurementData(this@MainActivity, latestFileInfo)
-						prefs.setLastBackupDataCount(dbDataCount)
-					} else {
-						Log.w("백업", "DB에는 데이터가 있지만 파일을 찾을 수 없음")
-					}
-
-					exportedMeasureSettings() // 새로 측정을 했을 때나
-				} else {
-					Log.v("백업", "변경사항 없음 - 백업 스킵")
-				}
-
-			}
 		}
 		cacheDir.deleteRecursively()
 
