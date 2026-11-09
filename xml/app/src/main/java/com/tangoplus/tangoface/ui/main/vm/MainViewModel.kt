@@ -191,7 +191,16 @@ class MainViewModel : ViewModel() {
 		val jsonArray = JSONArray()
 		val seqs = mutableSetOf<Sequence>()
 
-		faceStatics.filter { it.local_sn != 0 }.forEachIndexed { indexx, faceStatic ->
+		val sortedStatics = faceStatics
+			.filter { it.local_sn != 0 }
+			.sortedBy { fs ->
+				val idx = Sequence.fromId(fs.seq)?.let { Sequence.entries.indexOf(it) } ?: -1
+				if (idx == -1) Int.MAX_VALUE else idx
+			}
+		faceStatics.forEach {
+			Log.v("정렬확인", "dbSeq=${it.seq}, fromId=${Sequence.fromId(it.seq)}, file=${it.json_file_name}")
+		}
+		sortedStatics.forEachIndexed { indexx, faceStatic ->
 			// 이미지 URI 변환
 			try {
 				if (faceStatic.seq in listOf(2, 3)) { // DB에 저장된 seq Int값
@@ -223,7 +232,6 @@ class MainViewModel : ViewModel() {
 				jsonArray.put(JSONObject())
 			}
 
-			// 시퀀스 처리
 			val targetSequence = Sequence.fromId(faceStatic.seq)
 			val seqIndex = targetSequence?.let { Sequence.entries.indexOf(it) } ?: 0
 			val ordinal = Sequence.fromIndex(seqIndex)

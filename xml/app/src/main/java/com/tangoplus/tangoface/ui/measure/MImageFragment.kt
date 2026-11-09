@@ -114,15 +114,8 @@ class MImageFragment : Fragment() {
 								absoluteLandmarkPairs?.let { pairs ->
 									val horizontalRatio =
 										ClassifyUtility.calculateHorizontalRatio(pairs, mvm.currentHairLine2DCoordinate)
-									val index = Sequence.COMFORT.ordinal
-									while (mvm.staticJA.length() <= index) {
-										mvm.staticJA.put(JSONObject().apply { put("horizontal_ratio", "0:0:0") })
-									}
-									if (Sequence.COMFORT == Sequence.COMFORT) {
-										mvm.staticJA.getJSONObject(index).put("horizontal_ratio", horizontalRatio)
-									} else {
-										mvm.staticJA.getJSONObject(index).put("horizontal_ratio", "0:0:0")
-									}
+									val comfortJo = mvm.staticMap.getOrPut(Sequence.COMFORT) { JSONObject() }
+									comfortJo.put("horizontal_ratio", horizontalRatio)
 
 								}
 							}
@@ -155,13 +148,13 @@ class MImageFragment : Fragment() {
 							Log.v("userSn설정잘됐는지", "is init? = ${mvm.currentUserSn}, ${mvm.allSeqs}")
 							val allSeqs = mvm.allSeqs
 							val staticJos = mutableListOf<JSONObject>()
+							val usedSeqs = mutableListOf<Sequence>()
 
-							allSeqs.forEachIndexed { index, sequence ->
-								Log.v("staticJA", "${mvm.staticJA.getJSONObject(0).getString("horizontal_ratio")}")
-								val staticJSON =
-									mvm.setJo(mvm.staticJA.getJSONObject(index), sequence, ivm, prefsUtil, false)
-								Log.v("staticJSON", "${mvm.staticJA.getJSONObject(index)}")
-								staticJos.add(staticJSON)
+							allSeqs.forEach { sequence ->
+								val raw = mvm.staticMap[sequence] ?: return@forEach
+								Log.v("staticJA", "${raw.optString("horizontal_ratio")}")
+								staticJos.add(mvm.setJo(raw, sequence, ivm, prefsUtil, false))
+								usedSeqs.add(sequence)
 							}
 							Log.v("staticJson까보기0", "${staticJos.size}")
 
@@ -180,30 +173,27 @@ class MImageFragment : Fragment() {
 							}
 
 							// data
-							Log.v("mvm.plrJA", "${mvm.plrJA.length()}")
 							val mergedJOBeforeFileName = mutableListOf<JSONObject>()
 							for (i in 0 until staticJos.size) {
-								val currentStatic = transStatics[i]
+								val sequence = usedSeqs[i]
 								val mergedJSON = JSONObject().apply {
 									put("data", JSONObject(transStatics[i].toJsonString()))
-
-//								Log.v("LEN", "i=$i, coordinatesLen=${mvm.coordinatesJA.length()}, plrLen=${mvm.plrJA.length()}, mediaNames=${mvm.mediaFileNames.size}")
-									put("face_landmark", mvm.coordinatesJA.optJSONArray(i))
-									put("pose_landmark", mvm.plrJA.optJSONArray(i))
-
-									if (i == 0) {
-										put("hairline_landmark", mvm.hairLineJA.optJSONArray(i))
+									put("face_landmark", mvm.coordinatesMap[sequence])
+									put("pose_landmark", mvm.plrMap[sequence])
+									if (sequence == Sequence.COMFORT) {
+										put("hairline_landmark", mvm.hairLineMap[sequence])
 									}
 								}
 								mergedJOBeforeFileName.add(mergedJSON)
-//							Log.v("json저장 전", "seq: $i")
+
+								val fileName = mvm.mediaFileNameMap[sequence] ?: continue
 								val jsonPath = mvm.saveJsonToStorage(
 									requireActivity() as AppCompatActivity,
 									mergedJSON,
-									mvm.mediaFileNames[i].replace(".webp", "").replace(".mp4", "")
+									fileName.replace(".webp", "").replace(".mp4", "")
 								)
-								mergedJOBeforeFileName[i].put("json_file_name", jsonPath)
-								mvm.mergedJA.put(mergedJOBeforeFileName[i])
+								mergedJSON.put("json_file_name", jsonPath)
+								mvm.mergedJA.put(mergedJSON)
 							}
 
 //						Log.v("mvm.mergedJson", "${mvm.mergedJA.length()}")
@@ -416,11 +406,11 @@ class MImageFragment : Fragment() {
 		mvm.currentSeq = Sequence.COMFORT
 		mvm.face3DResult = listOf()
 
-		mvm.staticJA.clearAll()
-		mvm.coordinatesJA.clearAll()
-		mvm.mediaFileNames.clear()
-		mvm.plrJA.clearAll()
-		mvm.hairLineJA.clearAll()
+		mvm.staticMap.clear()
+		mvm.coordinatesMap.clear()
+		mvm.mediaFileNameMap.clear()
+		mvm.plrMap.clear()
+		mvm.hairLineMap.clear()
 		mvm.mergedJA.clearAll()
 		mvm.currentPlrCoordinate.clear()
 		mvm.current3DPlrCoordinate.clear()

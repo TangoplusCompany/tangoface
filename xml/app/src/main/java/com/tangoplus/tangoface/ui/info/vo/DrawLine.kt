@@ -26,4 +26,8 @@ enum class DrawLine {
 	A_RATIO_HORIZON,
 
 	A_BOW,
+
+	D_LIPS,
+	A_LIPS,
+
 }

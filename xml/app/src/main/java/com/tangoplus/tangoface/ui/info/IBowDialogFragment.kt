@@ -63,8 +63,7 @@ class IBowDialogFragment : DialogFragment() {
         dialog?.setCanceledOnTouchOutside(false)
         val fd = FaceDatabase.getDatabase(requireContext())
         fDao = fd.faceDao()
-        ivm.currentCheckedLines.addAll(listOf( DrawLine.A_BOW))
-
+        ivm.resetState(listOf(DrawLine.A_BOW))
         setUserInfo()
         setResult()
         setRatioBtn()

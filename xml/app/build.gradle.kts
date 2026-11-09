@@ -168,8 +168,9 @@ dependencies {
     implementation("com.google.ai.client.generativeai:generativeai:0.9.0")
     implementation("com.google.mediapipe:tasks-vision:0.10.26")
   implementation(libs.ads.mobile.sdk)
+	implementation(libs.androidx.sqlite.ktx)
 
-  val camera_version = "1.5.0"
+	val camera_version = "1.5.0"
     implementation("androidx.camera:camera-core:$camera_version")
     implementation("androidx.camera:camera-camera2:$camera_version")
     implementation("androidx.camera:camera-lifecycle:$camera_version")

@@ -14,6 +14,7 @@ import com.tangoplus.tangoface.R
 import com.tangoplus.tangoface.databinding.RvSettingsItemBinding
 import com.tangoplus.tangoface.domain.util.FileUtility.setOnSingleClickListener
 import com.tangoplus.tangoface.ui.main.MainActivity
+import com.tangoplus.tangoface.ui.settings.BackupFragment
 import com.tangoplus.tangoface.ui.settings.DepthCameraSettingsActivity
 import com.tangoplus.tangoface.ui.settings.PosterManageFragment
 import com.tangoplus.tangoface.ui.settings.StatisticsFragment
@@ -23,8 +24,8 @@ class SettingsRVAdapter(private val fragment: Fragment) : RecyclerView.Adapter<R
 	private val items = listOf(
 		"슬라이드 포스터 관리",
 		"사전 체크리스트 통계",
-		"백업 파일 확인하기",
-		"깊이 카메라 각도 조정"
+		"측정 데이터 내보내기/불러오기",
+//		"깊이 카메라 각도 조정"
 	)
 
 	inner class SettingsViewHolder(view: View) : RecyclerView.ViewHolder(view) {
@@ -39,6 +40,7 @@ class SettingsRVAdapter(private val fragment: Fragment) : RecyclerView.Adapter<R
 					"사전 체크리스트 통계" -> (fragment.requireActivity() as MainActivity).navigateToSubFragment(StatisticsFragment())
 					"백업 파일 확인하기" -> { openSpecificFolder() }
 					"깊이 카메라 각도 조정" -> { startSettingsDepthCamera() }
+					"측정 데이터 내보내기/불러오기" -> (fragment.requireActivity() as MainActivity).navigateToSubFragment(BackupFragment())
 				}
 			}
 		}

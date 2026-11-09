@@ -34,12 +34,12 @@ object MeasureUtility {
 	}
 
 	
-	fun hasPermissions(context: Context): Boolean {
-		Log.d("PermissionCheck", "Context type: ${context::class.java.name}")
-		return getRequiredPermissions().all {
-			ContextCompat.checkSelfPermission(context, it) == PackageManager.PERMISSION_GRANTED
-		}
-	}
+//	fun hasPermissions(context: Context): Boolean {
+//		Log.d("PermissionCheck", "Context type: ${context::class.java.name}")
+//		return getRequiredPermissions().all {
+//			ContextCompat.checkSelfPermission(context, it) == PackageManager.PERMISSION_GRANTED
+//		}
+//	}
 
 	val slide = TranslateAnimation(0f, 0f, -100f, 0f).apply {
 		duration = 800

@@ -95,13 +95,16 @@ class INormalFragment : Fragment(), OnFacialPartClickListener {
 		return bd.root
 	}
 
+	override fun onStart() {
+		super.onStart()
+		ivm.resetState(listOf(DrawLine.NECK, DrawLine.FACE, DrawLine.A_SAGGING_FACE, DrawLine.A_FACIAL_AXIS, DrawLine.A_HORIZON))
+	}
 
 	override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
 		super.onViewCreated(view, savedInstanceState)
 
 		val fd = FaceDatabase.getDatabase(requireContext())
 		fDao = fd.faceDao()
-		ivm.currentCheckedLines.addAll(listOf(DrawLine.NECK, DrawLine.FACE, DrawLine.A_SAGGING_FACE, DrawLine.A_FACIAL_AXIS, DrawLine.A_HORIZON))
 
 		setUserInfo()
 		setResult()
@@ -116,7 +119,7 @@ class INormalFragment : Fragment(), OnFacialPartClickListener {
 	}
 
 	private fun setAdapter() {
-		val vLayoutManager = GridLayoutManager(context, 5)
+		val vLayoutManager = GridLayoutManager(context, 3)
 		val sAdapter = PartSelectRVAdapter(svm)
 		sAdapter.onFacialPartClickListener = this@INormalFragment
 		bd.rvIN1.apply {
@@ -188,8 +191,6 @@ class INormalFragment : Fragment(), OnFacialPartClickListener {
 		}
 	}
 
-
-
 	private fun setUserInfo() {
 		Log.v("info", "${mvm.currentResult.value?.userName}, ${mvm.currentResult.value?.userMobile}}")
 		val name = mvm.currentResult.value?.userName ?: "GUEST"
@@ -224,9 +225,7 @@ class INormalFragment : Fragment(), OnFacialPartClickListener {
 				if (isActive) {
 					val savedScale = bd.ssivIN.scale
 					val savedCenter = bd.ssivIN.center?.let { PointF(it.x, it.y) }
-
 					Log.d("AngleDebug", "Saved - scale: $savedScale, center: $savedCenter")
-
 					bd.ssivIN.apply {
 						isPanEnabled = false
 						isZoomEnabled = false

@@ -51,7 +51,7 @@
             android:excludeFromRecents="false"
             android:exported="true"
             android:resizeableActivity="false"
-            android:screenOrientation="portrait"
+
             tools:ignore="DiscouragedApi,LockedOrientationActivity,NonResizeableActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -71,7 +71,6 @@
             android:excludeFromRecents="false"
             android:exported="true"
             android:resizeableActivity="false"
-            android:screenOrientation="portrait"
             tools:ignore="DiscouragedApi,LockedOrientationActivity">
 
             <!--

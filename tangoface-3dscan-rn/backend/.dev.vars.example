@@ -1,0 +1,10 @@
+# Local Development Secrets (DO NOT COMMIT actual .dev.vars to git)
+# Copy this file to .dev.vars and fill in your actual credentials.
+
+# Supabase Storage Settings (대시보드 > Project Settings > API 에서 복사)
+# 카드 등록 불필요! 무료 1GB 스토리지
+SUPABASE_URL=https://your-project-id.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_secret_key
+
+# Custom Allowed Origins for CORS (comma separated)
+ALLOWED_ORIGINS=http://localhost:8081,http://localhost:3000

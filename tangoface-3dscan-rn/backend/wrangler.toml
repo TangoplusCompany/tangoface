@@ -1,0 +1,23 @@
+name = "tangoface-backend"
+main = "src/index.ts"
+compatibility_date = "2025-02-14"
+compatibility_flags = ["nodejs_compat"]
+
+# D1 Database Binding (세션 & 레이트 리밋 상태 저장 - 카드 불필요)
+[[d1_databases]]
+binding = "DB"
+database_name = "tangoface-db"
+database_id = "7b322bd7-d0b1-4411-9133-6e123535e09a"
+
+# Cron Trigger for cleanup (runs every hour)
+[triggers]
+crons = ["0 * * * *"]
+
+# Public / Non-secret Environment Variables
+[vars]
+ALLOWED_ORIGINS = "http://localhost:8081,https://tangoface.com"
+MAX_UPLOAD_SIZE_BYTES = "209715200" # 200MB
+SUPABASE_BUCKET_NAME = "tangoface-videos"
+
+# Secrets (SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
+# -> DO NOT add secrets here. Use `.dev.vars` for local development and `wrangler secret put` for production.
