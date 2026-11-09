@@ -13,13 +13,12 @@
             android:id="@+id/ivMEFrame"
             android:layout_width="0dp"
             android:layout_height="0dp"
+            android:layout_marginTop="60dp"
             android:alpha="0.5"
-            app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="@+id/clMESeqGuide"
             app:layout_constraintHeight_percent="1.2"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent"
-            app:layout_constraintVertical_bias="0.35"
             app:srcCompat="@drawable/drawable_seq_0" />
 
         <androidx.constraintlayout.widget.ConstraintLayout
