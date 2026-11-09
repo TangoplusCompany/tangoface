@@ -26,6 +26,15 @@ export interface CompleteUploadResponse {
   message: string;
 }
 
+// 3D 모델 복원 진행률 및 남은 시간 예측 정보
+export interface ProcessingProgressInfo {
+  elapsed_seconds: number;        // 현재까지 진행된 시간 (초)
+  estimated_total_seconds: number;// 예상 총 소요 시간 (초, 예: 45초)
+  remaining_seconds: number;      // 예상 남은 시간 (초)
+  progress_percent: number;       // 0 ~ 99% 점근 진행률
+  stage: string;                  // 현재 처리 단계 안내 문구
+}
+
 export interface SessionStatusResponse {
   session_id: string;
   status: SessionStatus;
@@ -33,6 +42,8 @@ export interface SessionStatusResponse {
   paired_at: string | null;
   uploaded_at: string | null;
   created_at: string;
+  // PROCESSING 상태일 때 실시간 계산되는 스마트 진행률 객체
+  progress?: ProcessingProgressInfo | null;
 }
 
 export interface SessionResultResponse {

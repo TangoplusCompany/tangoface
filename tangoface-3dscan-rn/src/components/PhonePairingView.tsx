@@ -42,13 +42,12 @@ export const PhonePairingView: React.FC<PhonePairingViewProps> = ({ onPaired }) 
     <View style={styles.container}>
       <View style={styles.card}>
         <View style={styles.iconCircle}>
-          <Text style={styles.iconText}>📱</Text>
+          <Text style={styles.iconText}>😁</Text>
         </View>
 
-        <Text style={styles.title}>스마트폰 촬영 연동</Text>
+        <Text style={styles.title}>TangoFace {'\n'}3D 얼굴 스캔</Text>
         <Text style={styles.subtitle}>
-          태블릿 화면에 표시된{'\n'}
-          <Text style={styles.highlightText}>6자리 페어링 번호</Text>를 입력해주세요.
+          화면에 표시된 <Text style={styles.highlightText}>6자리 번호</Text>를 입력해주세요.
         </Text>
 
         <View style={styles.inputContainer}>
@@ -86,7 +85,7 @@ export const PhonePairingView: React.FC<PhonePairingViewProps> = ({ onPaired }) 
           {isLoading ? (
             <ActivityIndicator color="#ffffff" />
           ) : (
-            <Text style={styles.pairButtonText}>세션 연결하기</Text>
+            <Text style={styles.pairButtonText}>연결하기</Text>
           )}
         </TouchableOpacity>
 

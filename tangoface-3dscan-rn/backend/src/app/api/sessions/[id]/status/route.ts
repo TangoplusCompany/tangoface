@@ -3,6 +3,7 @@ import { NextRequest } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 import { hashToken, timingSafeMatch } from '@/lib/crypto';
 import { jsonWithCors, handleOptionsCors } from '@/lib/cors';
+import { calculateProcessingProgress } from '@/lib/progressEstimator';
 import { SessionStatusResponse } from '@/types/api';
 
 export const runtime = 'nodejs';
@@ -13,7 +14,7 @@ export async function OPTIONS(request: NextRequest) {
 
 /**
  * GET /api/sessions/[id]/status
- * 태블릿이 세션 상태를 폴링 조회
+ * 태블릿이 세션 상태 및 진행률을 폴링 조회
  * 인증: X-Session-Secret 헤더
  */
 export async function GET(
@@ -54,6 +55,22 @@ export async function GET(
       );
     }
 
+    // 3D 모델 복원 중(PROCESSING)일 때 스마트 진행률 및 남은 시간 산출
+    let progress = null;
+    if (session.status === 'PROCESSING') {
+      // 업로드 완료 시점 또는 세션 생성 시점을 기준 시작 시각으로 사용
+      const startedAt = session.uploaded_at || session.created_at;
+      progress = calculateProcessingProgress(startedAt);
+    } else if (session.status === 'DONE') {
+      progress = {
+        elapsed_seconds: 0,
+        estimated_total_seconds: 45,
+        remaining_seconds: 0,
+        progress_percent: 100,
+        stage: '3D 모델 복원 완료!',
+      };
+    }
+
     const response: SessionStatusResponse = {
       session_id: session.id,
       status: session.status,
@@ -61,6 +78,7 @@ export async function GET(
       paired_at: session.paired_at,
       uploaded_at: session.uploaded_at,
       created_at: session.created_at,
+      progress,
     };
 
     return jsonWithCors(request, response, { status: 200 });
