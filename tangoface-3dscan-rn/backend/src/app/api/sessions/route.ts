@@ -1,7 +1,12 @@
 // src/app/api/sessions/route.ts
 import { NextRequest } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
-import { generatePairingCode, generateSecureToken, hashToken } from '@/lib/crypto';
+import {
+  generatePairingCode,
+  generateSecureToken,
+  hashToken,
+  timingSafeMatch,
+} from '@/lib/crypto';
 import { jsonWithCors, handleOptionsCors } from '@/lib/cors';
 import { CreateSessionResponse } from '@/types/api';
 
@@ -30,10 +35,30 @@ export async function GET(request: NextRequest) {
 
 /**
  * POST /api/sessions
- * 태블릿이 세션을 생성: 6자리 번호(만료 10분), session_id, session_secret 반환
+ * 안드로이드 태블릿이 세션을 생성: 6자리 번호(만료 10분), session_id, session_secret 반환
+ * 보안: TABLET_API_KEY 헤더(x-tablet-key)를 검증하여 인가된 태블릿 기기만 세션을 생성할 수 있도록 차단
  */
 export async function POST(request: NextRequest) {
   try {
+    // 1. 태블릿 기기 비밀키(X-Tablet-Key) 검증
+    const configuredKey = process.env.TABLET_API_KEY;
+    if (configuredKey) {
+      const tabletKeyHeader =
+        request.headers.get('x-tablet-key') ||
+        request.headers.get('X-Tablet-Key');
+
+      if (!tabletKeyHeader || !timingSafeMatch(tabletKeyHeader, configuredKey)) {
+        return jsonWithCors(
+          request,
+          {
+            error:
+              '인증되지 않은 태블릿 기기입니다. 올바른 X-Tablet-Key 헤더가 필요합니다.',
+          },
+          { status: 401 }
+        );
+      }
+    }
+
     const supabase = getSupabaseAdmin();
     const now = new Date();
     const codeExpiresAt = new Date(now.getTime() + 10 * 60 * 1000); // 10분 만료
