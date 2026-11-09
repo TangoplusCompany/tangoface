@@ -10,7 +10,6 @@ import java.util.concurrent.TimeUnit
  * Next.js + Supabase 백엔드 연동을 위한 Retrofit 클라이언트 설정
  */
 object FaceScanApiClient {
-
     // 프로덕션 기본 URL (Retrofit baseUrl은 항상 '/'로 끝나야 함)
     const val BASE_URL = "https://your-backend.vercel.app/"
 

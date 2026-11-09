@@ -21,19 +21,45 @@ data class CreateSessionResponse(
 )
 
 /**
- * 2. 세션 상태 조회 응답 DTO
+ * 2. 실시간 3D 복원 진행률 정보 DTO
+ */
+data class ProcessingProgressInfo(
+    @SerializedName("elapsed_seconds")
+    val elapsedSeconds: Int, // 경과 시간 (초)
+
+    @SerializedName("estimated_total_seconds")
+    val estimatedTotalSeconds: Int, // 총 예상 소요 시간 (초, 예: 45)
+
+    @SerializedName("remaining_seconds")
+    val remainingSeconds: Int, // 예상 남은 시간 (초)
+
+    @SerializedName("progress_percent")
+    val progressPercent: Int, // 진행률 (0 ~ 100%)
+
+    @SerializedName("stage")
+    val stage: String // 단계 안내 문구 ("1단계: 특징점 추출 중...", 등)
+)
+
+/**
+ * 3. 세션 상태 조회 응답 DTO
  * GET api/sessions/{id}/status
  */
 data class SessionStatusResponse(
+    @SerializedName("session_id")
+    val sessionId: String? = null,
+
     @SerializedName("status")
     val status: String, // "CREATED", "PAIRED", "UPLOADED", "PROCESSING", "DONE", "FAILED"
 
     @SerializedName("fail_reason")
-    val failReason: String? = null
+    val failReason: String? = null,
+
+    @SerializedName("progress")
+    val progress: ProcessingProgressInfo? = null
 )
 
 /**
- * 3. 3D GLB 모델 결과 서명 다운로드 URL 응답 DTO
+ * 4. 3D GLB 모델 결과 서명 다운로드 URL 응답 DTO
  * GET api/sessions/{id}/result
  */
 data class SessionResultResponse(
@@ -47,12 +73,14 @@ data class SessionResultResponse(
 data class SessionStatus(
     val status: String,
     val failReason: String? = null,
-    val downloadUrl: String? = null
+    val downloadUrl: String? = null,
+    val progress: ProcessingProgressInfo? = null
 ) {
     val isDone: Boolean get() = status == STATUS_DONE
     val isFailed: Boolean get() = status == STATUS_FAILED
 
     companion object {
+        const val STATUS_IDLE = "IDLE"
         const val STATUS_CREATED = "CREATED"
         const val STATUS_PAIRED = "PAIRED"
         const val STATUS_UPLOADED = "UPLOADED"
@@ -60,4 +88,24 @@ data class SessionStatus(
         const val STATUS_DONE = "DONE"
         const val STATUS_FAILED = "FAILED"
     }
+}
+
+/**
+ * 스캔 세션 내역 관리 모델 (태블릿에서 뒤로가기 시에도 작업 유지 및 이력 관리)
+ */
+data class ScanHistoryItem(
+    val sessionId: String,
+    val sessionSecret: String,
+    val pairingCode: String,
+    val createdAt: Long = System.currentTimeMillis(),
+    var status: String = "CREATED",
+    var progressPercent: Int = 0,
+    var remainingSeconds: Int = 0,
+    var stageMessage: String = "",
+    var glbDownloadUrl: String? = null,
+    var failReason: String? = null
+) {
+    val isDone: Boolean get() = status == "DONE"
+    val isFailed: Boolean get() = status == "FAILED"
+    val isProcessing: Boolean get() = status in listOf("PAIRED", "UPLOADED", "PROCESSING")
 }

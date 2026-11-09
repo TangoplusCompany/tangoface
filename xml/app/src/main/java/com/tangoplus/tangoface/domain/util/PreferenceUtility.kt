@@ -94,6 +94,15 @@ class PreferenceUtility(context: Context) {
 		return mPrefs.getInt("FREQ_MODE" , 2)
 	}
 
+	// 가이드 프레임 상단 마진 (ivMEFrame / ivMNFrame 위치 조절: 0 ~ 120dp, 기본 60dp)
+	fun getGuideFrameMarginTop(defaultVal: Int = 60): Int {
+		return mPrefs.getInt("guide_frame_margin_top", defaultVal)
+	}
+
+	fun setGuideFrameMarginTop(marginDp: Int) {
+		mPrefs.edit { putInt("guide_frame_margin_top", marginDp) }
+	}
+
 	// ---- poster url 저장 ----
 	private val KEY_IMAGES = "images"
 	private val KEY_IS_INIT = "is_initialized"

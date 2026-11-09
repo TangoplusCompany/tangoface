@@ -8,9 +8,11 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.withContext
+import java.io.File
+import java.io.FileOutputStream
 
 /**
- * 3D 얼굴 스캔 세션 관리 및 상태 폴링 Repository 인터페이스
+ * 3D 얼굴 스캔 세션 관리, 상태 폴링 및 GLB 다운로드 Repository 인터페이스
  */
 interface FaceScanRepository {
 
@@ -38,6 +40,20 @@ interface FaceScanRepository {
         sessionSecret: String,
         intervalMillis: Long = 2000L
     ): Flow<SessionStatus>
+
+    /**
+     * 서명된 downloadUrl로부터 3D GLB 모델 파일을 기기 로컬 저장소로 다운로드
+     *
+     * @param downloadUrl 5분 유효 서명된 Supabase Storage 다운로드 URL
+     * @param destinationFile 저장할 로컬 대상 파일 경로 (예: cacheDir/scan_xxx.glb)
+     * @param onProgress 다운로드 진행률 콜백 (다운로드 바이트 수, 총 바이트 수)
+     * @return Result<File> 저장 완료된 File 객체
+     */
+    suspend fun downloadGlb(
+        downloadUrl: String,
+        destinationFile: File,
+        onProgress: ((bytesDownloaded: Long, totalBytes: Long) -> Unit)? = null
+    ): Result<File>
 }
 
 /**
@@ -147,7 +163,8 @@ class FaceScanRepositoryImpl(
                     emit(
                         SessionStatus(
                             status = statusBody.status,
-                            failReason = statusBody.failReason
+                            failReason = statusBody.failReason,
+                            progress = statusBody.progress
                         )
                     )
                     delay(intervalMillis)
@@ -155,4 +172,56 @@ class FaceScanRepositoryImpl(
             }
         }
     }.flowOn(Dispatchers.IO)
+
+    /**
+     * 3. 3D GLB 파일 스트리밍 다운로드 및 로컬 디스크 저장
+     */
+    override suspend fun downloadGlb(
+        downloadUrl: String,
+        destinationFile: File,
+        onProgress: ((bytesDownloaded: Long, totalBytes: Long) -> Unit)?
+    ): Result<File> = withContext(Dispatchers.IO) {
+        try {
+            val response = apiService.downloadGlbFile(downloadUrl)
+            if (!response.isSuccessful) {
+                val code = response.code()
+                val errorBody = response.errorBody()?.string()
+                return@withContext Result.failure(
+                    ApiException(code, "GLB 파일 다운로드 실패", errorBody)
+                )
+            }
+
+            val responseBody = response.body()
+                ?: return@withContext Result.failure(
+                    ApiException(response.code(), "다운로드 응답 본문이 비어있습니다.")
+                )
+
+            // 부모 디렉토리 생성
+            destinationFile.parentFile?.mkdirs()
+
+            val totalBytes = responseBody.contentLength()
+            var bytesDownloaded = 0L
+
+            responseBody.byteStream().use { input ->
+                FileOutputStream(destinationFile).use { output ->
+                    val buffer = ByteArray(8 * 1024)
+                    var read: Int
+                    while (input.read(buffer).also { read = it } != -1) {
+                        output.write(buffer, 0, read)
+                        bytesDownloaded += read
+                        onProgress?.invoke(bytesDownloaded, totalBytes)
+                    }
+                    output.flush()
+                }
+            }
+
+            Result.success(destinationFile)
+        } catch (e: Exception) {
+            // 다운로드 실패 시 잔여 불완전 파일 정리
+            if (destinationFile.exists()) {
+                destinationFile.delete()
+            }
+            Result.failure(e)
+        }
+    }
 }

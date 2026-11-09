@@ -1,10 +1,13 @@
 package com.tangoplus.tangoface.data.api
 
+import okhttp3.ResponseBody
 import retrofit2.Response
 import retrofit2.http.GET
 import retrofit2.http.Header
 import retrofit2.http.POST
 import retrofit2.http.Path
+import retrofit2.http.Streaming
+import retrofit2.http.Url
 
 /**
  * 3D 얼굴 스캔 백엔드 통신용 Retrofit 인터페이스
@@ -30,4 +33,11 @@ interface FaceScanApiService {
         @Path("id") sessionId: String,
         @Header("X-Session-Secret") sessionSecret: String
     ): Response<SessionResultResponse>
+
+    // 4. 서명된 URL로부터 3D GLB 바이너리 파일 스트리밍 다운로드
+    @Streaming
+    @GET
+    suspend fun downloadGlbFile(
+        @Url downloadUrl: String
+    ): Response<ResponseBody>
 }
