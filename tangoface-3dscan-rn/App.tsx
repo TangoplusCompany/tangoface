@@ -26,7 +26,8 @@ import {
   completeUpload,
 } from './src/config/api';
 
-type AppStep = 'pairing' | 'scanning' | 'recorded_preview' | 'success';
+// 단계: 1) PIN 입력 -> 2) 권한 허용 -> 3) 촬영/업로드 -> 4) 미리보기 -> 5) 완료
+type AppStep = 'pairing' | 'permissions' | 'scanning' | 'recorded_preview' | 'success';
 type ScanMode = 'panorama' | 'upload';
 
 export default function App() {
@@ -36,11 +37,11 @@ export default function App() {
   const [sessionId, setSessionId] = useState<string | null>(null);
 
   // 2. 카메라 & 모드 상태
-  const [facing, setFacing] = useState<CameraType>('back'); // 파노라마는 후면 카메라가 기본
+  const [facing, setFacing] = useState<CameraType>('back');
   const [scanMode, setScanMode] = useState<ScanMode>('panorama');
   const [isRecording, setIsRecording] = useState(false);
   const [recordSeconds, setRecordSeconds] = useState(0);
-  const [levelDurationCount, setLevelDurationCount] = useState(0); // 수평 유지 시간 카운트
+  const [levelDurationCount, setLevelDurationCount] = useState(0);
 
   // 3. 녹화된 비디오 Blob 및 업로드 진행 상태
   const [recordedBlob, setRecordedBlob] = useState<Blob | null>(null);
@@ -55,7 +56,7 @@ export default function App() {
 
   // 카메라 권한 및 웹 보안 컨텍스트 매니저
   const {
-    hasPermission,
+    hasPermission: hasCameraPermission,
     isLoading: isCameraLoading,
     errorMessage: cameraError,
     isSecureContext,
@@ -77,11 +78,31 @@ export default function App() {
     setSimulatedValues,
   } = useDeviceOrientation(2.5);
 
+  // 1단계: PIN 번호 입력 성공 시 -> 2단계(권한 요청)로 이동
+  const handlePaired = (token: string, sessId: string) => {
+    setPairToken(token);
+    setSessionId(sessId);
+    // 이미 카메라 권한이 있다면 바로 scanning으로, 없으면 permissions 단계로
+    if (hasCameraPermission) {
+      setAppStep('scanning');
+    } else {
+      setAppStep('permissions');
+    }
+  };
+
+  // 2단계: 카메라 + 자이로 센서 동시 권한 요청
   const handleAllowPermissions = async () => {
     try {
       const sensorPromise = requestSensorPermission();
       const cameraPromise = requestCameraPermission();
-      await Promise.all([cameraPromise, sensorPromise]);
+      const [cameraResult, sensorResult] = await Promise.all([
+        cameraPromise,
+        sensorPromise,
+      ]);
+
+      if (cameraResult) {
+        setAppStep('scanning');
+      }
     } catch (e) {
       console.error('권한 요청 중 오류:', e);
     }
@@ -109,13 +130,6 @@ export default function App() {
     };
   }, [isRecording, orientation.isLevel]);
 
-  // 페어링 완료 콜백
-  const handlePaired = (token: string, sessId: string) => {
-    setPairToken(token);
-    setSessionId(sessId);
-    setAppStep('scanning');
-  };
-
   // 촬영 토글 (시작 시 현재 위치를 자동으로 기준 영점으로 캘리브레이션!)
   const handleToggleRecord = async () => {
     if (!isRecording) {
@@ -123,7 +137,6 @@ export default function App() {
       setRecordSeconds(0);
       setLevelDurationCount(0);
 
-      // WebRTC MediaRecorder 시작
       if (cameraRef.current) {
         cameraRef.current.startRecording();
       }
@@ -131,7 +144,6 @@ export default function App() {
     } else {
       setIsRecording(false);
 
-      // 녹화 정지 및 Blob 획득
       let blob: Blob | null = null;
       if (cameraRef.current) {
         blob = await cameraRef.current.stopRecording();
@@ -160,14 +172,12 @@ export default function App() {
     setUploadProgress(0);
 
     try {
-      // 1. 백엔드에서 서명된 업로드 URL 발급
       setUploadStatusText('1/3 업로드 URL 발급 중...');
       const presignRes = await getPresignedUploadUrl(pairToken);
       if (!presignRes.success || !presignRes.upload_url) {
         throw new Error(presignRes.error || '업로드 URL 발급에 실패했습니다.');
       }
 
-      // 2. Supabase Storage로 직접 PUT 전송
       setUploadStatusText('2/3 Supabase 스토리지로 영상 직접 전송 중...');
       const uploadRes = await uploadVideoDirectly(
         presignRes.upload_url,
@@ -181,14 +191,12 @@ export default function App() {
         throw new Error(uploadRes.error || '영상 파일 전송에 실패했습니다.');
       }
 
-      // 3. 서버에 완료 보고 및 검증
       setUploadStatusText('3/3 파일 검증 및 세션 확정 중...');
       const completeRes = await completeUpload(pairToken);
       if (!completeRes.success) {
         throw new Error(completeRes.error || '업로드 완료 검증에 실패했습니다.');
       }
 
-      // 성공 화면으로 전환
       setAppStep('success');
     } catch (err: any) {
       setUploadError(err.message || '업로드 중 오류가 발생했습니다.');
@@ -243,129 +251,87 @@ export default function App() {
     <SafeAreaView style={styles.outerContainer}>
       <StatusBar style="light" />
       <View style={styles.mobileFrame}>
-        {/* 1단계: 6자리 페어링 번호 입력 화면 */}
+        {/* ========================================================= */}
+        {/* 1단계: 6자리 PIN 페어링 번호 입력 (틀리면 에러 경고 알림) */}
+        {/* ========================================================= */}
         {appStep === 'pairing' && (
           <PhonePairingView onPaired={handlePaired} />
         )}
 
-        {/* 4단계: 업로드 완료 화면 */}
-        {appStep === 'success' && sessionId && (
-          <UploadSuccessView
-            sessionId={sessionId}
-            onReset={handleResetAll}
-          />
-        )}
-
-        {/* 3단계: 촬영 직후 미리보기 및 업로드 확인 화면 */}
-        {appStep === 'recorded_preview' && (
-          <View style={styles.previewContainer}>
-            <View style={styles.previewCard}>
-              <Text style={styles.previewTitle}>촬영 영상 확인</Text>
-              <Text style={styles.previewSubtitle}>
-                수평 스캔이 정상적으로 완료되었습니다.{'\n'}
-                영상을 확인하고 전송 버튼을 눌러주세요.
-              </Text>
-
-              <View style={styles.videoPlayerBox}>
-                {Platform.OS === 'web' && recordedPreviewUrl ? (
-                  // @ts-ignore
-                  <video
-                    src={recordedPreviewUrl}
-                    controls
-                    playsInline
-                    style={{
-                      width: '100%',
-                      height: 220,
-                      backgroundColor: '#000',
-                      borderRadius: 12,
-                      objectFit: 'contain',
-                    }}
-                  />
-                ) : (
-                  <View style={styles.placeholderBox}>
-                    <Text style={styles.placeholderText}>촬영 영상 준비됨</Text>
-                  </View>
-                )}
-              </View>
-
-              {/* 통계 요약 */}
-              <View style={styles.statRow}>
-                <View style={styles.statItem}>
-                  <Text style={styles.statLabel}>촬영 시간</Text>
-                  <Text style={styles.statValue}>{recordSeconds}초</Text>
-                </View>
-                <View style={styles.statItem}>
-                  <Text style={styles.statLabel}>수평 유지율</Text>
-                  <Text style={styles.statHighlight}>
-                    {recordSeconds > 0
-                      ? Math.min(
-                          100,
-                          Math.round((levelDurationCount / recordSeconds) * 100)
-                        )
-                      : 100}
-                    %
-                  </Text>
-                </View>
-              </View>
-
-              {/* 에러 메시지 */}
-              {uploadError && (
-                <View style={styles.errorBox}>
-                  <Text style={styles.errorText}>⚠️ {uploadError}</Text>
-                </View>
-              )}
-
-              {/* 업로드 프로그레스 */}
-              {isUploading && (
-                <View style={styles.uploadingBox}>
-                  <Text style={styles.uploadingText}>{uploadStatusText}</Text>
-                  <View style={styles.progressBarBg}>
-                    <View
-                      style={[
-                        styles.progressBarFill,
-                        { width: `${uploadProgress}%` },
-                      ]}
-                    />
-                  </View>
-                  <Text style={styles.progressPercentText}>{uploadProgress}%</Text>
-                </View>
-              )}
-
-              {/* 액션 버튼 */}
-              <View style={styles.previewButtonGroup}>
-                <TouchableOpacity
-                  style={[
-                    styles.primaryButton,
-                    isUploading ? styles.disabledButton : null,
-                  ]}
-                  onPress={handleUploadRecordedVideo}
-                  disabled={isUploading}
-                  activeOpacity={0.8}
-                >
-                  {isUploading ? (
-                    <ActivityIndicator color="#ffffff" />
-                  ) : (
-                    <Text style={styles.primaryButtonText}>
-                      ☁️ 3D 스캔 영상 전송
-                    </Text>
-                  )}
-                </TouchableOpacity>
-
-                {!isUploading && (
-                  <TouchableOpacity
-                    style={styles.retakeButton}
-                    onPress={handleRetake}
-                    activeOpacity={0.8}
-                  >
-                    <Text style={styles.retakeButtonText}>🔄 다시 촬영하기</Text>
-                  </TouchableOpacity>
-                )}
-              </View>
+        {/* ========================================================= */}
+        {/* 2단계: PIN 통과 후 카메라 + 센서 권한 동시 요청 화면 */}
+        {/* ========================================================= */}
+        {appStep === 'permissions' && (
+          <View style={styles.permissionBox}>
+            <View style={styles.permissionIconCircle}>
+              <Text style={styles.permissionEmoji}>📸</Text>
             </View>
+
+            <View style={styles.pairSuccessTag}>
+              <Text style={styles.pairSuccessTagText}>
+                ✅ PIN 확인 완료 (세션: {sessionId?.slice(0, 8)}...)
+              </Text>
+            </View>
+
+            <Text style={styles.permissionTitle}>카메라 및 센서 권한 허용</Text>
+            <Text style={styles.permissionDesc}>
+              얼굴 3D 파노라마 스캔을 진행하려면{'\n'}
+              <Text style={styles.highlightText}>카메라 영상</Text>과{' '}
+              <Text style={styles.highlightText}>스마트폰 수평 센서</Text> 권한이 필요합니다.
+            </Text>
+
+            {cameraError && (
+              <View style={styles.errorAlertBox}>
+                <Text style={styles.errorAlertText}>{cameraError}</Text>
+              </View>
+            )}
+
+            {!isSecureContext && Platform.OS === 'web' && (
+              <View style={styles.warningBox}>
+                <Text style={styles.warningText}>
+                  💡 크롬 보안 정책: IP 주소 대신{' '}
+                  <Text style={{ fontWeight: '700', color: '#38bdf8' }}>
+                    http://localhost:8081
+                  </Text>{' '}
+                  또는 HTTPS 배포 도메인으로 접속하셔야 카메라가 활성화됩니다.
+                </Text>
+              </View>
+            )}
+
+            {/* 둘 다 허용 버튼 */}
+            <TouchableOpacity
+              style={styles.primaryButton}
+              onPress={handleAllowPermissions}
+              disabled={isCameraLoading}
+              activeOpacity={0.8}
+            >
+              {isCameraLoading ? (
+                <ActivityIndicator color="#ffffff" />
+              ) : (
+                <Text style={styles.primaryButtonText}>
+                  카메라 및 센서 권한 허용하기
+                </Text>
+              )}
+            </TouchableOpacity>
+
+            {/* 또는 파일 첨부로 바로 가기 */}
+            <TouchableOpacity
+              style={styles.fallbackButton}
+              onPress={() => {
+                setScanMode('upload');
+                setAppStep('scanning');
+              }}
+            >
+              <Text style={styles.fallbackButtonText}>
+                📁 카메라 대신 영상 파일 첨부하기
+              </Text>
+            </TouchableOpacity>
           </View>
         )}
 
-        {/* 2단계: 카메라 촬영 또는 영상 첨부 화면 */}
+        {/* ========================================================= */}
+        {/* 3단계: 권한 허용 완료 후 - 촬영 또는 영상 첨부 화면 */}
+        {/* ========================================================= */}
         {appStep === 'scanning' && (
           <>
             {/* 상단 바 & 모드 셀렉터 */}
@@ -431,60 +397,15 @@ export default function App() {
                 pairToken={pairToken}
                 onUploadSuccess={() => setAppStep('success')}
               />
-            ) : !hasPermission ? (
-              // 권한 안내 및 요청 뷰
+            ) : !hasCameraPermission ? (
+              // 카메라 권한이 아직 없는 경우 권한 안내 화면으로 이동
               <View style={styles.permissionBox}>
-                <View style={styles.permissionIconCircle}>
-                  <Text style={styles.permissionEmoji}>📷</Text>
-                </View>
-
-                <Text style={styles.permissionTitle}>카메라 및 센서 권한 필요</Text>
-                <Text style={styles.permissionDesc}>
-                  {Platform.OS === 'web'
-                    ? '브라우저 카메라와 스마트폰 자이로 수평 센서를 사용하려면 접근 권한이 필요합니다.'
-                    : '파노라마 3D 스캔 기능을 사용하려면 카메라 및 센서 접근 권한이 필요합니다.'}
-                </Text>
-
-                {cameraError && (
-                  <View style={styles.errorAlertBox}>
-                    <Text style={styles.errorAlertText}>{cameraError}</Text>
-                  </View>
-                )}
-
-                {!isSecureContext && Platform.OS === 'web' && (
-                  <View style={styles.warningBox}>
-                    <Text style={styles.warningText}>
-                      💡 크롬 보안 정책: IP 주소(예: 192.168.x.x) 대신{' '}
-                      <Text style={{ fontWeight: '700', color: '#38bdf8' }}>
-                        http://localhost:8081
-                      </Text>{' '}
-                      로 주소창을 변경해 접속하셔야 카메라가 활성화됩니다.
-                    </Text>
-                  </View>
-                )}
-
+                <Text style={styles.permissionTitle}>카메라 권한 필요</Text>
                 <TouchableOpacity
                   style={styles.primaryButton}
                   onPress={handleAllowPermissions}
-                  disabled={isCameraLoading}
-                  activeOpacity={0.8}
                 >
-                  {isCameraLoading ? (
-                    <ActivityIndicator color="#ffffff" />
-                  ) : (
-                    <Text style={styles.primaryButtonText}>
-                      카메라 및 센서 권한 허용하기
-                    </Text>
-                  )}
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={styles.fallbackButton}
-                  onPress={() => setScanMode('upload')}
-                >
-                  <Text style={styles.fallbackButtonText}>
-                    📁 카메라 대신 영상 파일 첨부하기
-                  </Text>
+                  <Text style={styles.primaryButtonText}>권한 다시 요청하기</Text>
                 </TouchableOpacity>
               </View>
             ) : (
@@ -513,7 +434,7 @@ export default function App() {
             )}
 
             {/* 하단 컨트롤 패널 */}
-            {scanMode !== 'upload' && hasPermission && (
+            {scanMode !== 'upload' && hasCameraPermission && (
               <View style={styles.bottomControls}>
                 <TouchableOpacity
                   style={styles.iconButton}
@@ -549,6 +470,123 @@ export default function App() {
               </View>
             )}
           </>
+        )}
+
+        {/* ========================================================= */}
+        {/* 4단계: 촬영 직후 미리보기 및 업로드 확인 */}
+        {/* ========================================================= */}
+        {appStep === 'recorded_preview' && (
+          <View style={styles.previewContainer}>
+            <View style={styles.previewCard}>
+              <Text style={styles.previewTitle}>촬영 영상 확인</Text>
+              <Text style={styles.previewSubtitle}>
+                수평 스캔이 정상적으로 완료되었습니다.{'\n'}
+                영상을 확인하고 전송 버튼을 눌러주세요.
+              </Text>
+
+              <View style={styles.videoPlayerBox}>
+                {Platform.OS === 'web' && recordedPreviewUrl ? (
+                  // @ts-ignore
+                  <video
+                    src={recordedPreviewUrl}
+                    controls
+                    playsInline
+                    style={{
+                      width: '100%',
+                      height: 220,
+                      backgroundColor: '#000',
+                      borderRadius: 12,
+                      objectFit: 'contain',
+                    }}
+                  />
+                ) : (
+                  <View style={styles.placeholderBox}>
+                    <Text style={styles.placeholderText}>촬영 영상 준비됨</Text>
+                  </View>
+                )}
+              </View>
+
+              <View style={styles.statRow}>
+                <View style={styles.statItem}>
+                  <Text style={styles.statLabel}>촬영 시간</Text>
+                  <Text style={styles.statValue}>{recordSeconds}초</Text>
+                </View>
+                <View style={styles.statItem}>
+                  <Text style={styles.statLabel}>수평 유지율</Text>
+                  <Text style={styles.statHighlight}>
+                    {recordSeconds > 0
+                      ? Math.min(
+                          100,
+                          Math.round((levelDurationCount / recordSeconds) * 100)
+                        )
+                      : 100}
+                    %
+                  </Text>
+                </View>
+              </View>
+
+              {uploadError && (
+                <View style={styles.errorBox}>
+                  <Text style={styles.errorText}>⚠️ {uploadError}</Text>
+                </View>
+              )}
+
+              {isUploading && (
+                <View style={styles.uploadingBox}>
+                  <Text style={styles.uploadingText}>{uploadStatusText}</Text>
+                  <View style={styles.progressBarBg}>
+                    <View
+                      style={[
+                        styles.progressBarFill,
+                        { width: `${uploadProgress}%` },
+                      ]}
+                    />
+                  </View>
+                  <Text style={styles.progressPercentText}>{uploadProgress}%</Text>
+                </View>
+              )}
+
+              <View style={styles.previewButtonGroup}>
+                <TouchableOpacity
+                  style={[
+                    styles.primaryButton,
+                    isUploading ? styles.disabledButton : null,
+                  ]}
+                  onPress={handleUploadRecordedVideo}
+                  disabled={isUploading}
+                  activeOpacity={0.8}
+                >
+                  {isUploading ? (
+                    <ActivityIndicator color="#ffffff" />
+                  ) : (
+                    <Text style={styles.primaryButtonText}>
+                      ☁️ 3D 스캔 영상 전송
+                    </Text>
+                  )}
+                </TouchableOpacity>
+
+                {!isUploading && (
+                  <TouchableOpacity
+                    style={styles.retakeButton}
+                    onPress={handleRetake}
+                    activeOpacity={0.8}
+                  >
+                    <Text style={styles.retakeButtonText}>🔄 다시 촬영하기</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            </View>
+          </View>
+        )}
+
+        {/* ========================================================= */}
+        {/* 5단계: 영상 전송 완료 안내 화면 */}
+        {/* ========================================================= */}
+        {appStep === 'success' && sessionId && (
+          <UploadSuccessView
+            sessionId={sessionId}
+            onReset={handleResetAll}
+          />
         )}
       </View>
     </SafeAreaView>
@@ -720,6 +758,20 @@ const styles = StyleSheet.create({
   permissionEmoji: {
     fontSize: 32,
   },
+  pairSuccessTag: {
+    backgroundColor: 'rgba(16, 185, 129, 0.15)',
+    borderRadius: 20,
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(16, 185, 129, 0.3)',
+  },
+  pairSuccessTagText: {
+    color: '#34d399',
+    fontSize: 12,
+    fontWeight: '700',
+  },
   permissionTitle: {
     fontSize: 20,
     fontWeight: '800',
@@ -732,6 +784,10 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 18,
     marginBottom: 20,
+  },
+  highlightText: {
+    color: '#38bdf8',
+    fontWeight: '700',
   },
   errorAlertBox: {
     width: '100%',
