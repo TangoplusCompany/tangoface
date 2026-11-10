@@ -112,23 +112,15 @@ export const VideoUploadView: React.FC<VideoUploadViewProps> = ({
       {!selectedVideo ? (
         // 파일 선택 전 UI
         <View style={styles.emptyCard}>
-          <View style={styles.uploadIconCircle}>
-            <Text style={styles.uploadEmoji}>🎬</Text>
-          </View>
-
-          <Text style={styles.mainTitle}>3D 스캔용 영상 첨부</Text>
-          <Text style={styles.description}>
-            크롬, 사파리, 파이어폭스 등 모든 브라우저에서{'\n'}
-            동영상 파일(.mp4, .mov, .webm)을 선택할 수 있습니다.
-          </Text>
+          <Text style={styles.mainTitle}>3D 스캔 동영상 파일 첨부</Text>
 
           {/* 파일 제약조건 안내 태그 */}
           <View style={styles.badgeRow}>
             <View style={styles.conditionBadge}>
-              <Text style={styles.badgeText}>⏱ 최대 30초 이내</Text>
+              <Text style={styles.badgeText}>최대 20초 이내</Text>
             </View>
             <View style={styles.conditionBadge}>
-              <Text style={styles.badgeText}>📦 최대 100MB 이하</Text>
+              <Text style={styles.badgeText}>최대 50MB 이내</Text>
             </View>
           </View>
 
@@ -168,7 +160,7 @@ export const VideoUploadView: React.FC<VideoUploadViewProps> = ({
               />
             ) : (
               <View style={styles.nativeVideoPlaceholder}>
-                <Text style={styles.nativeVideoText}>🎥 {selectedVideo.name}</Text>
+                <Text style={styles.nativeVideoText}>{selectedVideo.name}</Text>
               </View>
             )}
           </View>
@@ -184,7 +176,7 @@ export const VideoUploadView: React.FC<VideoUploadViewProps> = ({
             <View style={styles.infoRow}>
               <Text style={styles.infoLabel}>재생 시간</Text>
               <Text style={styles.infoHighlight}>
-                {selectedVideo.durationSec}초 (기준 충족 ✅)
+                {selectedVideo.durationSec}초 (기준 충족)
               </Text>
             </View>
             <View style={styles.infoRow}>
@@ -196,11 +188,11 @@ export const VideoUploadView: React.FC<VideoUploadViewProps> = ({
           {/* 에러 메시지 */}
           {errorMessage && (
             <View style={styles.errorBox}>
-              <Text style={styles.errorText}>⚠️ {errorMessage}</Text>
+              <Text style={styles.errorText}>{errorMessage}</Text>
             </View>
           )}
 
-          {/* 업로드 진행 상태 */}
+          
           {isUploading && (
             <View style={styles.uploadingBox}>
               <Text style={styles.uploadingText}>{uploadStatusText}</Text>
@@ -255,45 +247,22 @@ const styles = StyleSheet.create({
     padding: 20,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#090d16',
+    backgroundColor: '#161214',
   },
   emptyCard: {
     width: '100%',
     maxWidth: 360,
-    backgroundColor: 'rgba(30, 41, 59, 0.7)',
+    backgroundColor: 'rgba(28, 25, 26, 0.85)',
     borderRadius: 20,
-    borderWidth: 1.5,
-    borderColor: 'rgba(56, 189, 248, 0.25)',
     padding: 24,
     alignItems: 'center',
-  },
-  uploadIconCircle: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: 'rgba(56, 189, 248, 0.15)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: 'rgba(56, 189, 248, 0.3)',
-  },
-  uploadEmoji: {
-    fontSize: 28,
   },
   mainTitle: {
     fontSize: 20,
     fontWeight: '800',
     color: '#ffffff',
-    marginBottom: 8,
+    marginBottom: 16,
     textAlign: 'center',
-  },
-  description: {
-    fontSize: 13,
-    color: '#94a3b8',
-    textAlign: 'center',
-    lineHeight: 18,
-    marginBottom: 20,
   },
   badgeRow: {
     flexDirection: 'row',
@@ -301,22 +270,20 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   conditionBadge: {
-    backgroundColor: 'rgba(15, 23, 42, 0.8)',
-    paddingHorizontal: 10,
-    paddingVertical: 5,
+    backgroundColor: '#161214',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
     borderRadius: 8,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
   },
   badgeText: {
-    fontSize: 11,
-    color: '#38bdf8',
+    fontSize: 12,
+    color: '#FF8794',
     fontWeight: '600',
   },
   selectButton: {
     width: '100%',
     height: 48,
-    backgroundColor: '#0284c7',
+    backgroundColor: '#FF0055',
     borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
@@ -329,10 +296,8 @@ const styles = StyleSheet.create({
   previewCard: {
     width: '100%',
     maxWidth: 380,
-    backgroundColor: 'rgba(30, 41, 59, 0.85)',
+    backgroundColor: 'rgba(28, 25, 26, 0.9)',
     borderRadius: 20,
-    borderWidth: 1.5,
-    borderColor: 'rgba(56, 189, 248, 0.3)',
     padding: 20,
     alignItems: 'center',
   },
@@ -347,8 +312,6 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     overflow: 'hidden',
     marginBottom: 14,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
   },
   nativeVideoPlaceholder: {
     width: '100%',
@@ -363,46 +326,40 @@ const styles = StyleSheet.create({
   },
   infoTable: {
     width: '100%',
-    backgroundColor: 'rgba(15, 23, 42, 0.6)',
+    backgroundColor: '#161214',
     borderRadius: 12,
     padding: 12,
     marginBottom: 14,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.05)',
   },
   infoRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     paddingVertical: 5,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 255, 255, 0.05)',
   },
   infoLabel: {
     fontSize: 12,
-    color: '#64748b',
+    color: '#9E9C9C',
   },
   infoValue: {
     fontSize: 12,
-    color: '#e2e8f0',
+    color: '#DCD9D9',
     fontWeight: '600',
     maxWidth: '65%',
   },
   infoHighlight: {
     fontSize: 12,
-    color: '#34d399',
+    color: '#00FFCC',
     fontWeight: '700',
   },
   errorBox: {
     width: '100%',
-    backgroundColor: 'rgba(239, 68, 68, 0.15)',
+    backgroundColor: 'rgba(255, 84, 73, 0.15)',
     borderRadius: 8,
     padding: 8,
     marginBottom: 12,
-    borderWidth: 1,
-    borderColor: 'rgba(239, 68, 68, 0.3)',
   },
   errorText: {
-    color: '#f87171',
+    color: '#FF5449',
     fontSize: 12,
     textAlign: 'center',
   },
@@ -412,7 +369,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   uploadingText: {
-    color: '#38bdf8',
+    color: '#FF8794',
     fontSize: 12,
     fontWeight: '600',
     marginBottom: 6,
@@ -427,10 +384,10 @@ const styles = StyleSheet.create({
   },
   progressBarFill: {
     height: '100%',
-    backgroundColor: '#38bdf8',
+    backgroundColor: '#FF0055',
   },
   progressPercentText: {
-    color: '#94a3b8',
+    color: '#9E9C9C',
     fontSize: 11,
     fontWeight: '700',
   },
@@ -441,7 +398,7 @@ const styles = StyleSheet.create({
   actionPrimaryButton: {
     width: '100%',
     height: 48,
-    backgroundColor: '#0284c7',
+    backgroundColor: '#FF0055',
     borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
@@ -452,21 +409,19 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   disabledButton: {
-    backgroundColor: '#334155',
+    backgroundColor: '#30292B',
     opacity: 0.6,
   },
   actionSecondaryButton: {
     width: '100%',
     height: 44,
-    backgroundColor: 'transparent',
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
     borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.15)',
   },
   actionSecondaryText: {
-    color: '#94a3b8',
+    color: '#9E9C9C',
     fontSize: 14,
     fontWeight: '600',
   },

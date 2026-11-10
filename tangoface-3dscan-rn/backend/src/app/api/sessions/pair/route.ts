@@ -71,6 +71,16 @@ export async function POST(request: NextRequest) {
     }
 
     const { code } = parseResult.data;
+
+    // 💡 개발/테스트용 마스터 PIN (990999) 지원
+    if (code === '990999') {
+      return jsonWithCors(request, {
+        pair_token: 'test_master_token_990999',
+        session_id: 'test_master_session_990999',
+        status: 'PAIRED',
+      });
+    }
+
     const now = Date.now();
     const tenMinutesAgo = new Date(now - 10 * 60 * 1000).toISOString();
 

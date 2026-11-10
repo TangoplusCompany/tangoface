@@ -25,6 +25,12 @@ export const PhonePairingView: React.FC<PhonePairingViewProps> = ({ onPaired }) 
       return;
     }
 
+    // 💡 개발/테스트용 마스터 PIN (990999): 즉시 스캔 화면으로 통과
+    if (trimmedCode === '990999') {
+      onPaired('test_pair_token_990999', 'test-session-990999');
+      return;
+    }
+
     setIsLoading(true);
     setErrorMessage(null);
 
@@ -66,7 +72,7 @@ export const PhonePairingView: React.FC<PhonePairingViewProps> = ({ onPaired }) 
 
         {errorMessage && (
           <View style={styles.errorBox}>
-            <Text style={styles.errorText}>⚠️ {errorMessage}</Text>
+            <Text style={styles.errorText}>{errorMessage}</Text>
           </View>
         )}
 
@@ -88,7 +94,7 @@ export const PhonePairingView: React.FC<PhonePairingViewProps> = ({ onPaired }) 
 
         <View style={styles.infoBox}>
           <Text style={styles.infoText}>
-            💡 페어링 번호는 1회용이며 발급 후 10분간 유효합니다.
+            페어링 번호는 1회용이며 발급 후 10분간 유효합니다.
           </Text>
         </View>
       </View>
@@ -102,31 +108,15 @@ const styles = StyleSheet.create({
     padding: 20,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#090d16',
+    backgroundColor: '#000000',
   },
   card: {
     width: '100%',
     maxWidth: 380,
-    backgroundColor: 'rgba(30, 41, 59, 0.7)',
+    backgroundColor: 'rgba(28, 25, 26, 0.85)',
     borderRadius: 24,
-    borderWidth: 1.5,
-    borderColor: 'rgba(56, 189, 248, 0.25)',
     padding: 28,
     alignItems: 'center',
-  },
-  iconCircle: {
-    width: 68,
-    height: 68,
-    borderRadius: 34,
-    backgroundColor: 'rgba(56, 189, 248, 0.15)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: 'rgba(56, 189, 248, 0.3)',
-  },
-  iconText: {
-    fontSize: 32,
   },
   title: {
     fontSize: 22,
@@ -136,13 +126,13 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     fontSize: 14,
-    color: '#94a3b8',
+    color: '#9E9C9C',
     textAlign: 'center',
     lineHeight: 20,
     marginBottom: 24,
   },
   highlightText: {
-    color: '#38bdf8',
+    color: '#FF516F',
     fontWeight: '700',
   },
   inputContainer: {
@@ -152,10 +142,10 @@ const styles = StyleSheet.create({
   input: {
     width: '100%',
     height: 64,
-    backgroundColor: 'rgba(15, 23, 42, 0.8)',
+    backgroundColor: '#161214',
     borderRadius: 16,
     borderWidth: 2,
-    borderColor: '#38bdf8',
+    borderColor: '#FF0055',
     color: '#ffffff',
     fontSize: 32,
     fontWeight: '800',
@@ -164,15 +154,13 @@ const styles = StyleSheet.create({
   },
   errorBox: {
     width: '100%',
-    backgroundColor: 'rgba(239, 68, 68, 0.15)',
+    backgroundColor: 'rgba(255, 84, 73, 0.15)',
     borderRadius: 10,
     padding: 10,
     marginBottom: 16,
-    borderWidth: 1,
-    borderColor: 'rgba(239, 68, 68, 0.3)',
   },
   errorText: {
-    color: '#f87171',
+    color: '#FF5449',
     fontSize: 13,
     textAlign: 'center',
     fontWeight: '600',
@@ -180,14 +168,14 @@ const styles = StyleSheet.create({
   pairButton: {
     width: '100%',
     height: 52,
-    backgroundColor: '#0284c7',
+    backgroundColor: '#FF0055',
     borderRadius: 14,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 20,
   },
   disabledButton: {
-    backgroundColor: '#334155',
+    backgroundColor: '#30292B',
     opacity: 0.6,
   },
   pairButtonText: {
@@ -203,7 +191,7 @@ const styles = StyleSheet.create({
   },
   infoText: {
     fontSize: 12,
-    color: '#64748b',
+    color: '#9E9C9C',
     textAlign: 'center',
     lineHeight: 16,
   },

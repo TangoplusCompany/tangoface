@@ -10,7 +10,7 @@ export interface SelectedVideoInfo {
 }
 
 const MAX_DURATION_SEC = 30;
-const MAX_SIZE_MB = 100;
+const MAX_SIZE_MB = 50;
 
 /**
  * 웹 브라우저에서 Video 엘리먼트를 통해 실제 비디오 duration(초) 측정
@@ -65,7 +65,7 @@ export async function pickVideoWithDurationLimit(): Promise<SelectedVideoInfo | 
 
         const sizeMB = Math.round((file.size / (1024 * 1024)) * 10) / 10;
         if (sizeMB > MAX_SIZE_MB) {
-          alert(`파일 용량이 너무 큽니다 (${sizeMB}MB).\n최대 ${MAX_SIZE_MB}MB 이하의 영상만 지원됩니다.`);
+          alert(`파일 용량이 초과되었습니다 (${sizeMB}MB).\n최대 ${MAX_SIZE_MB}MB 이내의 영상만 지원됩니다.`);
           resolve(null);
           return;
         }
@@ -76,7 +76,7 @@ export async function pickVideoWithDurationLimit(): Promise<SelectedVideoInfo | 
 
           if (durationSec > MAX_DURATION_SEC) {
             alert(
-              `⚠️ 영상 길이가 30초를 초과했습니다.\n(선택된 영상: ${durationSec}초)\n30초 이내의 영상 파일만 첨부해주세요.`
+              `영상 길이가 30초를 초과했습니다.\n(선택된 영상: ${durationSec}초)\n30초 이내의 영상 파일만 첨부해주세요.`
             );
             resolve(null);
             return;
@@ -116,7 +116,7 @@ export async function pickVideoWithDurationLimit(): Promise<SelectedVideoInfo | 
     const durationSec = asset.duration ? Math.round((asset.duration > 1000 ? asset.duration / 1000 : asset.duration) * 10) / 10 : 0;
 
     if (durationSec > MAX_DURATION_SEC) {
-      alert(`⚠️ 영상 길이가 30초를 초과했습니다. (${durationSec}초)`);
+      alert(`영상 길이가 30초를 초과했습니다. (${durationSec}초)`);
       return null;
     }
 

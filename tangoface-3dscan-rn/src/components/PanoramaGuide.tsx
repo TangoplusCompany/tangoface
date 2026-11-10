@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   StyleSheet,
   Text,
@@ -22,6 +22,16 @@ interface PanoramaGuideProps {
   isSensorActive?: boolean;
 }
 
+/**
+ * 부채꼴 원테두리 스캔 목표 회전 범위 (도)
+ * - 얼굴을 구(sphere)라고 할 때 좌측(-60°)에서 우측(+60°)까지 지평면(X-Z) 상에서 부채꼴 원호를 따라 이동
+ * - 총 120° 원호 회전 기준, 100° 도달 시 100% 매핑
+ */
+const TARGET_SWEEP_DEGREES = 100.0;
+const TRACK_WIDTH = 280; // 트랙 전체 너비 (px)
+const POINTER_SIZE = 24; // 인디케이터 크기
+const MAX_TRAVEL_X = TRACK_WIDTH - POINTER_SIZE - 12; // 이동 가능 최대 X (px)
+
 export const PanoramaGuide: React.FC<PanoramaGuideProps> = ({
   orientation,
   isRecording,
@@ -35,68 +45,23 @@ export const PanoramaGuide: React.FC<PanoramaGuideProps> = ({
   onRequestSensorPermission,
   isSensorActive = false,
 }) => {
-  const { deltaRoll, deltaPitch, deltaHeading, isLevel } = orientation;
+  const { deltaHeading } = orientation;
 
-  // 가이드 텍스트 및 상태 계산
-  const getGuideFeedback = () => {
-    if (isLevel) {
-      return {
-        text: '수평 유지됨 (완벽한 상태)',
-        color: '#22c55e', // green
-        bgColor: 'rgba(34, 197, 94, 0.25)',
-        borderColor: '#22c55e',
-      };
-    }
+  // 1. 부채꼴 원테두리 진행도(Progress) 계산: 0 ~ 1.0 (0% ~ 100%)
+  // 상하 기울기(Y축) 배제, X-Z 지평면 상에서의 순수 회전각(deltaHeading)을 기준으로 계산
+  const progressRatio = useMemo(() => {
+    if (!isRecording) return 0;
+    const sweep = Math.abs(deltaHeading);
+    return Math.min(1.0, Math.max(0, sweep / TARGET_SWEEP_DEGREES));
+  }, [deltaHeading, isRecording]);
 
-    if (Math.abs(deltaRoll) > 3) {
-      if (deltaRoll > 0) {
-        return {
-          text: `왼쪽으로 기울이세요 (${Math.abs(deltaRoll).toFixed(1)}°)`,
-          color: '#f59e0b',
-          bgColor: 'rgba(245, 158, 11, 0.25)',
-          borderColor: '#f59e0b',
-        };
-      } else {
-        return {
-          text: `오른쪽으로 기울이세요 (${Math.abs(deltaRoll).toFixed(1)}°)`,
-          color: '#f59e0b',
-          bgColor: 'rgba(245, 158, 11, 0.25)',
-          borderColor: '#f59e0b',
-        };
-      }
-    }
+  const progressPercent = Math.round(progressRatio * 100);
 
-    if (deltaPitch > 3) {
-      return {
-        text: `카메라를 아래로 내리세요 (${Math.abs(deltaPitch).toFixed(1)}°)`,
-        color: '#f43f5e',
-        bgColor: 'rgba(244, 63, 94, 0.25)',
-        borderColor: '#f43f5e',
-      };
-    } else {
-      return {
-        text: `카메라를 위로 들어올리세요 (${Math.abs(deltaPitch).toFixed(1)}°)`,
-        color: '#f43f5e',
-        bgColor: 'rgba(244, 63, 94, 0.25)',
-        borderColor: '#f43f5e',
-      };
-    }
-  };
+  // 2. 상단 인디케이터 X 좌표 (0px ~ MAX_TRAVEL_X px)
+  const trackIndicatorX = progressRatio * MAX_TRAVEL_X;
 
-  const feedback = getGuideFeedback();
-
-  // 상단 파노라마 트랙 인디케이터 좌표 계산
-  // deltaPitch에 따른 Y축 오차 (-25px ~ +25px)
-  const trackIndicatorY = Math.max(-24, Math.min(24, -deltaPitch * 2.5));
-
-  // deltaHeading에 따른 X축 진행도 (0% ~ 100%, 0도 ~ 90도 회전을 트랙 전체 폭 260px에 매핑)
-  const clampedHeading = Math.max(0, Math.min(90, Math.abs(deltaHeading)));
-  const trackIndicatorX = (clampedHeading / 90) * 230; // 0 ~ 230px
-
-  // 중앙 수평선 이동 및 회전
-  // pitch에 따라 상하 -35px ~ 35px, roll에 따라 -45deg ~ 45deg
-  const horizonTranslateY = Math.max(-35, Math.min(35, -deltaPitch * 2));
-  const horizonRotateDeg = Math.max(-45, Math.min(45, deltaRoll));
+  // 3. 트랙 내부 채워지는 프로그레스 바 너비 (0px ~ TRACK_WIDTH px)
+  const fillWidth = progressRatio * (TRACK_WIDTH - 6);
 
   // 시뮬레이터 슬라이더 제어용 로컬 상태 (PC 브라우저 테스트)
   const [simRoll, setSimRoll] = useState(0);
@@ -112,16 +77,24 @@ export const PanoramaGuide: React.FC<PanoramaGuideProps> = ({
 
   return (
     <View style={styles.container} pointerEvents="box-none">
-      {/* 1. 상단 파노라마 가이드 트랙 (아이폰 파노라마 스타일) */}
+      {/* ========================================================= */}
+      {/* 상단 파노라마 트랙: X-Z 지평면 부채꼴 궤적 게이지 */}
+      {/* ========================================================= */}
       <View style={styles.topTrackSection}>
         <View style={styles.trackContainer}>
-          {/* 수평 기준선 (골드/그린 점선) */}
+          {/* 채워지는 프로그레스 게이지 바 (좌측 -> 우측) */}
           <View
             style={[
-              styles.trackCenterLine,
-              { backgroundColor: isLevel ? '#22c55e' : 'rgba(255, 255, 255, 0.4)' },
+              styles.trackFillBar,
+              {
+                width: fillWidth,
+                backgroundColor: progressPercent >= 100 ? '#00FFCC' : '#FF0055',
+              },
             ]}
           />
+
+          {/* 중앙 수평 기준선 */}
+          <View style={styles.trackCenterLine} />
 
           {/* 패닝 진행 방향 가이드 화살표 */}
           <View style={styles.trackArrows}>
@@ -132,15 +105,14 @@ export const PanoramaGuide: React.FC<PanoramaGuideProps> = ({
             <Text style={styles.arrowText}>▶</Text>
           </View>
 
-          {/* 현재 카메라 위치 및 수평 포인터 */}
+          {/* 움직이는 인디케이터 포인터 (0% -> 100% 도달) */}
           <View
             style={[
               styles.trackPointer,
               {
-                left: 14 + trackIndicatorX,
-                transform: [{ translateY: trackIndicatorY }],
-                borderColor: feedback.borderColor,
-                backgroundColor: isLevel ? '#22c55e' : '#f59e0b',
+                left: 6 + trackIndicatorX,
+                borderColor: progressPercent >= 100 ? '#00FFCC' : '#FF0055',
+                backgroundColor: progressPercent >= 100 ? '#00FFCC' : '#FF0055',
               },
             ]}
           >
@@ -148,152 +120,46 @@ export const PanoramaGuide: React.FC<PanoramaGuideProps> = ({
           </View>
         </View>
 
-        <Text style={styles.trackSubText}>
-          {isRecording
-            ? '수평선을 따라 화살표 방향으로 천천히 회전하세요'
-            : '수평 기준을 맞춘 후 촬영을 시작하세요'}
-        </Text>
-      </View>
-
-      {/* 2. 중앙 실시간 수평계 (DSLR / 항공기 인공 수평선) */}
-      <View style={styles.centerHorizonWrapper} pointerEvents="none">
-        {/* 좌측 고정 날개선 */}
-        <View
-          style={[
-            styles.fixedWingLeft,
-            { backgroundColor: isLevel ? '#22c55e' : 'rgba(255, 255, 255, 0.8)' },
-          ]}
-        />
-
-        {/* 중앙 움직이는 수평 바 (기기 롤/피치에 반응) */}
-        <View
-          style={[
-            styles.movingHorizonLine,
-            {
-              transform: [
-                { translateY: horizonTranslateY },
-                { rotate: `${horizonRotateDeg}deg` },
-              ],
-              borderColor: isLevel ? '#22c55e' : '#f59e0b',
-              backgroundColor: isLevel ? '#22c55e' : 'rgba(245, 158, 11, 0.8)',
-            },
-          ]}
-        >
-          {/* 중앙 조준점 원 */}
-          <View
-            style={[
-              styles.horizonCenterDot,
-              { borderColor: isLevel ? '#22c55e' : '#f59e0b' },
-            ]}
-          />
-        </View>
-
-        {/* 우측 고정 날개선 */}
-        <View
-          style={[
-            styles.fixedWingRight,
-            { backgroundColor: isLevel ? '#22c55e' : 'rgba(255, 255, 255, 0.8)' },
-          ]}
-        />
-      </View>
-
-      {/* 3. 수평 상태 뱃지 & 실시간 각도 표시 */}
-      <View style={styles.badgeSection}>
-        <View
-          style={[
-            styles.feedbackBadge,
-            {
-              backgroundColor: feedback.bgColor,
-              borderColor: feedback.borderColor,
-            },
-          ]}
-        >
-          <View
-            style={[
-              styles.statusDot,
-              { backgroundColor: feedback.color },
-            ]}
-          />
-          <Text style={[styles.feedbackText, { color: feedback.color }]}>
-            {feedback.text}
+        {/* 진행 상태 안내 문구 및 퍼센트 */}
+        <View style={styles.statusRow}>
+          <Text style={styles.trackSubText}>
+            {!isRecording
+              ? '얼굴 좌측(-60°)을 바라본 상태에서 촬영을 시작하세요'
+              : progressPercent >= 100
+              ? '100% 스캔 완료! 촬영 종료 버튼을 눌러주세요'
+              : `진행률 ${progressPercent}% | 우측(+60°)으로 천천히 이동하세요`}
           </Text>
         </View>
-
       </View>
 
-      {/* 5. PC 웹 브라우저용 시뮬레이션 제어 바 (센서 없는 환경 테스트) */}
-      {Platform.OS === 'web' && (
+      {/* ========================================================= */}
+      {/* PC 웹 브라우저용 시뮬레이션 제어 바 (센서 없는 환경 테스트) */}
+      {/* ========================================================= */}
+      {Platform.OS === 'web' && isSimulated && (
         <View style={styles.simWrapper}>
-
-
-          {isSimulated && (
-            <View style={styles.simCard}>
-              <Text style={styles.simCardTitle}>가상 기울기 조절 (PC 테스트용)</Text>
-
-              {/* 좌우 틸트 프리셋 버튼 */}
-              <View style={styles.simBtnRow}>
-                <Text style={styles.simLabel}>좌우(Roll):</Text>
-                <TouchableOpacity
-                  style={styles.simTinyBtn}
-                  onPress={() => updateSim(simRoll - 3, simPitch, simHeading)}
-                >
-                  <Text style={styles.simTinyBtnText}>◀ -3°</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.simTinyBtn, styles.simActiveBtn]}
-                  onPress={() => updateSim(0, simPitch, simHeading)}
-                >
-                  <Text style={styles.simTinyBtnText}>수평 0°</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.simTinyBtn}
-                  onPress={() => updateSim(simRoll + 3, simPitch, simHeading)}
-                >
-                  <Text style={styles.simTinyBtnText}>+3° ▶</Text>
-                </TouchableOpacity>
-              </View>
-
-              {/* 상하 피치 프리셋 버튼 */}
-              <View style={styles.simBtnRow}>
-                <Text style={styles.simLabel}>상하(Pitch):</Text>
-                <TouchableOpacity
-                  style={styles.simTinyBtn}
-                  onPress={() => updateSim(simRoll, simPitch - 3, simHeading)}
-                >
-                  <Text style={styles.simTinyBtnText}>▲ 위 3°</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.simTinyBtn, styles.simActiveBtn]}
-                  onPress={() => updateSim(simRoll, 0, simHeading)}
-                >
-                  <Text style={styles.simTinyBtnText}>중앙 0°</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.simTinyBtn}
-                  onPress={() => updateSim(simRoll, simPitch + 3, simHeading)}
-                >
-                  <Text style={styles.simTinyBtnText}>▼ 아래 3°</Text>
-                </TouchableOpacity>
-              </View>
-
-              {/* 패닝 진행 회전 버튼 */}
-              <View style={styles.simBtnRow}>
-                <Text style={styles.simLabel}>패닝(Pan):</Text>
-                <TouchableOpacity
-                  style={styles.simTinyBtn}
-                  onPress={() => updateSim(simRoll, simPitch, 0)}
-                >
-                  <Text style={styles.simTinyBtnText}>시작점</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.simTinyBtn}
-                  onPress={() => updateSim(simRoll, simPitch, Math.min(90, simHeading + 15))}
-                >
-                  <Text style={styles.simTinyBtnText}>+15° 회전 ▶</Text>
-                </TouchableOpacity>
-              </View>
+          <View style={styles.simCard}>
+            <Text style={styles.simCardTitle}>가상 회전 조절 (PC 테스트용)</Text>
+            <View style={styles.simBtnRow}>
+              <TouchableOpacity
+                style={styles.simTinyBtn}
+                onPress={() => updateSim(0, 0, 0)}
+              >
+                <Text style={styles.simTinyBtnText}>시작점 (0%)</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.simTinyBtn}
+                onPress={() => updateSim(0, 0, TARGET_SWEEP_DEGREES * 0.5)}
+              >
+                <Text style={styles.simTinyBtnText}>중간 (50%)</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.simTinyBtn, styles.simActiveBtn]}
+                onPress={() => updateSim(0, 0, TARGET_SWEEP_DEGREES)}
+              >
+                <Text style={styles.simTinyBtnText}>완료 (100%)</Text>
+              </TouchableOpacity>
             </View>
-          )}
+          </View>
         </View>
       )}
     </View>
@@ -307,39 +173,43 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingTop: 14,
-    paddingBottom: 16,
+    paddingTop: 16,
     zIndex: 10,
   },
   topTrackSection: {
     alignItems: 'center',
   },
   trackContainer: {
-    width: 270,
-    height: 52,
-    backgroundColor: 'rgba(15, 23, 42, 0.75)',
-    borderRadius: 14,
-    borderWidth: 1.5,
-    borderColor: 'rgba(255, 255, 255, 0.25)',
+    width: TRACK_WIDTH,
+    height: 48,
+    backgroundColor: 'rgba(28, 25, 26, 0.88)',
+    borderRadius: 24,
     justifyContent: 'center',
     position: 'relative',
     overflow: 'hidden',
-    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.4)',
+  },
+  trackFillBar: {
+    position: 'absolute',
+    left: 3,
+    top: 3,
+    bottom: 3,
+    borderRadius: 20,
+    opacity: 0.45,
   },
   trackCenterLine: {
     position: 'absolute',
-    left: 10,
-    right: 10,
+    left: 12,
+    right: 12,
     height: 2,
+    backgroundColor: 'rgba(255, 255, 255, 0.25)',
     borderRadius: 1,
   },
   trackArrows: {
     flexDirection: 'row',
     justifyContent: 'space-around',
-    paddingHorizontal: 20,
-    opacity: 0.25,
+    paddingHorizontal: 24,
+    opacity: 0.3,
   },
   arrowText: {
     color: '#ffffff',
@@ -348,199 +218,67 @@ const styles = StyleSheet.create({
   },
   trackPointer: {
     position: 'absolute',
-    width: 22,
-    height: 22,
-    borderRadius: 11,
+    width: POINTER_SIZE,
+    height: POINTER_SIZE,
+    borderRadius: POINTER_SIZE / 2,
     borderWidth: 2.5,
     alignItems: 'center',
     justifyContent: 'center',
-    boxShadow: '0 0 10px rgba(0, 0, 0, 0.6)',
   },
   pointerInner: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
     backgroundColor: '#ffffff',
   },
+  statusRow: {
+    marginTop: 8,
+    alignItems: 'center',
+  },
   trackSubText: {
-    color: '#cbd5e1',
-    fontSize: 12,
-    fontWeight: '500',
-    marginTop: 6,
-    textAlign: 'center',
-    textShadowColor: 'rgba(0, 0, 0, 0.75)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 3,
-  },
-  centerHorizonWrapper: {
-    alignSelf: 'center',
-    width: 280,
-    height: 100,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    position: 'relative',
-  },
-  fixedWingLeft: {
-    width: 44,
-    height: 3,
-    borderRadius: 2,
-  },
-  fixedWingRight: {
-    width: 44,
-    height: 3,
-    borderRadius: 2,
-  },
-  movingHorizonLine: {
-    width: 140,
-    height: 3,
-    borderRadius: 2,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  horizonCenterDot: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    borderWidth: 2,
-    backgroundColor: 'transparent',
-  },
-  badgeSection: {
-    alignItems: 'center',
-    marginTop: -10,
-  },
-  feedbackBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 7,
-    paddingHorizontal: 16,
-    borderRadius: 24,
-    borderWidth: 1.5,
-  },
-  statusDot: {
-    width: 9,
-    height: 9,
-    borderRadius: 4.5,
-    marginRight: 8,
-  },
-  feedbackText: {
+    color: '#FFFFFF',
     fontSize: 13,
-    fontWeight: '700',
-  },
-  angleDetailRow: {
-    flexDirection: 'row',
-    gap: 8,
-    marginTop: 6,
-  },
-  angleChip: {
-    backgroundColor: 'rgba(15, 23, 42, 0.75)',
-    paddingVertical: 3,
-    paddingHorizontal: 9,
-    borderRadius: 10,
-    color: '#94a3b8',
-    fontSize: 11,
-    fontWeight: '500',
-  },
-  angleValue: {
-    color: '#f8fafc',
-    fontWeight: '700',
-  },
-  controlRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    marginVertical: 4,
-  },
-  calibrateButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(30, 41, 59, 0.9)',
-    borderWidth: 1,
-    borderColor: '#38bdf8',
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderRadius: 20,
-  },
-  calibrateIcon: {
-    marginRight: 6,
-    fontSize: 14,
-  },
-  calibrateButtonText: {
-    color: '#38bdf8',
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  resetButton: {
-    backgroundColor: 'rgba(30, 41, 59, 0.9)',
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: '#475569',
-  },
-  resetButtonText: {
-    color: '#94a3b8',
-    fontSize: 12,
-    fontWeight: '500',
+    fontWeight: '600',
+    textAlign: 'center',
+    backgroundColor: 'rgba(22, 18, 20, 0.85)',
+    paddingVertical: 6,
+    paddingHorizontal: 14,
+    borderRadius: 16,
+    overflow: 'hidden',
   },
   simWrapper: {
-    alignItems: 'center',
-    marginTop: 2,
-  },
-  simToggleBtn: {
-    backgroundColor: 'rgba(15, 23, 42, 0.85)',
-    paddingVertical: 5,
-    paddingHorizontal: 12,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: '#334155',
-  },
-  simToggleText: {
-    color: '#94a3b8',
-    fontSize: 11,
-    fontWeight: '600',
+    position: 'absolute',
+    bottom: 24,
+    alignSelf: 'center',
   },
   simCard: {
-    marginTop: 6,
-    backgroundColor: 'rgba(15, 23, 42, 0.95)',
-    padding: 10,
+    backgroundColor: 'rgba(28, 25, 26, 0.95)',
+    padding: 12,
     borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#334155',
-    width: '100%',
-    maxWidth: 320,
   },
   simCardTitle: {
-    color: '#e2e8f0',
-    fontSize: 11,
-    fontWeight: '700',
-    marginBottom: 6,
+    color: '#9E9C9C',
+    fontSize: 12,
+    fontWeight: '600',
+    marginBottom: 8,
     textAlign: 'center',
   },
   simBtnRow: {
     flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginVertical: 3,
-  },
-  simLabel: {
-    color: '#94a3b8',
-    fontSize: 11,
-    width: 80,
+    gap: 8,
   },
   simTinyBtn: {
-    backgroundColor: '#1e293b',
-    paddingVertical: 4,
-    paddingHorizontal: 8,
+    backgroundColor: '#30292B',
+    paddingVertical: 6,
+    paddingHorizontal: 10,
     borderRadius: 6,
   },
   simActiveBtn: {
-    backgroundColor: '#0369a1',
+    backgroundColor: '#FF0055',
   },
   simTinyBtnText: {
-    color: '#f8fafc',
-    fontSize: 10,
+    color: '#ffffff',
+    fontSize: 12,
     fontWeight: '600',
   },
 });
