@@ -173,6 +173,7 @@ class MExpertFragment : Fragment() {
     super.onViewCreated(view, savedInstanceState)
 
     prefsUtil = PreferenceUtility(requireActivity())
+    initFrameMarginControl()
     bd.btnMEShooting.setOnSingleClickListener {
       if (bd.btnMEShooting.text == "결과보기") {
 
@@ -524,6 +525,38 @@ class MExpertFragment : Fragment() {
   fun cancelJawTiltGuideText() {
     guideRunnables.forEach { runnable -> guideHandler.removeCallbacks(runnable) }
     guideRunnables.clear()
+  }
+
+  /**
+   * 가이드 프레임(ivMEFrame) 상단 마진 조절 (0 ~ 120dp, 5단위)
+   */
+  private fun initFrameMarginControl() {
+    val initialMargin = prefsUtil.getGuideFrameMarginTop(120)
+    applyFrameMargin(initialMargin)
+
+    bd.tvMEFrameMarginUp.setOnClickListener {
+      val currentMargin = prefsUtil.getGuideFrameMarginTop(120)
+      val newMargin = (currentMargin - 10).coerceAtLeast(0) // 위로 누르면 5단위 축소
+      applyFrameMargin(newMargin)
+      prefsUtil.setGuideFrameMarginTop(newMargin)
+    }
+
+    bd.tvMEFrameMarginDown.setOnClickListener {
+      val currentMargin = prefsUtil.getGuideFrameMarginTop(120)
+      val newMargin = (currentMargin + 10).coerceAtMost(480) // 아래로 누르면 5단위 증가 (max 120)
+      applyFrameMargin(newMargin)
+      prefsUtil.setGuideFrameMarginTop(newMargin)
+    }
+  }
+
+  private fun applyFrameMargin(marginDp: Int) {
+    val density = resources.displayMetrics.density
+    val marginPx = (marginDp * density).toInt()
+    val params = bd.ivMEFrame.layoutParams as? ViewGroup.MarginLayoutParams
+    params?.let {
+      it.topMargin = marginPx
+      bd.ivMEFrame.layoutParams = it
+    }
   }
 
 }

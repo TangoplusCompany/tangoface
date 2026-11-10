@@ -1,0 +1,363 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/black"
+    tools:context=".ui.measure.ModelScanFragment">
+
+    <!-- 메인 콘텐츠 영역 -->
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
+
+        <!-- 상단 헤더 바 -->
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:id="@+id/clTopBar"
+            android:layout_width="match_parent"
+            android:layout_height="64dp"
+            android:paddingHorizontal="24dp"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent">
+
+            <TextView
+                android:id="@+id/tvScanTitle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="3D 얼굴 스캔"
+                android:textColor="@color/white"
+                android:textSize="22sp"
+                android:textStyle="bold"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent" />
+
+            <!-- 스캔 내역 열기 버튼 -->
+            <androidx.appcompat.widget.AppCompatButton
+                android:id="@+id/btnHistoryToggle"
+                android:layout_width="wrap_content"
+                android:layout_height="40dp"
+                android:background="@drawable/effect_20"
+                android:backgroundTint="@color/accent900"
+                android:paddingHorizontal="16dp"
+                android:text="스캔 내역 (0)"
+                android:textColor="@color/subColor100"
+                android:textSize="15sp"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintTop_toTopOf="parent" />
+
+        </androidx.constraintlayout.widget.ConstraintLayout>
+
+        <!-- 1. QR 스캔 및 1초 뒤 PIN 번호 발급 영역 (READY_TO_SCAN / CREATED / PAIRED) -->
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:id="@+id/clPairingContainer"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginHorizontal="60dp"
+            android:background="@drawable/bg_glass_card"
+            android:padding="32dp"
+            android:visibility="visible"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/clTopBar"
+            tools:visibility="visible">
+
+            <TextView
+                android:id="@+id/tvPairingTitle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="스마트폰 카메라로 아래 QR 코드를 스캔해주세요"
+                android:textColor="@color/white"
+                android:textSize="22sp"
+                android:textStyle="bold"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent" />
+
+            <!-- 스마트폰 스캔용 QR 코드 이미지 -->
+            <androidx.cardview.widget.CardView
+                android:id="@+id/cvQrWrapper"
+                android:layout_width="180dp"
+                android:layout_height="180dp"
+                android:layout_marginTop="20dp"
+                app:cardCornerRadius="16dp"
+                app:cardElevation="0dp"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@id/tvPairingTitle">
+
+                <ImageView
+                    android:id="@+id/ivScanQr"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:background="@color/white"
+                    android:contentDescription="스캔용 QR 코드"
+                    android:padding="10dp"
+                    android:src="@drawable/img_scan_qr" />
+
+            </androidx.cardview.widget.CardView>
+
+            <!-- 1초 동안 PIN 발급 대기 프로그레스 -->
+            <ProgressBar
+                android:id="@+id/pbPinLoading"
+                android:layout_width="32dp"
+                android:layout_height="32dp"
+                android:layout_marginTop="24dp"
+                android:indeterminateTint="@color/accent300"
+                android:visibility="gone"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@id/cvQrWrapper" />
+
+            <!-- 1초 뒤 발급되는 6자리 PIN 번호 -->
+            <TextView
+                android:id="@+id/tvPairingCode"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:letterSpacing="0.25"
+                android:textColor="@color/subColor100"
+                android:textSize="58sp"
+                android:textStyle="bold"
+                android:visibility="visible"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@id/cvQrWrapper"
+                tools:text="829143" />
+
+            <TextView
+                android:id="@+id/tvPairingSub"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:text="스마트폰 화면에 위 6자리 번호를 입력해주세요"
+                android:textColor="@color/subColor500"
+                android:textSize="17sp"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@id/tvPairingCode" />
+
+        </androidx.constraintlayout.widget.ConstraintLayout>
+
+        <!-- 2. 실시간 3D 복원 진행률 및 남은 시간 영역 (status == PROCESSING / UPLOADED) -->
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:id="@+id/clProgressContainer"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginHorizontal="60dp"
+            android:background="@drawable/bg_glass_card"
+            android:padding="32dp"
+            android:visibility="gone"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/clTopBar"
+            tools:visibility="gone">
+
+            <TextView
+                android:id="@+id/tvProgressStage"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="3D 얼굴 복원을 진행 중입니다..."
+                android:textColor="@color/white"
+                android:textSize="24sp"
+                android:textStyle="bold"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent" />
+
+            <ProgressBar
+                android:id="@+id/pbScanProgress"
+                style="?android:attr/progressBarStyleHorizontal"
+                android:layout_width="0dp"
+                android:layout_height="22dp"
+                android:layout_marginTop="28dp"
+                android:max="100"
+                android:progress="0"
+                android:progressDrawable="@drawable/bg_round_progress"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@id/tvProgressStage"
+                tools:progress="45" />
+
+            <TextView
+                android:id="@+id/tvProgressPercent"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:textColor="@color/subColor100"
+                android:textSize="36sp"
+                android:textStyle="bold"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@id/pbScanProgress"
+                tools:text="45%" />
+
+            <TextView
+                android:id="@+id/tvRemainingTime"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="@color/white"
+                android:textSize="20sp"
+                app:layout_constraintBottom_toBottomOf="@id/tvProgressPercent"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintTop_toTopOf="@id/tvProgressPercent"
+                tools:text="예상 남은 시간: 약 25초" />
+
+        </androidx.constraintlayout.widget.ConstraintLayout>
+
+        <!-- 3. 복원 완료 안내 영역 (status == DONE) -->
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:id="@+id/clDoneContainer"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginHorizontal="60dp"
+            android:background="@drawable/bg_glass_card"
+            android:padding="32dp"
+            android:visibility="gone"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/clTopBar"
+            tools:visibility="gone">
+
+            <TextView
+                android:id="@+id/tvDoneTitle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="3D 얼굴 복원 완료!"
+                android:textColor="@color/subColor100"
+                android:textSize="28sp"
+                android:textStyle="bold"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent" />
+
+            <TextView
+                android:id="@+id/tvDoneMessage"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:text="복원 완료! 3D 모델을 준비합니다."
+                android:textColor="@color/white"
+                android:textSize="20sp"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@id/tvDoneTitle" />
+
+            <androidx.appcompat.widget.AppCompatButton
+                android:id="@+id/btnNewScan"
+                android:layout_width="wrap_content"
+                android:layout_height="48dp"
+                android:layout_marginTop="28dp"
+                android:background="@drawable/bg_glass_card_accent"
+                android:paddingHorizontal="28dp"
+                android:text="새로운 스캔 시작"
+                android:textColor="@color/subColor100"
+                android:textSize="18sp"
+                android:textStyle="bold"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@id/tvDoneMessage" />
+
+        </androidx.constraintlayout.widget.ConstraintLayout>
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+    <!-- 4. 스캔 내역 관리 오버레이 뷰 (내역 관리 목록) -->
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/clHistoryOverlay"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="#D0000000"
+        android:clickable="true"
+        android:focusable="true"
+        android:padding="32dp"
+        android:visibility="gone"
+        tools:visibility="visible">
+
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:background="@drawable/bg_glass_card"
+            android:padding="24dp"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintWidth_percent="0.85">
+
+            <!-- 내역 상단 바 -->
+            <TextView
+                android:id="@+id/tvHistoryHeaderTitle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="스캔 내역 관리"
+                android:textColor="@color/white"
+                android:textSize="24sp"
+                android:textStyle="bold"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent" />
+
+            <!-- 실패 내역 일괄 삭제 버튼 -->
+            <androidx.appcompat.widget.AppCompatButton
+                android:id="@+id/btnDeleteAllFailed"
+                android:layout_width="wrap_content"
+                android:layout_height="38dp"
+                android:layout_marginEnd="12dp"
+                android:background="@drawable/effect_20"
+                android:paddingHorizontal="14dp"
+                android:text="실패 내역 전체 삭제"
+                android:textColor="@color/accent300"
+                android:textSize="14sp"
+                app:layout_constraintBottom_toBottomOf="@id/tvHistoryHeaderTitle"
+                app:layout_constraintEnd_toStartOf="@id/btnCloseHistory"
+                app:layout_constraintTop_toTopOf="@id/tvHistoryHeaderTitle" />
+
+            <!-- 닫기 버튼 -->
+            <androidx.appcompat.widget.AppCompatButton
+                android:id="@+id/btnCloseHistory"
+                android:layout_width="40dp"
+                android:layout_height="38dp"
+                android:background="@drawable/effect_20"
+                android:text="✕"
+                android:textColor="@color/white"
+                android:textSize="18sp"
+                app:layout_constraintBottom_toBottomOf="@id/tvHistoryHeaderTitle"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintTop_toTopOf="@id/tvHistoryHeaderTitle" />
+
+            <!-- 내역 목록 리사이클러뷰 -->
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/rvScanHistory"
+                android:layout_width="0dp"
+                android:layout_height="0dp"
+                android:layout_marginTop="20dp"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@id/tvHistoryHeaderTitle" />
+
+            <!-- 빈 내역 안내 문구 -->
+            <TextView
+                android:id="@+id/tvEmptyHistory"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="진행되었거나 완료된 스캔 내역이 없습니다."
+                android:textColor="@color/subColor500"
+                android:textSize="18sp"
+                android:visibility="gone"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@id/tvHistoryHeaderTitle"
+                tools:visibility="gone" />
+
+        </androidx.constraintlayout.widget.ConstraintLayout>
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+</FrameLayout>

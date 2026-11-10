@@ -67,7 +67,6 @@ import com.orbbec.obsensor.types.IMUSampleRate
 import com.tangoplus.tangoface.domain.opencv.HsvColorTracker
 import com.tangoplus.tangoface.domain.util.LandmarkUtility.colorFrameToBitmapSafe
 import com.tangoplus.tangoface.domain.util.LandmarkUtility.scaleAndCropIntrinsicCenterCrop
-import com.tangoplus.tangoface.domain.util.clearAll
 import com.tangoplus.tangoface.domain.vo.MeasureType
 import com.tangoplus.tangoface.ui.main.vm.MainViewModel
 import com.tangoplus.tangoface.ui.measure.vm.ScanViewModel
@@ -556,7 +555,6 @@ class DepthCameraActivity : BaseActivity(), FaceLandmarkerHelper.LandmarkerListe
 			MeasureType.NORMAL -> MNormalFragment()
 			MeasureType.EXPERT -> MExpertFragment()
 			MeasureType.BOW -> MBowFragment()
-			MeasureType.SCAN -> MScanFragment()
 			else -> MNormalFragment()
 		}
 		supportFragmentManager.beginTransaction().apply {

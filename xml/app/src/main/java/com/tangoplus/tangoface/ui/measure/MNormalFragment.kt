@@ -126,6 +126,7 @@ class MNormalFragment : Fragment() {
     super.onViewCreated(view, savedInstanceState)
 
     prefsUtil = PreferenceUtility(requireContext())
+    initFrameMarginControl()
     bd.btnMNShooting.setOnSingleClickListener {
       if (bd.btnMNShooting.text == "결과보기") {
         // ---------------# 데이터 갈무리해서 gallery DialogFragment로 넘기기 #-----------------
@@ -367,5 +368,35 @@ class MNormalFragment : Fragment() {
     isCountDown = false
   }
 
+  /**
+   * 가이드 프레임(ivMNFrame) 상단 마진 조절 (0 ~ 120dp, 5단위)
+   */
+  private fun initFrameMarginControl() {
+    val initialMargin = prefsUtil.getGuideFrameMarginTop(120)
+    applyFrameMargin(initialMargin)
 
+    bd.tvMNFrameMarginUp.setOnClickListener {
+      val currentMargin = prefsUtil.getGuideFrameMarginTop(120)
+      val newMargin = (currentMargin - 10).coerceAtLeast(0) // 위로 누르면 5단위 축소
+      applyFrameMargin(newMargin)
+      prefsUtil.setGuideFrameMarginTop(newMargin)
+    }
+
+    bd.tvMNFrameMarginDown.setOnClickListener {
+      val currentMargin = prefsUtil.getGuideFrameMarginTop(120)
+      val newMargin = (currentMargin + 10).coerceAtMost(480) // 아래로 누르면 5단위 증가 (max 120)
+      applyFrameMargin(newMargin)
+      prefsUtil.setGuideFrameMarginTop(newMargin)
+    }
+  }
+
+  private fun applyFrameMargin(marginDp: Int) {
+    val density = resources.displayMetrics.density
+    val marginPx = (marginDp * density).toInt()
+    val params = bd.ivMNFrame.layoutParams as? ViewGroup.MarginLayoutParams
+    params?.let {
+      it.topMargin = marginPx
+      bd.ivMNFrame.layoutParams = it
+    }
+  }
 }

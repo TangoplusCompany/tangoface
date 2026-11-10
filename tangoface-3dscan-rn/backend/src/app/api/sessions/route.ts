@@ -45,9 +45,13 @@ export async function POST(request: NextRequest) {
     if (configuredKey) {
       const tabletKeyHeader =
         request.headers.get('x-tablet-key') ||
-        request.headers.get('X-Tablet-Key');
+        request.headers.get('X-Tablet-Key') ||
+        '';
 
-      if (!tabletKeyHeader || !timingSafeMatch(tabletKeyHeader, configuredKey)) {
+      const cleanHeaderKey = tabletKeyHeader.trim().replace(/^["']|["']$/g, '');
+      const cleanConfiguredKey = configuredKey.trim().replace(/^["']|["']$/g, '');
+
+      if (!cleanHeaderKey || !timingSafeMatch(cleanHeaderKey, cleanConfiguredKey)) {
         return jsonWithCors(
           request,
           {

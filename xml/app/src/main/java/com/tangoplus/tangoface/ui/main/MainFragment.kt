@@ -43,6 +43,7 @@ import com.tangoplus.tangoface.ui.main.vm.MainViewModel
 import com.tangoplus.tangoface.ui.measure.DepthCameraActivity
 import com.tangoplus.tangoface.ui.measure.JawGuideDialogFragment
 import com.tangoplus.tangoface.ui.measure.MImageFragment
+import com.tangoplus.tangoface.ui.measure.ModelScanFragment
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -133,9 +134,8 @@ class MainFragment : Fragment(), OnMainTabClickListener {
 			balloon.showAlignBottom(bd.tvMRam)
 		}
 
-		bd.clMNotice.setOnSingleClickListener {
-			selectedMeasureType = MeasureType.SCAN
-			checkStoragePermission()
+		bd.tvMModelScan.setOnSingleClickListener {
+			(requireActivity() as MainActivity).navigateToSubFragment(ModelScanFragment())
 		}
 	}
 
