@@ -119,3 +119,68 @@ export async function createResultSignedDownloadUrl(
 
   return data.signedUrl;
 }
+
+/**
+ * Colab 워커용: videos 버킷 영상 다운로드 Signed URL 발급 (기본 1시간 유효)
+ */
+export async function createVideoSignedDownloadUrl(
+  supabase: SupabaseClient,
+  uploadPath: string,
+  expiresInSeconds = 3600
+): Promise<string> {
+  const { data, error } = await supabase.storage
+    .from(VIDEOS_BUCKET)
+    .createSignedUrl(uploadPath, expiresInSeconds);
+
+  if (error || !data?.signedUrl) {
+    throw new Error(`영상 다운로드 URL 생성 실패: ${error?.message || '알 수 없는 오류'}`);
+  }
+
+  const baseUrl = process.env.SUPABASE_URL || '';
+  return data.signedUrl.startsWith('http')
+    ? data.signedUrl
+    : `${baseUrl}/storage/v1${data.signedUrl}`;
+}
+
+/**
+ * Colab 워커용: results 버킷 GLB 직접 업로드 Signed URL 발급 (upsert 허용)
+ */
+export async function createResultSignedUploadUrl(
+  supabase: SupabaseClient,
+  resultPath: string
+): Promise<string> {
+  const { data, error } = await supabase.storage
+    .from(RESULTS_BUCKET)
+    .createSignedUploadUrl(resultPath, { upsert: true });
+
+  if (error || !data?.signedUrl) {
+    throw new Error(`결과 업로드 URL 생성 실패: ${error?.message || '알 수 없는 오류'}`);
+  }
+
+  const baseUrl = process.env.SUPABASE_URL || '';
+  return data.signedUrl.startsWith('http')
+    ? data.signedUrl
+    : `${baseUrl}/storage/v1${data.signedUrl}`;
+}
+
+/**
+ * results 버킷에 실제 GLB 파일이 존재하는지 확인
+ */
+export async function checkResultFileExists(
+  supabase: SupabaseClient,
+  resultPath: string
+): Promise<boolean> {
+  const lastSlashIndex = resultPath.lastIndexOf('/');
+  const folder = lastSlashIndex !== -1 ? resultPath.substring(0, lastSlashIndex) : '';
+  const fileName = lastSlashIndex !== -1 ? resultPath.substring(lastSlashIndex + 1) : resultPath;
+
+  const { data: files, error } = await supabase.storage
+    .from(RESULTS_BUCKET)
+    .list(folder, { search: fileName });
+
+  if (error || !files || files.length === 0) {
+    return false;
+  }
+
+  return files.some((f) => f.name === fileName);
+}

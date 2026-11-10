@@ -73,6 +73,7 @@ export async function GET(
       session_id: session.id,
       status: 'DONE',
       model_url: modelUrl,
+      download_url: modelUrl,
       expires_in_seconds: RESULT_DOWNLOAD_EXPIRY_SECONDS,
     };
 

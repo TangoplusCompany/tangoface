@@ -63,7 +63,7 @@ data class SessionStatusResponse(
  * GET api/sessions/{id}/result
  */
 data class SessionResultResponse(
-    @SerializedName("download_url")
+    @SerializedName(value = "model_url", alternate = ["download_url"])
     val downloadUrl: String // Supabase Storage GLB 다운로드 5분 유효 서명 URL
 )
 
@@ -103,6 +103,7 @@ data class ScanHistoryItem(
     var remainingSeconds: Int = 0,
     var stageMessage: String = "",
     var glbDownloadUrl: String? = null,
+    var localGlbPath: String? = null,
     var failReason: String? = null
 ) {
     val isDone: Boolean get() = status == "DONE"
