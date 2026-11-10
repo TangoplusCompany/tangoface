@@ -41,9 +41,6 @@ export const PhonePairingView: React.FC<PhonePairingViewProps> = ({ onPaired }) 
   return (
     <View style={styles.container}>
       <View style={styles.card}>
-        <View style={styles.iconCircle}>
-          <Text style={styles.iconText}>😁</Text>
-        </View>
 
         <Text style={styles.title}>TangoFace {'\n'}3D 얼굴 스캔</Text>
         <Text style={styles.subtitle}>
