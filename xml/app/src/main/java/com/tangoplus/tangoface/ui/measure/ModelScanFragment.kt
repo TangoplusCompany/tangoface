@@ -21,6 +21,7 @@ import com.tangoplus.tangoface.ui.adapter.ScanHistoryAdapter
 import com.tangoplus.tangoface.ui.measure.vm.ScanUiState
 import com.tangoplus.tangoface.ui.measure.vm.ScanViewModel
 import kotlinx.coroutines.launch
+import java.io.File
 
 /**
  * 3D 얼굴 스캔 프래그먼트:
@@ -210,7 +211,7 @@ class ModelScanFragment : Fragment() {
                 bd.clProgressContainer.isVisible = true
                 bd.clDoneContainer.isVisible = false
 
-                bd.tvProgressStage.text = "영상 업로드 완료! 3D 모델 생성을 준비 중입니다..."
+                bd.tvProgressStage.text = state.stageMessage.ifEmpty { "영상 업로드 완료! 3D 모델 생성을 준비 중입니다..." }
                 bd.pbScanProgress.progress = 0
                 bd.tvProgressPercent.text = "0%"
                 bd.tvRemainingTime.text = "준비 중..."
@@ -233,13 +234,31 @@ class ModelScanFragment : Fragment() {
             }
 
             "DONE" -> {
-                // 복원 완료 안내
+                // 복원 완료 안내 및 GLB 로컬 다운로드 자동 실행
                 bd.clPairingContainer.isVisible = false
                 bd.clProgressContainer.isVisible = false
                 bd.clDoneContainer.isVisible = true
 
-                bd.tvDoneTitle.text = "3D 얼굴 복원 완료!"
-                bd.tvDoneMessage.text = "3D 모델 복원이 완료되었습니다.\nGLB 모델을 준비합니다."
+                val downloadUrl = state.glbDownloadUrl
+                val localPath = state.localGlbPath
+
+                if (localPath != null) {
+                    val savedFile = File(localPath)
+                    val sizeKb = savedFile.length() / 1024
+                    bd.tvDoneTitle.text = "3D 얼굴 복원 완료!"
+                    bd.tvDoneMessage.text = "GLB 모델 다운로드가 완료되었습니다.\n파일: ${savedFile.name} (${sizeKb} KB)"
+                } else if (state.isDownloadingGlb) {
+                    bd.tvDoneTitle.text = "3D 얼굴 복원 완료!"
+                    bd.tvDoneMessage.text = "서버에서 3D GLB 모델을 내려받고 있습니다..."
+                } else if (downloadUrl != null && state.sessionId.isNotEmpty() && state.errorMessage == null) {
+                    bd.tvDoneTitle.text = "3D 얼굴 복원 완료!"
+                    bd.tvDoneMessage.text = "3D GLB 모델 다운로드를 시작합니다..."
+                    val destFile = File(requireContext().filesDir, "models/${state.sessionId}.glb")
+                    svm.downloadGlbToLocal(state.sessionId, downloadUrl, destFile)
+                } else {
+                    bd.tvDoneTitle.text = "3D 얼굴 복원 완료!"
+                    bd.tvDoneMessage.text = state.errorMessage ?: "3D 모델 복원이 완료되었습니다."
+                }
             }
 
             "FAILED" -> {

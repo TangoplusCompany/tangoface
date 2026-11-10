@@ -108,15 +108,15 @@ export async function POST(request: NextRequest) {
       return jsonWithCors(request, { error: '세션 상태 갱신에 실패했습니다.' }, { status: 500 });
     }
 
-    // 4. RunPod 작업 트리거 (TODO 스텁 - 백그라운드 호출 인터페이스)
-    // Vercel 서버리스 함수는 긴 대기를 하지 않고 작업을 비동기 큐잉/트리거만 수행합니다.
-    startProcessing(session.id).catch((err) => {
-      console.error('RunPod 시작 요청 예외 (TODO):', err);
-    });
+    // 4. Colab FastAPI 작업 트리거 (Vercel 서버리스 종료 전에 요청이 전달되도록 await 처리)
+    const processingRes = await startProcessing(session.id);
 
     const response: CompleteUploadResponse = {
-      status: 'UPLOADED',
-      message: '영상 파일이 정상적으로 확인되어 세션 상태가 UPLOADED로 변경되었습니다.',
+      status: processingRes.status === 'SUBMITTED' ? 'PROCESSING' : 'UPLOADED',
+      message:
+        processingRes.status === 'SUBMITTED'
+          ? '영상 업로드가 완료되어 Colab 3D 복원 작업을 시작했습니다.'
+          : '영상 파일이 확인되어 UPLOADED 상태로 변경되었습니다.',
     };
 
     return jsonWithCors(request, response, { status: 200 });

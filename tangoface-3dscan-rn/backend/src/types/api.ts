@@ -22,7 +22,7 @@ export interface PresignUploadResponse {
 }
 
 export interface CompleteUploadResponse {
-  status: 'UPLOADED';
+  status: 'UPLOADED' | 'PROCESSING';
   message: string;
 }
 
@@ -50,5 +50,6 @@ export interface SessionResultResponse {
   session_id: string;
   status: 'DONE';
   model_url: string;
+  download_url?: string;
   expires_in_seconds: number;
 }

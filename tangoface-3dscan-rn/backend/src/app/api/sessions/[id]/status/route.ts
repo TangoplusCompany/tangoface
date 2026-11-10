@@ -4,7 +4,9 @@ import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 import { hashToken, timingSafeMatch } from '@/lib/crypto';
 import { jsonWithCors, handleOptionsCors } from '@/lib/cors';
 import { calculateProcessingProgress } from '@/lib/progressEstimator';
+import { syncColabJobStatusIfNeeded } from '@/lib/runpod';
 import { SessionStatusResponse } from '@/types/api';
+import { SessionStatus } from '@/types/session';
 
 export const runtime = 'nodejs';
 
@@ -38,7 +40,7 @@ export async function GET(
 
     const { data: session, error } = await supabase
       .from('sessions')
-      .select('id, status, fail_reason, session_secret_hash, paired_at, uploaded_at, created_at')
+      .select('id, status, fail_reason, result_path, session_secret_hash, paired_at, uploaded_at, created_at')
       .eq('id', sessionId)
       .maybeSingle();
 
@@ -55,13 +57,18 @@ export async function GET(
       );
     }
 
+    // Colab 워커(/jobs/{id}) 및 Storage 상태 동기화
+    const synced = await syncColabJobStatusIfNeeded(supabase, session);
+    const effectiveStatus = synced.status as SessionStatus;
+    const effectiveFailReason = synced.fail_reason;
+
     // 3D 모델 복원 중(PROCESSING)일 때 스마트 진행률 및 남은 시간 산출
     let progress = null;
-    if (session.status === 'PROCESSING') {
+    if (effectiveStatus === 'PROCESSING') {
       // 업로드 완료 시점 또는 세션 생성 시점을 기준 시작 시각으로 사용
       const startedAt = session.uploaded_at || session.created_at;
       progress = calculateProcessingProgress(startedAt);
-    } else if (session.status === 'DONE') {
+    } else if (effectiveStatus === 'DONE') {
       progress = {
         elapsed_seconds: 0,
         estimated_total_seconds: 45,
@@ -73,8 +80,8 @@ export async function GET(
 
     const response: SessionStatusResponse = {
       session_id: session.id,
-      status: session.status,
-      fail_reason: session.fail_reason,
+      status: effectiveStatus,
+      fail_reason: effectiveFailReason,
       paired_at: session.paired_at,
       uploaded_at: session.uploaded_at,
       created_at: session.created_at,

@@ -20,6 +20,7 @@ import {
 } from './src/components/SmartCameraView';
 import { PhonePairingView } from './src/components/PhonePairingView';
 import { UploadSuccessView } from './src/components/UploadSuccessView';
+import { ScanGuideModal } from './src/components/ScanGuideModal';
 import {
   getPresignedUploadUrl,
   uploadVideoDirectly,
@@ -51,6 +52,10 @@ export default function App() {
   const [uploadStatusText, setUploadStatusText] = useState('');
   const [uploadError, setUploadError] = useState<string | null>(null);
 
+  // 4. 촬영 가이드 모달 상태 (PIN 통과 후 화면 전환 전 먼저 노출)
+  const [showGuideModal, setShowGuideModal] = useState<boolean>(false);
+  const [pendingStepAfterGuide, setPendingStepAfterGuide] = useState<AppStep | null>(null);
+
   const cameraRef = useRef<SmartCameraHandle | null>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -78,15 +83,21 @@ export default function App() {
     setSimulatedValues,
   } = useDeviceOrientation(2.5);
 
-  // 1단계: PIN 번호 입력 성공 시 -> 2단계(권한 요청)로 이동
+  // 1단계: PIN 번호 입력 성공 시 -> 화면 전환 전 촬영 가이드 먼저 노출
   const handlePaired = (token: string, sessId: string) => {
     setPairToken(token);
     setSessionId(sessId);
-    // 이미 카메라 권한이 있다면 바로 scanning으로, 없으면 permissions 단계로
-    if (hasCameraPermission) {
-      setAppStep('scanning');
-    } else {
-      setAppStep('permissions');
+    // 가이드 확인 후 넘어갈 다음 화면 예약
+    setPendingStepAfterGuide(hasCameraPermission ? 'scanning' : 'permissions');
+    setShowGuideModal(true);
+  };
+
+  // 가이드 모달 확인 버튼 클릭 시 처리
+  const handleCloseGuideModal = () => {
+    setShowGuideModal(false);
+    if (pendingStepAfterGuide) {
+      setAppStep(pendingStepAfterGuide);
+      setPendingStepAfterGuide(null);
     }
   };
 
@@ -232,6 +243,8 @@ export default function App() {
     setLevelDurationCount(0);
     setUploadError(null);
     setUploadProgress(0);
+    setShowGuideModal(false);
+    setPendingStepAfterGuide(null);
     setAppStep('pairing');
   };
 
@@ -263,19 +276,11 @@ export default function App() {
         {/* ========================================================= */}
         {appStep === 'permissions' && (
           <View style={styles.permissionBox}>
-            <View style={styles.permissionIconCircle}>
-              <Text style={styles.permissionEmoji}>📸</Text>
-            </View>
-
-            <View style={styles.pairSuccessTag}>
-              <Text style={styles.pairSuccessTagText}>
-                ✅ PIN 확인 완료 (세션: {sessionId?.slice(0, 8)}...)
-              </Text>
-            </View>
+            
 
             <Text style={styles.permissionTitle}>카메라 및 센서 권한 허용</Text>
             <Text style={styles.permissionDesc}>
-              얼굴 3D 파노라마 스캔을 진행하려면{'\n'}
+              카메라를 사용해 스캔을 진행하려면{'\n'}
               <Text style={styles.highlightText}>카메라 영상</Text>과{' '}
               <Text style={styles.highlightText}>스마트폰 수평 센서</Text> 권한이 필요합니다.
             </Text>
@@ -289,8 +294,8 @@ export default function App() {
             {!isSecureContext && Platform.OS === 'web' && (
               <View style={styles.warningBox}>
                 <Text style={styles.warningText}>
-                  💡 크롬 보안 정책: IP 주소 대신{' '}
-                  <Text style={{ fontWeight: '700', color: '#38bdf8' }}>
+                  크롬 보안 정책: IP 주소 대신{' '}
+                  <Text style={{ fontWeight: '700', color: '#FF516F' }}>
                     http://localhost:8081
                   </Text>{' '}
                   또는 HTTPS 배포 도메인으로 접속하셔야 카메라가 활성화됩니다.
@@ -323,7 +328,7 @@ export default function App() {
               }}
             >
               <Text style={styles.fallbackButtonText}>
-                📁 카메라 대신 영상 파일 첨부하기
+                카메라 대신 영상 파일 첨부하기
               </Text>
             </TouchableOpacity>
           </View>
@@ -339,17 +344,20 @@ export default function App() {
               <View style={styles.headerTopRow}>
                 <View>
                   <Text style={styles.headerTitle}>TangoFace 3D Scan</Text>
-                  {sessionId && (
-                    <Text style={styles.sessionBadge}>
-                      연결 세션: {sessionId.slice(0, 8)}...
-                    </Text>
-                  )}
                 </View>
-                {isRecording && (
+                {isRecording ? (
                   <View style={styles.recBadge}>
                     <View style={styles.recDot} />
                     <Text style={styles.recTimeText}>{formatTime(recordSeconds)}</Text>
                   </View>
+                ) : (
+                  <TouchableOpacity
+
+                    onPress={() => setShowGuideModal(true)}
+                    activeOpacity={0.8}
+                  >
+                    <Text style={styles.guideTriggerText}>촬영 가이드</Text>
+                  </TouchableOpacity>
                 )}
               </View>
 
@@ -368,7 +376,7 @@ export default function App() {
                       scanMode === 'panorama' && styles.activeModeTabText,
                     ]}
                   >
-                    파노라마 수평 스캔
+                    카메라로 촬영
                   </Text>
                 </TouchableOpacity>
 
@@ -385,7 +393,7 @@ export default function App() {
                       scanMode === 'upload' && styles.activeModeTabText,
                     ]}
                   >
-                    영상 파일 첨부
+                    동영상 파일 첨부
                   </Text>
                 </TouchableOpacity>
               </View>
@@ -441,7 +449,7 @@ export default function App() {
                   onPress={toggleCameraFacing}
                   disabled={isRecording}
                 >
-                  <Text style={styles.iconButtonText}>🔄</Text>
+                  <Text style={styles.iconButtonText}>전환</Text>
                 </TouchableOpacity>
 
                 {/* 촬영 버튼 */}
@@ -465,7 +473,7 @@ export default function App() {
                   style={styles.iconButton}
                   onPress={calibrateToCurrentPosition}
                 >
-                  <Text style={styles.iconButtonText}>🎯</Text>
+                  <Text style={styles.iconButtonText}>영점</Text>
                 </TouchableOpacity>
               </View>
             )}
@@ -477,14 +485,11 @@ export default function App() {
         {/* ========================================================= */}
         {appStep === 'recorded_preview' && (
           <View style={styles.previewContainer}>
-            <View style={styles.previewCard}>
-              <Text style={styles.previewTitle}>촬영 영상 확인</Text>
-              <Text style={styles.previewSubtitle}>
-                수평 스캔이 정상적으로 완료되었습니다.{'\n'}
-                영상을 확인하고 전송 버튼을 눌러주세요.
-              </Text>
+            <View style={styles.previewSimpleWrapper}>
+              <Text style={styles.previewTitle}>녹화본 확인</Text>
 
-              <View style={styles.videoPlayerBox}>
+              {/* 3:4 비율 비디오 플레이어 영역 */}
+              <View style={styles.videoPlayerBox34}>
                 {Platform.OS === 'web' && recordedPreviewUrl ? (
                   // @ts-ignore
                   <video
@@ -493,10 +498,9 @@ export default function App() {
                     playsInline
                     style={{
                       width: '100%',
-                      height: 220,
+                      height: '100%',
                       backgroundColor: '#000',
-                      borderRadius: 12,
-                      objectFit: 'contain',
+                      objectFit: 'cover',
                     }}
                   />
                 ) : (
@@ -506,28 +510,9 @@ export default function App() {
                 )}
               </View>
 
-              <View style={styles.statRow}>
-                <View style={styles.statItem}>
-                  <Text style={styles.statLabel}>촬영 시간</Text>
-                  <Text style={styles.statValue}>{recordSeconds}초</Text>
-                </View>
-                <View style={styles.statItem}>
-                  <Text style={styles.statLabel}>수평 유지율</Text>
-                  <Text style={styles.statHighlight}>
-                    {recordSeconds > 0
-                      ? Math.min(
-                          100,
-                          Math.round((levelDurationCount / recordSeconds) * 100)
-                        )
-                      : 100}
-                    %
-                  </Text>
-                </View>
-              </View>
-
               {uploadError && (
                 <View style={styles.errorBox}>
-                  <Text style={styles.errorText}>⚠️ {uploadError}</Text>
+                  <Text style={styles.errorText}>{uploadError}</Text>
                 </View>
               )}
 
@@ -560,7 +545,7 @@ export default function App() {
                     <ActivityIndicator color="#ffffff" />
                   ) : (
                     <Text style={styles.primaryButtonText}>
-                      ☁️ 3D 스캔 영상 전송
+                      3D 스캔 영상 전송
                     </Text>
                   )}
                 </TouchableOpacity>
@@ -571,7 +556,7 @@ export default function App() {
                     onPress={handleRetake}
                     activeOpacity={0.8}
                   >
-                    <Text style={styles.retakeButtonText}>🔄 다시 촬영하기</Text>
+                    <Text style={styles.retakeButtonText}>다시 촬영하기</Text>
                   </TouchableOpacity>
                 )}
               </View>
@@ -588,6 +573,12 @@ export default function App() {
             onReset={handleResetAll}
           />
         )}
+
+        {/* 촬영 방법 및 3D 스캔 품질 향상 가이드 모달 */}
+        <ScanGuideModal
+          visible={showGuideModal}
+          onClose={handleCloseGuideModal}
+        />
       </View>
     </SafeAreaView>
   );
@@ -604,7 +595,7 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: 480,
     height: '100%',
-    backgroundColor: '#090d16',
+    backgroundColor: '#161214',
     position: 'relative',
     overflow: 'hidden',
   },
@@ -612,7 +603,7 @@ const styles = StyleSheet.create({
     paddingTop: Platform.OS === 'android' ? 36 : 14,
     paddingHorizontal: 16,
     paddingBottom: 10,
-    backgroundColor: '#090d16',
+    backgroundColor: '#161214',
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(255, 255, 255, 0.08)',
     zIndex: 10,
@@ -630,10 +621,21 @@ const styles = StyleSheet.create({
     letterSpacing: -0.3,
   },
   sessionBadge: {
-    color: '#38bdf8',
+    color: '#FF8794',
     fontSize: 11,
     fontWeight: '600',
     marginTop: 2,
+  },
+  guideTriggerButton: {
+    backgroundColor: 'rgba(255, 0, 85, 0.15)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 14,
+  },
+  guideTriggerText: {
+    color: '#FF8794',
+    fontSize: 12,
+    fontWeight: '700',
   },
   recBadge: {
     flexDirection: 'row',
@@ -642,8 +644,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 14,
-    borderWidth: 1,
-    borderColor: 'rgba(239, 68, 68, 0.5)',
   },
   recDot: {
     width: 8,
@@ -659,7 +659,7 @@ const styles = StyleSheet.create({
   },
   modeTabs: {
     flexDirection: 'row',
-    backgroundColor: 'rgba(15, 23, 42, 0.8)',
+    backgroundColor: '#1C191A',
     borderRadius: 10,
     padding: 3,
   },
@@ -670,15 +670,15 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   activeModeTab: {
-    backgroundColor: '#1e293b',
+    backgroundColor: '#30292B',
   },
   modeTabText: {
     fontSize: 13,
-    color: '#64748b',
+    color: '#9E9C9C',
     fontWeight: '600',
   },
   activeModeTabText: {
-    color: '#38bdf8',
+    color: '#FF0055',
     fontWeight: '700',
   },
   cameraContainer: {
@@ -703,17 +703,17 @@ const styles = StyleSheet.create({
     zIndex: 20,
   },
   iconButton: {
-    width: 46,
-    height: 46,
-    borderRadius: 23,
-    backgroundColor: 'rgba(15, 23, 42, 0.75)',
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: 'rgba(28, 25, 26, 0.85)',
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
   },
   iconButtonText: {
-    fontSize: 20,
+    fontSize: 13,
+    color: '#e2e8f0',
+    fontWeight: '700',
   },
   recordButtonOuter: {
     width: 74,
@@ -744,28 +744,14 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     padding: 24,
-    backgroundColor: '#090d16',
-  },
-  permissionIconCircle: {
-    width: 68,
-    height: 68,
-    borderRadius: 34,
-    backgroundColor: 'rgba(56, 189, 248, 0.12)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  permissionEmoji: {
-    fontSize: 32,
+    backgroundColor: '#161214',
   },
   pairSuccessTag: {
     backgroundColor: 'rgba(16, 185, 129, 0.15)',
     borderRadius: 20,
     paddingHorizontal: 12,
-    paddingVertical: 4,
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: 'rgba(16, 185, 129, 0.3)',
+    paddingVertical: 5,
+    marginBottom: 16,
   },
   pairSuccessTagText: {
     color: '#34d399',
@@ -780,13 +766,13 @@ const styles = StyleSheet.create({
   },
   permissionDesc: {
     fontSize: 13,
-    color: '#94a3b8',
+    color: '#9E9C9C',
     textAlign: 'center',
     lineHeight: 18,
     marginBottom: 20,
   },
   highlightText: {
-    color: '#38bdf8',
+    color: '#FF516F',
     fontWeight: '700',
   },
   errorAlertBox: {
@@ -795,8 +781,6 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     padding: 10,
     marginBottom: 14,
-    borderWidth: 1,
-    borderColor: 'rgba(239, 68, 68, 0.3)',
   },
   errorAlertText: {
     color: '#f87171',
@@ -808,8 +792,6 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     padding: 10,
     marginBottom: 16,
-    borderWidth: 1,
-    borderColor: 'rgba(234, 179, 8, 0.3)',
   },
   warningText: {
     color: '#fbbf24',
@@ -820,7 +802,7 @@ const styles = StyleSheet.create({
   primaryButton: {
     width: '100%',
     height: 48,
-    backgroundColor: '#0284c7',
+    backgroundColor: '#FF0055',
     borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
@@ -834,55 +816,44 @@ const styles = StyleSheet.create({
   fallbackButton: {
     width: '100%',
     height: 44,
-    backgroundColor: 'transparent',
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
     borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.15)',
   },
   fallbackButtonText: {
-    color: '#94a3b8',
+    color: '#9E9C9C',
     fontSize: 13,
     fontWeight: '600',
   },
   previewContainer: {
     flex: 1,
-    padding: 20,
+    paddingHorizontal: 20,
+    paddingVertical: 16,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#090d16',
+    backgroundColor: '#000000',
   },
-  previewCard: {
+  previewSimpleWrapper: {
     width: '100%',
-    maxWidth: 380,
-    backgroundColor: 'rgba(30, 41, 59, 0.85)',
-    borderRadius: 20,
-    borderWidth: 1.5,
-    borderColor: 'rgba(56, 189, 248, 0.3)',
-    padding: 20,
+    maxWidth: 320,
     alignItems: 'center',
   },
   previewTitle: {
-    fontSize: 19,
-    fontWeight: '800',
+    fontSize: 20,
+    fontWeight: '700',
     color: '#ffffff',
-    marginBottom: 6,
-  },
-  previewSubtitle: {
-    fontSize: 13,
-    color: '#94a3b8',
-    textAlign: 'center',
-    lineHeight: 18,
     marginBottom: 16,
+    textAlign: 'center',
   },
-  videoPlayerBox: {
+  videoPlayerBox34: {
     width: '100%',
-    borderRadius: 12,
+    maxWidth: 270,
+    aspectRatio: 3 / 4,
+    borderRadius: 14,
     overflow: 'hidden',
-    marginBottom: 14,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
+    backgroundColor: '#000000',
+    marginBottom: 20,
   },
   placeholderBox: {
     width: '100%',
@@ -898,7 +869,7 @@ const styles = StyleSheet.create({
   statRow: {
     flexDirection: 'row',
     width: '100%',
-    backgroundColor: 'rgba(15, 23, 42, 0.6)',
+    backgroundColor: 'rgba(28, 25, 26, 0.6)',
     borderRadius: 12,
     padding: 12,
     marginBottom: 14,
@@ -909,7 +880,7 @@ const styles = StyleSheet.create({
   },
   statLabel: {
     fontSize: 11,
-    color: '#64748b',
+    color: '#9E9C9C',
     marginBottom: 2,
   },
   statValue: {
@@ -919,7 +890,7 @@ const styles = StyleSheet.create({
   },
   statHighlight: {
     fontSize: 14,
-    color: '#34d399',
+    color: '#00FFCC',
     fontWeight: '700',
   },
   errorBox: {
@@ -928,8 +899,6 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     padding: 8,
     marginBottom: 12,
-    borderWidth: 1,
-    borderColor: 'rgba(239, 68, 68, 0.3)',
   },
   errorText: {
     color: '#f87171',
@@ -942,7 +911,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   uploadingText: {
-    color: '#38bdf8',
+    color: '#FF8794',
     fontSize: 12,
     fontWeight: '600',
     marginBottom: 6,
@@ -957,10 +926,10 @@ const styles = StyleSheet.create({
   },
   progressBarFill: {
     height: '100%',
-    backgroundColor: '#38bdf8',
+    backgroundColor: '#FF0055',
   },
   progressPercentText: {
-    color: '#94a3b8',
+    color: '#9E9C9C',
     fontSize: 11,
     fontWeight: '700',
   },
@@ -969,21 +938,19 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   disabledButton: {
-    backgroundColor: '#334155',
+    backgroundColor: '#30292B',
     opacity: 0.6,
   },
   retakeButton: {
     width: '100%',
     height: 44,
-    backgroundColor: 'transparent',
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
     borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.15)',
   },
   retakeButtonText: {
-    color: '#94a3b8',
+    color: '#9E9C9C',
     fontSize: 14,
     fontWeight: '600',
   },
