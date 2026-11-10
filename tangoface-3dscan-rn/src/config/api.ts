@@ -4,6 +4,9 @@
  */
 import { Platform } from 'react-native';
 
+// 프로덕션 Vercel 백엔드 기본 주소
+const PRODUCTION_API_URL = 'https://tangoface-backend.vercel.app';
+
 // 백엔드 API 기본 주소 설정 (모바일 브라우저 / PC 브라우저 자동 감지)
 export const getApiBaseUrl = (): string => {
   if (process.env.EXPO_PUBLIC_API_URL) {
@@ -11,14 +14,18 @@ export const getApiBaseUrl = (): string => {
   }
   if (Platform.OS === 'web' && typeof window !== 'undefined') {
     const hostname = window.location.hostname;
-    // 로컬 환경인 경우 포트 3000(Next.js)으로 연결
+    // PC 로컬 개발 환경인 경우에만 localhost:3000 사용
     if (hostname === 'localhost' || hostname === '127.0.0.1') {
       return 'http://localhost:3000';
     }
-    // 동일 네트워크 스마트폰 접속 시(예: 192.168.x.x)
-    return `http://${hostname}:3000`;
+    // IP 주소로 직접 접속한 로컬 테스트 환경 (예: 192.168.x.x)
+    if (/^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(hostname)) {
+      return `http://${hostname}:3000`;
+    }
+    // Vercel 등 실제 배포 도메인 환경인 경우 프로덕션 백엔드 URL 사용
+    return PRODUCTION_API_URL;
   }
-  return 'http://localhost:3000';
+  return PRODUCTION_API_URL;
 };
 
 /**

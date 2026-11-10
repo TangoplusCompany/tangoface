@@ -42,21 +42,37 @@ export async function POST(request: NextRequest) {
   try {
     // 1. 태블릿 기기 비밀키(X-Tablet-Key) 검증
     const configuredKey = process.env.TABLET_API_KEY;
+
+    const tabletKeyHeader =
+      request.headers.get('x-tablet-key') ||
+      request.headers.get('X-Tablet-Key') ||
+      '';
+
+    const cleanHeaderKey = tabletKeyHeader.trim().replace(/^["']|["']$/g, '');
+    const cleanConfiguredKey = (configuredKey || '').trim().replace(/^["']|["']$/g, '');
+
+    console.log('[DEBUG /api/sessions POST]', {
+      configuredKeyExists: !!configuredKey,
+      configuredLength: cleanConfiguredKey.length,
+      headerLength: cleanHeaderKey.length,
+      headerSnippet: cleanHeaderKey.length > 8 ? `${cleanHeaderKey.slice(0, 4)}...${cleanHeaderKey.slice(-4)}` : cleanHeaderKey,
+      configuredSnippet: cleanConfiguredKey.length > 8 ? `${cleanConfiguredKey.slice(0, 4)}...${cleanConfiguredKey.slice(-4)}` : cleanConfiguredKey,
+      isMatch: cleanHeaderKey === cleanConfiguredKey,
+    });
+
     if (configuredKey) {
-      const tabletKeyHeader =
-        request.headers.get('x-tablet-key') ||
-        request.headers.get('X-Tablet-Key') ||
-        '';
-
-      const cleanHeaderKey = tabletKeyHeader.trim().replace(/^["']|["']$/g, '');
-      const cleanConfiguredKey = configuredKey.trim().replace(/^["']|["']$/g, '');
-
       if (!cleanHeaderKey || !timingSafeMatch(cleanHeaderKey, cleanConfiguredKey)) {
         return jsonWithCors(
           request,
           {
             error:
               '인증되지 않은 태블릿 기기입니다. 올바른 X-Tablet-Key 헤더가 필요합니다.',
+            debug: {
+              configuredKeyExists: !!configuredKey,
+              headerLength: cleanHeaderKey.length,
+              configuredLength: cleanConfiguredKey.length,
+              isMatch: cleanHeaderKey === cleanConfiguredKey,
+            },
           },
           { status: 401 }
         );

@@ -15,7 +15,17 @@ export function getCorsHeaders(request: Request): Record<string, string> {
     'Vary': 'Origin',
   };
 
-  if (requestOrigin && allowedOrigins.includes(requestOrigin)) {
+  const isVercelDomain = (() => {
+    if (!requestOrigin) return false;
+    try {
+      const url = new URL(requestOrigin);
+      return url.hostname.endsWith('.vercel.app');
+    } catch {
+      return false;
+    }
+  })();
+
+  if (requestOrigin && (allowedOrigins.includes(requestOrigin) || isVercelDomain)) {
     headers['Access-Control-Allow-Origin'] = requestOrigin;
     headers['Access-Control-Allow-Methods'] = 'GET, POST, OPTIONS';
     headers['Access-Control-Allow-Headers'] =

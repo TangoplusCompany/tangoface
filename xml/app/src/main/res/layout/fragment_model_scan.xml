@@ -22,32 +22,74 @@
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent">
 
-            <TextView
-                android:id="@+id/tvScanTitle"
+            <!-- 좌측 상단: TangoFace + 실험실 뱃지 -->
+            <LinearLayout
+                android:id="@+id/llBrandContainer"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="3D 얼굴 스캔"
-                android:textColor="@color/white"
-                android:textSize="22sp"
-                android:textStyle="bold"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
                 app:layout_constraintBottom_toBottomOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toTopOf="parent" />
+                app:layout_constraintTop_toTopOf="parent">
 
-            <!-- 스캔 내역 열기 버튼 -->
-            <androidx.appcompat.widget.AppCompatButton
-                android:id="@+id/btnHistoryToggle"
+                <TextView
+                    android:id="@+id/tvBrandTitle"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="TangoFace"
+                    android:textColor="@color/white"
+                    android:textSize="24sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/tvLabBadge"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="10dp"
+                    android:background="@drawable/effect_20"
+                    android:backgroundTint="@color/accent"
+                    android:paddingHorizontal="8dp"
+                    android:paddingVertical="3dp"
+                    android:text="실험실"
+                    android:textColor="@color/white"
+                    android:textSize="12sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
+
+            <!-- 우측 영역: 3D 모델링 스캔 타이틀 + 스캔 내역 버튼 -->
+            <LinearLayout
+                android:id="@+id/llRightHeaderContainer"
                 android:layout_width="wrap_content"
-                android:layout_height="40dp"
-                android:background="@drawable/effect_20"
-                android:backgroundTint="@color/accent900"
-                android:paddingHorizontal="16dp"
-                android:text="스캔 내역 (0)"
-                android:textColor="@color/subColor100"
-                android:textSize="15sp"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
                 app:layout_constraintBottom_toBottomOf="parent"
                 app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintTop_toTopOf="parent" />
+                app:layout_constraintTop_toTopOf="parent">
+
+                <TextView
+                    android:id="@+id/tvScanTitle"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginEnd="16dp"
+                    android:text="3D 모델링 스캔"
+                    android:textColor="@color/subColor100"
+                    android:textSize="20sp"
+                    android:textStyle="bold" />
+
+                <!-- 스캔 내역 열기 버튼 -->
+                <androidx.appcompat.widget.AppCompatButton
+                    android:id="@+id/btnHistoryToggle"
+                    android:layout_width="wrap_content"
+                    android:layout_height="40dp"
+                    android:background="@drawable/effect_20"
+                    android:backgroundTint="@color/accent900"
+                    android:paddingHorizontal="16dp"
+                    android:text="스캔 내역 (0)"
+                    android:textColor="@color/subColor100"
+                    android:textSize="15sp" />
+            </LinearLayout>
 
         </androidx.constraintlayout.widget.ConstraintLayout>
 
