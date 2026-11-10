@@ -63,7 +63,7 @@ class ScanViewModel(
      * - 이미 진행 중인 작업(PAIRED, UPLOADED, PROCESSING)이 있으면 유실 없이 복원
      * - 진행 중인 작업이 없다면: 1초 동안 QR 스캔 유도 후 PIN 번호 발급
      */
-    fun onFragmentEnter() {
+    fun onFragmentEnter(tabletKey: String = FaceScanApiClient.getTabletKey()) {
         // 이미 3D 스캔 굽는 작업이 진행 중이면 유실되지 않고 해당 작업 화면을 유지
         val ongoingStatus = _uiState.value.status
         if (ongoingStatus in listOf("PAIRED", "UPLOADED", "PROCESSING") && currentSessionId != null) {
@@ -71,7 +71,7 @@ class ScanViewModel(
         }
 
         // 대기 중이거나 완료/실패 상태라면 신규 세션 플로우 시작 (1초 뒤 PIN 발급)
-        startNewScanFlow(delayMillis = 1000L)
+        startNewScanFlow(delayMillis = 1000L, tabletKey = tabletKey)
     }
 
     /**
@@ -79,7 +79,7 @@ class ScanViewModel(
      * 1단계: "스마트폰으로 QR 코드를 먼저 스캔하세요" (READY_TO_SCAN)
      * 2단계: 1초 뒤 PIN 번호 생성 API 호출 -> 6자리 PIN 번호 표시 (CREATED)
      */
-    fun startNewScanFlow(delayMillis: Long = 1000L) {
+    fun startNewScanFlow(delayMillis: Long = 1000L, tabletKey: String = FaceScanApiClient.getTabletKey()) {
         viewModelScope.launch {
             _uiState.update {
                 ScanUiState(
@@ -91,14 +91,14 @@ class ScanViewModel(
             // 1초 대기 후 PIN 발급
             delay(delayMillis)
 
-            createSession()
+            createSession(tabletKey)
         }
     }
 
     /**
      * 세션 생성 및 6자리 페어링 번호 발급
      */
-    fun createSession(tabletKey: String = FaceScanApiClient.DEFAULT_TABLET_KEY) {
+    fun createSession(tabletKey: String = FaceScanApiClient.getTabletKey()) {
         viewModelScope.launch {
             _uiState.update {
                 it.copy(

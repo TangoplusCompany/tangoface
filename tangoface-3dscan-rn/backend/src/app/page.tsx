@@ -104,9 +104,7 @@ export default function Home() {
         <h1 style={{ fontSize: 24, margin: 0, color: '#38bdf8' }}>
           TangoFace 3D Backend API Tester
         </h1>
-        <p style={{ margin: '8px 0 0 0', color: '#94a3b8', fontSize: 14 }}>
-          Next.js(App Router) + Supabase(Postgres/Storage) 세션·페어링 실시간 테스트 대시보드
-        </p>
+        
       </header>
 
       {/* 상태 현황 카드 */}
@@ -134,22 +132,6 @@ export default function Home() {
         </div>
       </section>
 
-      {/* 태블릿 인증 키 설정 */}
-      <section style={{ backgroundColor: '#0f172a', border: '1px solid #1e293b', borderRadius: 12, padding: 16, marginBottom: 16 }}>
-        <label style={{ display: 'block', fontSize: 12, color: '#94a3b8', marginBottom: 6, fontWeight: 'bold' }}>
-          🔑 X-Tablet-Key 헤더 (태블릿 보안 인증키):
-        </label>
-        <input
-          type="text"
-          value={tabletKey}
-          onChange={(e) => setTabletKey(e.target.value)}
-          placeholder="태블릿 전용 비밀키 입력"
-          style={{ width: '100%', padding: '8px 12px', fontSize: 13, backgroundColor: '#020617', border: '1px solid #334155', borderRadius: 6, color: '#38bdf8', fontFamily: 'monospace' }}
-        />
-        <p style={{ margin: '6px 0 0 0', fontSize: 11, color: '#64748b' }}>
-          * 이 키를 헤더(X-Tablet-Key)에 실어 보내는 공인 안드로이드 태블릿만 세션을 생성할 수 있습니다.
-        </p>
-      </section>
 
       {/* 액션 버튼 */}
       <section style={{ display: 'flex', gap: 12, marginBottom: 24 }}>

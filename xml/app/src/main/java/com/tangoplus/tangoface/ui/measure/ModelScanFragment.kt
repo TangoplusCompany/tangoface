@@ -1,6 +1,7 @@
 package com.tangoplus.tangoface.ui.measure
 
 import android.os.Bundle
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -15,7 +16,7 @@ import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.tangoplus.tangoface.data.api.ScanHistoryItem
-import com.tangoplus.tangoface.databinding.FragmentMScanBinding
+import com.tangoplus.tangoface.databinding.FragmentModelScanBinding
 import com.tangoplus.tangoface.ui.adapter.ScanHistoryAdapter
 import com.tangoplus.tangoface.ui.measure.vm.ScanUiState
 import com.tangoplus.tangoface.ui.measure.vm.ScanViewModel
@@ -27,9 +28,9 @@ import kotlinx.coroutines.launch
  * - 뒤로가기 시에도 백그라운드 3D 렌더링/폴링 유실 방지
  * - 스캔 내역 관리 목록 (실패 내역 삭제, 이전 세션 복원 등) 제공
  */
-class MScanFragment : Fragment() {
+class ModelScanFragment : Fragment() {
 
-    private var _binding: FragmentMScanBinding? = null
+    private var _binding: FragmentModelScanBinding? = null
     private val bd get() = _binding!!
 
     private val svm: ScanViewModel by activityViewModels()
@@ -42,7 +43,7 @@ class MScanFragment : Fragment() {
         container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View {
-        _binding = FragmentMScanBinding.inflate(inflater, container, false)
+        _binding = FragmentModelScanBinding.inflate(inflater, container, false)
         return bd.root
     }
 
@@ -54,8 +55,10 @@ class MScanFragment : Fragment() {
         setupBackPressHandler()
         observeViewModel()
 
-        // 화면 진입 시 신규 또는 기존 진행 중인 세션 복원
-        svm.onFragmentEnter()
+        // 화면 진입 시 신규 또는 기존 진행 중인 세션 복원 (strings.xml 태블릿 키 주입)
+        val tabletKey = com.tangoplus.tangoface.data.api.FaceScanApiClient.getTabletKey(requireContext())
+        Log.v("키가져와지나요?", "$tabletKey")
+        svm.onFragmentEnter(tabletKey)
     }
 
     private fun initViews() {
@@ -77,7 +80,8 @@ class MScanFragment : Fragment() {
 
         // 복원 완료 후 새로운 스캔 시작
         bd.btnNewScan.setOnClickListener {
-            svm.startNewScanFlow(delayMillis = 1000L)
+            val key = com.tangoplus.tangoface.data.api.FaceScanApiClient.getTabletKey(requireContext())
+            svm.startNewScanFlow(delayMillis = 1000L, tabletKey = key)
         }
     }
 

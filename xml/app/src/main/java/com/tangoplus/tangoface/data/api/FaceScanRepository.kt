@@ -22,7 +22,7 @@ interface FaceScanRepository {
      * @return Result<CreateSessionResponse> (성공 시 sessionId, code, sessionSecret 포함)
      */
     suspend fun createScanSession(
-        tabletKey: String = FaceScanApiClient.DEFAULT_TABLET_KEY
+        tabletKey: String = FaceScanApiClient.getTabletKey()
     ): Result<CreateSessionResponse>
 
     /**

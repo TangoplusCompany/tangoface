@@ -11,13 +11,21 @@ import java.util.concurrent.TimeUnit
  */
 object FaceScanApiClient {
     // 프로덕션 기본 URL (Retrofit baseUrl은 항상 '/'로 끝나야 함)
-    const val BASE_URL = "https://your-backend.vercel.app/"
+    const val BASE_URL = "https://tangoface-backend.vercel.app/"
 
     // 안드로이드 에뮬레이터 로컬 테스트 URL
     const val LOCAL_EMULATOR_URL = "http://10.0.2.2:3000/"
 
-    // 태블릿 인증 기본 비밀키
-    const val DEFAULT_TABLET_KEY = "tbl_b3932fb37cd110ef805c34c03003a907b0a71b238e2b5dc4"
+    /**
+     * strings.xml에 정의된 x_tablet_key 조회 (하드코딩 방지)
+     */
+    fun getTabletKey(context: android.content.Context? = com.tangoplus.tangoface.orbbec.application.MyApplication.getInstance()): String {
+        return try {
+            context?.getString(com.tangoplus.tangoface.R.string.x_tablet_key) ?: ""
+        } catch (e: Exception) {
+            ""
+        }
+    }
 
     // 타임아웃 설정 (초)
     private const val CONNECT_TIMEOUT_SEC = 15L

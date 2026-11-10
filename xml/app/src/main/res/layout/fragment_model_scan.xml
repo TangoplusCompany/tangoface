@@ -5,7 +5,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@color/black"
-    tools:context=".ui.measure.MScanFragment">
+    tools:context=".ui.measure.ModelScanFragment">
 
     <!-- 메인 콘텐츠 영역 -->
     <androidx.constraintlayout.widget.ConstraintLayout
@@ -40,6 +40,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="40dp"
                 android:background="@drawable/effect_20"
+                android:backgroundTint="@color/accent900"
                 android:paddingHorizontal="16dp"
                 android:text="스캔 내역 (0)"
                 android:textColor="@color/subColor100"
