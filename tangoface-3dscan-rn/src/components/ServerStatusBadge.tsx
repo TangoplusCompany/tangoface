@@ -77,11 +77,11 @@ export const ServerStatusBadge: React.FC<ServerStatusBadgeProps> = ({
     ? '서버 상태 확인 중...'
     : isOnline
     ? queueCount > 0
-      ? `3D 변환 서버 연결됨 (대기 ${queueCount}명)`
+      ? `서버 연결됨 (대기 ${queueCount}명)`
       : isBusy
-      ? '3D 변환 서버 연결됨 (작업 중)'
-      : '3D 변환 서버 연결됨'
-    : '3D 변환 서버 꺼짐';
+      ? '서버 연결됨 (작업 중)'
+      : '서버 연결됨'
+    : '서버 꺼짐';
 
   return (
     <TouchableOpacity
