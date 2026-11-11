@@ -16,6 +16,7 @@ export interface PairSessionResponse {
 export interface PresignUploadResponse {
   upload_path: string;
   signed_url: string;
+  upload_url?: string;
   token?: string;
   max_size_bytes: number;
   allowed_mime_types: string[];

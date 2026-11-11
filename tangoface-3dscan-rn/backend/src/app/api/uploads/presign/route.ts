@@ -81,6 +81,7 @@ export async function POST(request: NextRequest) {
     const response: PresignUploadResponse = {
       upload_path: uploadPath,
       signed_url: signedUrl,
+      upload_url: signedUrl,
       token,
       max_size_bytes: MAX_VIDEO_SIZE_BYTES,
       allowed_mime_types: ALLOWED_VIDEO_MIME_TYPES,

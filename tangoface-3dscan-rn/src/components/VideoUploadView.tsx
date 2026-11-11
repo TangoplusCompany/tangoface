@@ -226,7 +226,7 @@ export const VideoUploadView: React.FC<VideoUploadViewProps> = ({
               {isUploading ? (
                 <ActivityIndicator color="#ffffff" />
               ) : (
-                <Text style={styles.actionPrimaryText}>스토리지로 영상 전송</Text>
+                <Text style={styles.actionPrimaryText}>영상 전송</Text>
               )}
             </TouchableOpacity>
 

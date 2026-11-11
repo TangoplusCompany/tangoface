@@ -91,8 +91,8 @@ export async function getPresignedUploadUrl(pairToken: string): Promise<{
 
     return {
       success: true,
-      upload_url: data.upload_url,
-      path: data.path,
+      upload_url: data.signed_url || data.upload_url,
+      path: data.upload_path || data.path,
     };
   } catch (err: any) {
     return {
@@ -115,8 +115,9 @@ export function uploadVideoDirectly(
     const xhr = new XMLHttpRequest();
     xhr.open('PUT', uploadUrl, true);
 
-    // Supabase Storage Signed Upload URL 표준 Content-Type
-    const contentType = fileOrBlob.type || 'video/mp4';
+    // Supabase Storage Signed Upload URL 표준 Content-Type (코덱 파라미터 제거)
+    const rawType = (fileOrBlob.type || 'video/mp4').split(';')[0].trim();
+    const contentType = rawType || 'video/mp4';
     xhr.setRequestHeader('Content-Type', contentType);
 
     if (xhr.upload && onProgress) {
