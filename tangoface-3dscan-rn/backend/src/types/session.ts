@@ -21,6 +21,8 @@ export interface SessionRow {
   expires_at: string;
   paired_at: string | null;
   uploaded_at: string | null;
+  processing_started_at?: string | null;
+  not_found_count?: number;
 }
 
 export interface PairAttemptRow {

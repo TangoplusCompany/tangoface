@@ -19,11 +19,13 @@ const RegisterSchema = z.object({
     .refine((val) => val.startsWith('https://'), {
       message: '워커 주소는 https:// 로 시작해야 합니다.',
     }),
+  busy: z.boolean().optional(),
+  queue: z.number().int().min(0).optional(),
 });
 
 /**
  * POST /api/worker/register
- * Colab FastAPI 하트비트가 30초마다 호출하여 최신 터널 URL(trycloudflare.com)을 등록
+ * Colab FastAPI 하트비트가 30초마다 호출하여 최신 터널 URL(trycloudflare.com)과 상태(busy, queue)를 등록
  * 인증: X-Register-Secret 헤더 (WORKER_REGISTER_SECRET 일치 검증)
  */
 export async function POST(request: NextRequest) {
@@ -65,16 +67,38 @@ export async function POST(request: NextRequest) {
     }
 
     const cleanUrl = parseResult.data.url.replace(/\/+$/, '');
+    const nowIso = new Date().toISOString();
     const supabase = getSupabaseAdmin();
 
-    const { error: upsertError } = await supabase.from('worker_configs').upsert(
-      {
-        worker_key: 'colab',
-        worker_url: cleanUrl,
-        updated_at: new Date().toISOString(),
-      },
-      { onConflict: 'worker_key' }
-    );
+    const fullPayload: Record<string, any> = {
+      worker_key: 'colab',
+      worker_url: cleanUrl,
+      updated_at: nowIso,
+    };
+    if (parseResult.data.busy !== undefined) {
+      fullPayload.busy = parseResult.data.busy;
+    }
+    if (parseResult.data.queue !== undefined) {
+      fullPayload.queue = parseResult.data.queue;
+    }
+
+    let { error: upsertError } = await supabase
+      .from('worker_configs')
+      .upsert(fullPayload, { onConflict: 'worker_key' });
+
+    // 마이그레이션 SQL 적용 전(busy/queue 컬럼 없음)일 경우에도 기본 URL 등록은 실패하지 않도록 폴백
+    if (upsertError && (parseResult.data.busy !== undefined || parseResult.data.queue !== undefined)) {
+      console.warn('worker_configs(busy/queue) 확장 저장 폴백:', upsertError.message);
+      const fallbackResult = await supabase.from('worker_configs').upsert(
+        {
+          worker_key: 'colab',
+          worker_url: cleanUrl,
+          updated_at: nowIso,
+        },
+        { onConflict: 'worker_key' }
+      );
+      upsertError = fallbackResult.error;
+    }
 
     if (upsertError) {
       console.error('워커 URL DB 저장 실패:', upsertError);
@@ -90,7 +114,9 @@ export async function POST(request: NextRequest) {
       {
         ok: true,
         worker_url: cleanUrl,
-        updated_at: new Date().toISOString(),
+        busy: parseResult.data.busy ?? null,
+        queue: parseResult.data.queue ?? null,
+        updated_at: nowIso,
       },
       { status: 200 }
     );
@@ -116,7 +142,7 @@ export async function GET(request: NextRequest) {
     const supabase = getSupabaseAdmin();
     const { data } = await supabase
       .from('worker_configs')
-      .select('worker_key, worker_url, updated_at')
+      .select('*')
       .eq('worker_key', 'colab')
       .maybeSingle();
 

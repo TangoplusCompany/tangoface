@@ -18,44 +18,31 @@ const PROCESSING_STAGES = [
 ];
 
 /**
- * 시작 시각을 기준으로 경과 시간, 예상 남은 시간, 진행률(%), 안내 단계를 계산
- * - 완료 직전까지 멈춤 없이 부드럽게 98~99%까지 점근(asymptotic curve)하도록 처리하여
- *   예상 시간을 조금 넘어가도 앱이 멈춘 것처럼 보이지 않게 방어합니다.
+ * 경과 초(elapsedSeconds)를 기준으로 예상 남은 시간, 진행률(%), 안내 단계를 계산
  */
-export function calculateProcessingProgress(
-  startedAtIso: string,
+export function calculateProcessingProgressFromElapsed(
+  elapsedSecondsInput: number,
   estimatedTotalSeconds = DEFAULT_ESTIMATED_DURATION_SECONDS
 ): ProcessingProgressInfo {
-  const startedAt = new Date(startedAtIso).getTime();
-  const now = Date.now();
-  const elapsedMs = Math.max(0, now - startedAt);
-  const elapsedSeconds = Math.floor(elapsedMs / 1000);
-
-  // 예상 진행 비율 (0.0 ~ 1.0+)
+  const elapsedSeconds = Math.max(0, Math.floor(elapsedSecondsInput));
   const ratio = elapsedSeconds / estimatedTotalSeconds;
 
   let progressPercent: number;
-  let stageText: string;
 
   if (ratio < 0.95) {
-    // 정상 구간: 시간에 비례하여 0% ~ 95%까지 선형 증가
     progressPercent = Math.round(ratio * 100);
   } else {
-    // 예상 시간을 초과하거나 근접했을 때: 95% ~ 99% 구간을 지수 감쇠로 부드럽게 대기
-    // elapsed가 더 커져도 99%를 넘지 않음 (DONE 웹훅이 와야 100%가 됨)
-    const overtime = elapsedSeconds - (estimatedTotalSeconds * 0.95);
-    const asymptoticBonus = (1 - Math.exp(-overtime / 15)) * 4; // 최대 4% 추가 (95 + 4 = 99%)
+    const overtime = elapsedSeconds - estimatedTotalSeconds * 0.95;
+    const asymptoticBonus = (1 - Math.exp(-overtime / 15)) * 4;
     progressPercent = Math.min(99, Math.round(95 + asymptoticBonus));
   }
 
-  // 남은 시간 계산
   const remainingSeconds = Math.max(2, Math.round(estimatedTotalSeconds - elapsedSeconds));
 
-  // 단계 라벨 선택
   const matchedStage = PROCESSING_STAGES.find(
     (s) => ratio >= s.minRatio && ratio < s.maxRatio
   );
-  stageText = matchedStage ? matchedStage.label : '마무리 검증 및 업로드 준비 중...';
+  const stageText = matchedStage ? matchedStage.label : '마무리 검증 및 업로드 준비 중...';
 
   return {
     elapsed_seconds: elapsedSeconds,
@@ -64,4 +51,19 @@ export function calculateProcessingProgress(
     progress_percent: progressPercent,
     stage: stageText,
   };
+}
+
+/**
+ * 시작 시각(ISO)을 기준으로 경과 시간, 예상 남은 시간, 진행률(%), 안내 단계를 계산
+ */
+export function calculateProcessingProgress(
+  startedAtIso: string,
+  estimatedTotalSeconds = DEFAULT_ESTIMATED_DURATION_SECONDS
+): ProcessingProgressInfo {
+  const startedAt = new Date(startedAtIso).getTime();
+  const elapsedMs = Math.max(0, Date.now() - startedAt);
+  return calculateProcessingProgressFromElapsed(
+    Math.floor(elapsedMs / 1000),
+    estimatedTotalSeconds
+  );
 }

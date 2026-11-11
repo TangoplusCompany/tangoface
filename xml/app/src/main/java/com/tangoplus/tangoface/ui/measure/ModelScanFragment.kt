@@ -292,7 +292,12 @@ class ModelScanFragment : Fragment() {
         errorDialog = AlertDialog.Builder(requireContext())
             .setTitle("3D 스캔 안내")
             .setMessage(message)
-            .setPositiveButton("확인") { dialog, _ ->
+            .setPositiveButton("다시 시도") { dialog, _ ->
+                dialog.dismiss()
+                val key = com.tangoplus.tangoface.data.api.FaceScanApiClient.getTabletKey(requireContext())
+                svm.startNewScanFlow(delayMillis = 500L, tabletKey = key)
+            }
+            .setNegativeButton("닫기") { dialog, _ ->
                 dialog.dismiss()
             }
             .setCancelable(true)
