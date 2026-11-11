@@ -1,5 +1,10 @@
 package com.tangoplus.tangoface.ui.measure.vm
 
+import android.content.ContentValues
+import android.content.Context
+import android.media.MediaScannerConnection
+import android.os.Environment
+import android.provider.MediaStore
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.tangoplus.tangoface.data.api.FaceScanApiClient
@@ -8,7 +13,13 @@ import com.tangoplus.tangoface.data.api.FaceScanRepository
 import com.tangoplus.tangoface.data.api.FaceScanRepositoryImpl
 import com.tangoplus.tangoface.data.api.ScanErrorCodeMapper
 import com.tangoplus.tangoface.data.api.ScanHistoryItem
+import com.tangoplus.tangoface.data.db.FaceDatabase
+import com.tangoplus.tangoface.data.db.FaceStatic
+import com.tangoplus.tangoface.domain.util.PreferenceUtility
+import com.tangoplus.tangoface.domain.vo.MeasureType
+import com.tangoplus.tangoface.domain.vo.Sequence
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -17,8 +28,22 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.io.File
+import java.io.FileInputStream
 import java.util.concurrent.ConcurrentHashMap
+
+/**
+ * 3D 얼굴 스캔 완료 후 UserSetupDialogFragment에서 입력받은 사용자 정보
+ */
+data class ScanUserInfo(
+    val name: String = "GUEST",
+    val mobile: String = "",
+    val birthday: String = "",
+    val gender: Int = -1,
+    val nationality: String = "",
+    val uuid: String = ""
+)
 
 /**
  * 3D 얼굴 스캔 화면 UI 상태 모델
@@ -29,10 +54,17 @@ data class ScanUiState(
     val pairingCode: String = "",
     val progressPercent: Int = 0,
     val remainingSeconds: Int = 0,
+    val isQueued: Boolean = false,
     val stageMessage: String = "",
     val glbDownloadUrl: String? = null,
     val isDownloadingGlb: Boolean = false,
     val localGlbPath: String? = null,
+    val localGlbUri: String? = null,
+    val localGlbFileName: String? = null,
+    val localGlbSizeBytes: Long = 0L,
+    val userInfo: ScanUserInfo? = null,
+    val isUserSetupCompleted: Boolean = false,
+    val savedTempServerSn: Int? = null,
     val errorMessage: String? = null
 )
 
@@ -59,26 +91,21 @@ class ScanViewModel(
     // 세션별 백그라운드 폴링 작업 관리 (유실 방지)
     private val activePollingJobs = ConcurrentHashMap<String, Job>()
 
-    // 세션별 중복 GLB 다운로드 방지용 Set
+    // 세션별 중복 GLB 다운로드 / DB 저장 방지용 Set
     private val activeDownloadSessionIds = ConcurrentHashMap.newKeySet<String>()
+    private val activePersistSessionIds = ConcurrentHashMap.newKeySet<String>()
 
-    // 현재 포커스된 세션 ID
+    // 현재 포커스된 세션 ID 및 세션 초기화 Job
     private var currentSessionId: String? = null
     private var currentSessionSecret: String? = null
+    private var sessionInitJob: Job? = null
 
     /**
      * 화면 진입 시 호출:
-     * - 이미 진행 중인 작업(PAIRED, UPLOADED, PROCESSING)이 있으면 유실 없이 복원
-     * - 진행 중인 작업이 없다면: 1초 동안 QR 스캔 유도 후 PIN 번호 발급
+     * - 진입 시마다 기존 상태를 초기화하고 신규 세션(QR + 새 6자리 PIN 번호) 발급
      */
     fun onFragmentEnter(tabletKey: String = FaceScanApiClient.getTabletKey()) {
-        // 이미 3D 스캔 굽는 작업이 진행 중이면 유실되지 않고 해당 작업 화면을 유지
-        val ongoingStatus = _uiState.value.status
-        if (ongoingStatus in listOf("PAIRED", "UPLOADED", "PROCESSING") && currentSessionId != null) {
-            return
-        }
-
-        // 대기 중이거나 완료/실패 상태라면 신규 세션 플로우 시작 (1초 뒤 PIN 발급)
+        resetAll()
         startNewScanFlow(delayMillis = 1000L, tabletKey = tabletKey)
     }
 
@@ -88,7 +115,8 @@ class ScanViewModel(
      * 2단계: 1초 뒤 PIN 번호 생성 API 호출 -> 6자리 PIN 번호 표시 (CREATED)
      */
     fun startNewScanFlow(delayMillis: Long = 1000L, tabletKey: String = FaceScanApiClient.getTabletKey()) {
-        viewModelScope.launch {
+        sessionInitJob?.cancel()
+        sessionInitJob = viewModelScope.launch {
             _uiState.update {
                 ScanUiState(
                     status = "READY_TO_SCAN",
@@ -99,7 +127,7 @@ class ScanViewModel(
             // 1초 대기 후 PIN 발급
             delay(delayMillis)
 
-            createSession(tabletKey)
+            createSessionInternal(tabletKey)
         }
     }
 
@@ -107,51 +135,56 @@ class ScanViewModel(
      * 세션 생성 및 6자리 페어링 번호 발급
      */
     fun createSession(tabletKey: String = FaceScanApiClient.getTabletKey()) {
-        viewModelScope.launch {
+        sessionInitJob?.cancel()
+        sessionInitJob = viewModelScope.launch {
+            createSessionInternal(tabletKey)
+        }
+    }
+
+    private suspend fun createSessionInternal(tabletKey: String) {
+        _uiState.update {
+            it.copy(
+                status = "CREATING",
+                errorMessage = null
+            )
+        }
+
+        val result = repository.createScanSession(tabletKey)
+        result.onSuccess { response ->
+            currentSessionId = response.sessionId
+            currentSessionSecret = response.sessionSecret
+
+            val historyItem = ScanHistoryItem(
+                sessionId = response.sessionId,
+                sessionSecret = response.sessionSecret,
+                pairingCode = response.code,
+                status = "CREATED",
+                stageMessage = "스마트폰에서 6자리 코드를 입력해주세요."
+            )
+
+            // 내역 목록에 추가
+            _historyList.update { current ->
+                listOf(historyItem) + current.filter { it.sessionId != response.sessionId }
+            }
+
             _uiState.update {
                 it.copy(
-                    status = "CREATING",
-                    errorMessage = null
+                    status = "CREATED",
+                    sessionId = response.sessionId,
+                    pairingCode = response.code,
+                    errorMessage = null,
+                    stageMessage = "스마트폰에서 PIN 번호를 입력해주세요."
                 )
             }
 
-            val result = repository.createScanSession(tabletKey)
-            result.onSuccess { response ->
-                currentSessionId = response.sessionId
-                currentSessionSecret = response.sessionSecret
-
-                val historyItem = ScanHistoryItem(
-                    sessionId = response.sessionId,
-                    sessionSecret = response.sessionSecret,
-                    pairingCode = response.code,
-                    status = "CREATED",
-                    stageMessage = "스마트폰에서 6자리 코드를 입력해주세요."
+            // 백그라운드 폴링 시작
+            startBackgroundPolling(response.sessionId, response.sessionSecret)
+        }.onFailure { error ->
+            _uiState.update {
+                it.copy(
+                    status = "FAILED",
+                    errorMessage = error.message ?: "세션 생성에 실패했습니다."
                 )
-
-                // 내역 목록에 추가
-                _historyList.update { current ->
-                    listOf(historyItem) + current.filter { it.sessionId != response.sessionId }
-                }
-
-                _uiState.update {
-                    it.copy(
-                        status = "CREATED",
-                        sessionId = response.sessionId,
-                        pairingCode = response.code,
-                        errorMessage = null,
-                        stageMessage = "스마트폰에서 PIN 번호를 입력해주세요."
-                    )
-                }
-
-                // 백그라운드 폴링 시작 (뒤로 가기 해도 중단되지 않음)
-                startBackgroundPolling(response.sessionId, response.sessionSecret)
-            }.onFailure { error ->
-                _uiState.update {
-                    it.copy(
-                        status = "FAILED",
-                        errorMessage = error.message ?: "세션 생성에 실패했습니다."
-                    )
-                }
             }
         }
     }
@@ -199,12 +232,13 @@ class ScanViewModel(
                         "PROCESSING" -> {
                             val progress = statusBody.progress
                             val queuePos = progress?.queuePosition
+                            val queued = queuePos != null && queuePos >= 1
                             val percent = progress?.progressPercent ?: 0
                             val remaining = progress?.etaSeconds ?: progress?.remainingSeconds ?: 0
                             val stage = when {
-                                queuePos != null && queuePos >= 1 -> {
-                                    val ahead = (queuePos - 1).coerceAtLeast(0)
-                                    progress.stage.ifBlank { "대기 중 (앞에 ${ahead}명)" }
+                                queued -> {
+                                    val ahead = (queuePos!! - 1).coerceAtLeast(0)
+                                    progress?.stage?.ifBlank { null } ?: "대기 중 (앞에 ${ahead}명)"
                                 }
                                 else -> progress?.stage?.ifBlank { null } ?: "3D 얼굴 복원 진행 중..."
                             }
@@ -224,6 +258,7 @@ class ScanViewModel(
                                         status = "PROCESSING",
                                         progressPercent = percent,
                                         remainingSeconds = remaining,
+                                        isQueued = queued,
                                         stageMessage = stage
                                     )
                                 }
@@ -274,6 +309,7 @@ class ScanViewModel(
                                         status = "DONE",
                                         progressPercent = 100,
                                         remainingSeconds = 0,
+                                        isQueued = false,
                                         stageMessage = "3D 복원이 완료되었습니다.",
                                         glbDownloadUrl = downloadUrl
                                     )
@@ -378,6 +414,9 @@ class ScanViewModel(
         currentSessionId = target.sessionId
         currentSessionSecret = target.sessionSecret
 
+        val targetPath = target.localGlbPath
+        val targetFile = targetPath?.takeIf { !it.startsWith("content://") }?.let { File(it) }
+
         _uiState.value = ScanUiState(
             status = target.status,
             sessionId = target.sessionId,
@@ -386,23 +425,33 @@ class ScanViewModel(
             remainingSeconds = target.remainingSeconds,
             stageMessage = target.stageMessage,
             glbDownloadUrl = target.glbDownloadUrl,
-            localGlbPath = target.localGlbPath,
+            localGlbPath = targetFile?.absolutePath,
+            localGlbUri = targetPath?.takeIf { it.startsWith("content://") },
+            localGlbFileName = targetFile?.name,
+            localGlbSizeBytes = targetFile?.takeIf { it.exists() }?.length() ?: 0L,
+            isUserSetupCompleted = target.savedTempServerSn != null,
+            savedTempServerSn = target.savedTempServerSn,
             errorMessage = target.failReason
         )
     }
 
     /**
-     * DONE 상태에서 발급된 Signed URL로부터 GLB 파일을 태블릿 로컬 저장소에 다운로드 (최대 3회 자동 재시도)
+     * DONE 상태에서 발급된 Signed URL로부터 GLB 파일을 공용 저장소(Documents/TangoPlus/3DModels)에 다운로드
+     * (최대 3회 자동 재시도, 파일 저장 후 UserSetupDialogFragment 입력 완료 시 DB 저장)
      */
-    fun downloadGlbToLocal(sessionId: String, downloadUrl: String, destinationFile: File) {
+    fun downloadGlbToLocal(
+        context: Context,
+        sessionId: String,
+        downloadUrl: String,
+        destinationFile: File
+    ) {
         if (!activeDownloadSessionIds.add(sessionId)) {
             return
         }
 
+        val appContext = context.applicationContext
         viewModelScope.launch {
             try {
-                destinationFile.parentFile?.mkdirs()
-
                 if (currentSessionId == sessionId) {
                     _uiState.update {
                         it.copy(
@@ -416,25 +465,62 @@ class ScanViewModel(
                 var lastError: Throwable? = null
                 val maxAttempts = 3
                 var downloadedFile: File? = null
+                var mediaStoreUriString: String? = null
+                var fileSizeBytes = 0L
+
+                val cacheTempFile = File(appContext.cacheDir, destinationFile.name)
 
                 for (attempt in 1..maxAttempts) {
-                    val result = repository.downloadGlb(downloadUrl, destinationFile)
-                    if (result.isSuccess) {
-                        downloadedFile = result.getOrNull()
-                        break
+                    // 1) 직접 Documents/TangoPlus/3DModels 경로에 쓰기 시도
+                    destinationFile.parentFile?.mkdirs()
+                    val directResult = repository.downloadGlb(downloadUrl, destinationFile)
+                    if (directResult.isSuccess) {
+                        val saved = directResult.getOrNull()
+                        if (saved != null && saved.exists() && saved.length() > 0L) {
+                            downloadedFile = saved
+                            fileSizeBytes = saved.length()
+                            MediaScannerConnection.scanFile(
+                                appContext,
+                                arrayOf(saved.absolutePath),
+                                arrayOf("model/gltf-binary"),
+                                null
+                            )
+                            break
+                        }
                     }
-                    lastError = result.exceptionOrNull()
+
+                    // 2) 직접 쓰기 권한이 제한된 환경이면 캐시에 내려받은 뒤 MediaStore Documents/TangoPlus/3DModels로 복사
+                    val cacheResult = repository.downloadGlb(downloadUrl, cacheTempFile)
+                    if (cacheResult.isSuccess) {
+                        val cached = cacheResult.getOrNull()
+                        if (cached != null && cached.exists() && cached.length() > 0L) {
+                            val copiedUri = copyGlbToMediaStoreDocuments(appContext, cached, destinationFile.name)
+                            if (copiedUri != null) {
+                                mediaStoreUriString = copiedUri
+                                fileSizeBytes = cached.length()
+                                cached.delete()
+                                break
+                            }
+                        }
+                    }
+
+                    lastError = directResult.exceptionOrNull() ?: cacheResult.exceptionOrNull()
                     if (attempt < maxAttempts) {
                         delay(1500L)
                     }
                 }
 
-                if (downloadedFile != null) {
-                    val savedPath = downloadedFile.absolutePath
+                if (downloadedFile != null || mediaStoreUriString != null) {
+                    val savedPath = downloadedFile?.absolutePath
+                    val fileName = downloadedFile?.name ?: destinationFile.name
+                    val alreadyCompletedUser = _uiState.value
+                        .takeIf { currentSessionId == sessionId && it.isUserSetupCompleted && it.userInfo != null }
+                        ?.userInfo
+
                     updateHistoryItem(sessionId) { item ->
                         item.copy(
-                            localGlbPath = savedPath,
-                            stageMessage = "3D 모델 다운로드 완료"
+                            localGlbPath = savedPath ?: mediaStoreUriString,
+                            stageMessage = if (alreadyCompletedUser != null) "3D 모델 저장 중..." else "사용자 정보를 입력해주세요."
                         )
                     }
                     if (currentSessionId == sessionId) {
@@ -442,10 +528,18 @@ class ScanViewModel(
                             it.copy(
                                 isDownloadingGlb = false,
                                 localGlbPath = savedPath,
+                                localGlbUri = mediaStoreUriString,
+                                localGlbFileName = fileName,
+                                localGlbSizeBytes = fileSizeBytes,
                                 errorMessage = null,
-                                stageMessage = "3D 모델 다운로드 완료"
+                                stageMessage = if (alreadyCompletedUser != null) "3D 모델 저장 중..." else "사용자 정보를 입력해주세요."
                             )
                         }
+                    }
+
+                    // 진행 중 이미 UserSetupDialogFragment 입력이 끝났다면 즉시 파일명 변경 + DB 저장
+                    if (alreadyCompletedUser != null) {
+                        persistScanWithUserInfo(appContext, sessionId, alreadyCompletedUser)
                     }
                 } else {
                     val errMsg = lastError?.message ?: "GLB 파일 다운로드에 실패했습니다."
@@ -462,6 +556,197 @@ class ScanViewModel(
                 activeDownloadSessionIds.remove(sessionId)
             }
         }
+    }
+
+    private suspend fun copyGlbToMediaStoreDocuments(
+        context: Context,
+        sourceFile: File,
+        fileName: String
+    ): String? = withContext(Dispatchers.IO) {
+        try {
+            val values = ContentValues().apply {
+                put(MediaStore.MediaColumns.DISPLAY_NAME, fileName)
+                put(MediaStore.MediaColumns.MIME_TYPE, "model/gltf-binary")
+                put(MediaStore.Files.FileColumns.RELATIVE_PATH, "${Environment.DIRECTORY_DOCUMENTS}/TangoPlus/3DModels")
+            }
+            val resolver = context.contentResolver
+            val uri = resolver.insert(MediaStore.Files.getContentUri("external"), values)
+                ?: return@withContext null
+
+            resolver.openOutputStream(uri)?.use { out ->
+                FileInputStream(sourceFile).use { input ->
+                    input.copyTo(out)
+                }
+            } ?: return@withContext null
+
+            uri.toString()
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    /**
+     * UserSetupDialogFragment 입력 완료 시 사용자 정보를 ViewModel에 저장하고,
+     * GLB 파일이 이미 준비되어 있으면 즉시 파일명 변경 및 Room DB(t_face_static, SCAN) 저장 수행
+     * (아직 복원/다운로드 중이면 downloadGlbToLocal 완료 직후 자동 저장)
+     */
+    fun saveUserInfoAndPersistToDb(
+        context: Context,
+        userInfo: ScanUserInfo
+    ) {
+        val state = _uiState.value
+        val sessionId = state.sessionId.ifBlank { currentSessionId.orEmpty() }
+        if (state.savedTempServerSn != null) return
+
+        // 선입력 시에도 VM 상태에 우선 저장
+        _uiState.update {
+            it.copy(
+                userInfo = userInfo,
+                isUserSetupCompleted = true,
+                errorMessage = null
+            )
+        }
+
+        val hasLocalFile = (state.localGlbFileName ?: state.localGlbPath?.let { File(it).name }) != null
+        if (!hasLocalFile) return
+
+        val appContext = context.applicationContext
+        viewModelScope.launch {
+            persistScanWithUserInfo(appContext, sessionId, userInfo)
+        }
+    }
+
+    private suspend fun persistScanWithUserInfo(
+        appContext: Context,
+        sessionId: String,
+        userInfo: ScanUserInfo
+    ) {
+        if (!activePersistSessionIds.add(sessionId)) return
+        try {
+            val state = _uiState.value
+            if (state.savedTempServerSn != null) return
+            val fileName = state.localGlbFileName ?: state.localGlbPath?.let { File(it).name } ?: return
+
+            // 측정건(사용자 이름 + 측정 시각) 기준으로 파일명 변경 후 DB 에는 변경된 파일명 저장
+            val renamed = withContext(Dispatchers.IO) {
+                renameGlbForMeasurement(appContext, state, userInfo)
+            }
+            val finalFileName = renamed?.first ?: fileName
+            val finalPath = renamed?.second ?: state.localGlbPath
+            val finalUri = renamed?.third ?: state.localGlbUri
+
+            val assignedSn = withContext(Dispatchers.IO) {
+                saveScanResultToDb(appContext, sessionId, finalFileName, userInfo)
+            }
+
+            updateHistoryItem(sessionId) { item ->
+                item.copy(
+                    savedTempServerSn = assignedSn,
+                    localGlbPath = finalPath ?: finalUri,
+                    stageMessage = "3D 모델 및 사용자 정보 저장 완료"
+                )
+            }
+
+            if (currentSessionId == sessionId) {
+                _uiState.update {
+                    it.copy(
+                        userInfo = userInfo,
+                        isUserSetupCompleted = true,
+                        savedTempServerSn = assignedSn,
+                        localGlbFileName = finalFileName,
+                        localGlbPath = finalPath,
+                        localGlbUri = finalUri,
+                        errorMessage = null,
+                        stageMessage = "3D 모델 및 사용자 정보 저장 완료"
+                    )
+                }
+            }
+        } finally {
+            activePersistSessionIds.remove(sessionId)
+        }
+    }
+
+    /**
+     * 저장된 GLB 파일명을 "{이름}_{yyyyMMddHHmmss}.glb" 로 변경
+     * - 파일 직접 저장(file path)이면 renameTo, MediaStore(content://)이면 DISPLAY_NAME update
+     * - 실패 시 null 반환(기존 파일명 유지)
+     * @return Triple(새 파일명, 새 파일 경로(or null), 새 content uri(or null))
+     */
+    private fun renameGlbForMeasurement(
+        context: Context,
+        state: ScanUiState,
+        userInfo: ScanUserInfo
+    ): Triple<String, String?, String?>? {
+        return try {
+            val safeName = userInfo.name.ifBlank { "GUEST" }
+                .replace(Regex("[\\\\/:*?\"<>|\\s]"), "")
+                .ifEmpty { "GUEST" }
+            val timestamp = java.time.LocalDateTime.now()
+                .format(java.time.format.DateTimeFormatter.ofPattern("yyyyMMddHHmmss"))
+            val newName = "${safeName}_$timestamp.glb"
+
+            val path = state.localGlbPath
+            val uriStr = state.localGlbUri
+            when {
+                path != null -> {
+                    val src = File(path)
+                    val dst = File(src.parentFile, newName)
+                    if (src.exists() && src.renameTo(dst)) {
+                        MediaScannerConnection.scanFile(
+                            context,
+                            arrayOf(src.absolutePath, dst.absolutePath),
+                            arrayOf("model/gltf-binary", "model/gltf-binary"),
+                            null
+                        )
+                        Triple(newName, dst.absolutePath, null)
+                    } else null
+                }
+                uriStr != null -> {
+                    val values = ContentValues().apply {
+                        put(MediaStore.MediaColumns.DISPLAY_NAME, newName)
+                    }
+                    val updated = context.contentResolver.update(android.net.Uri.parse(uriStr), values, null, null)
+                    if (updated > 0) Triple(newName, null, uriStr) else null
+                }
+                else -> null
+            }
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    /**
+     * 다운로드된 3D 스캔 GLB 결과를 Room DB(t_face_static, SCAN)에 저장
+     * (UserSetupDialogFragment 입력값 반영)
+     */
+    private suspend fun saveScanResultToDb(
+        context: Context,
+        sessionId: String,
+        fileName: String,
+        userInfo: ScanUserInfo
+    ): Int {
+        val prefsUtil = PreferenceUtility(context)
+        val assignedSn = prefsUtil.getLastTempServerSn()
+        val fDao = FaceDatabase.getDatabase(context).faceDao()
+
+        val faceStatic = FaceStatic(
+            temp_server_sn = assignedSn,
+            uuid = userInfo.uuid.ifBlank { sessionId },
+            name = userInfo.name.ifBlank { "GUEST" },
+            mobile = userInfo.mobile,
+            birthday = userInfo.birthday,
+            gender = userInfo.gender,
+            nationality = userInfo.nationality,
+            seq = Sequence.COMFORT.id,
+            media_file_name = fileName,
+            json_file_name = "",
+            reg_date = FaceStatic.getCurrentDateTime(),
+            measure_type = MeasureType.SCAN.idx,
+            activated = 1
+        )
+        fDao.insertStatic(faceStatic)
+        prefsUtil.setNextTempServerSn()
+        return assignedSn
     }
 
     /**
@@ -501,7 +786,7 @@ class ScanViewModel(
     }
 
     /**
-     * 현재 스캔 상태 초기화 후 새로 시작
+     * 현재 스캔 상태 초기화
      */
     fun resetScanState() {
         currentSessionId = null
@@ -509,10 +794,27 @@ class ScanViewModel(
         _uiState.value = ScanUiState(status = "IDLE")
     }
 
-    override fun onCleared() {
-        super.onCleared()
+    /**
+     * 프래그먼트 이탈/종료 시 진행 중인 폴링·세션·내역·사용자 입력까지 전체 초기화
+     */
+    fun resetAll() {
+        sessionInitJob?.cancel()
+        sessionInitJob = null
+
         activePollingJobs.values.forEach { it.cancel() }
         activePollingJobs.clear()
+        activeDownloadSessionIds.clear()
+        activePersistSessionIds.clear()
+
+        currentSessionId = null
+        currentSessionSecret = null
+        _historyList.value = emptyList()
+        _uiState.value = ScanUiState(status = "IDLE")
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        resetAll()
     }
 }
 

@@ -82,15 +82,15 @@ export async function POST(request: NextRequest) {
     }
 
     const now = Date.now();
-    const tenMinutesAgo = new Date(now - 10 * 60 * 1000).toISOString();
+    const fifteenMinutesAgo = new Date(now - 15 * 60 * 1000).toISOString();
 
-    // 3. 10분 이내 & CREATED 상태인 세션 조회
+    // 3. 15분 이내 & CREATED 상태인 세션 조회
     const { data: session, error: findError } = await supabase
       .from('sessions')
       .select('id, status, created_at')
       .eq('code', code)
       .eq('status', 'CREATED')
-      .gte('created_at', tenMinutesAgo)
+      .gte('created_at', fifteenMinutesAgo)
       .maybeSingle();
 
     if (findError || !session) {

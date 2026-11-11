@@ -57,7 +57,7 @@
                     android:textStyle="bold" />
             </LinearLayout>
 
-            <!-- 우측 영역: 3D 모델링 스캔 타이틀 + 스캔 내역 버튼 -->
+            <!-- 우측 영역: 3D 모델링 스캔 타이틀 -->
             <LinearLayout
                 android:id="@+id/llRightHeaderContainer"
                 android:layout_width="wrap_content"
@@ -72,23 +72,10 @@
                     android:id="@+id/tvScanTitle"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginEnd="16dp"
                     android:text="3D 모델링 스캔"
                     android:textColor="@color/subColor100"
                     android:textSize="20sp"
                     android:textStyle="bold" />
-
-                <!-- 스캔 내역 열기 버튼 -->
-                <androidx.appcompat.widget.AppCompatButton
-                    android:id="@+id/btnHistoryToggle"
-                    android:layout_width="wrap_content"
-                    android:layout_height="40dp"
-                    android:background="@drawable/effect_20"
-                    android:backgroundTint="@color/accent900"
-                    android:paddingHorizontal="16dp"
-                    android:text="스캔 내역 (0)"
-                    android:textColor="@color/subColor100"
-                    android:textSize="15sp" />
             </LinearLayout>
 
         </androidx.constraintlayout.widget.ConstraintLayout>
@@ -99,7 +86,7 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_marginHorizontal="60dp"
-            android:background="@drawable/bg_glass_card"
+            android:background="@drawable/bg_scan_card"
             android:padding="32dp"
             android:visibility="visible"
             app:layout_constraintBottom_toBottomOf="parent"
@@ -176,9 +163,11 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="12dp"
-                android:text="스마트폰 화면에 위 6자리 번호를 입력해주세요"
+                android:gravity="center"
+                android:lineSpacingExtra="6dp"
+                android:text="스마트폰 화면에 위 6자리 번호를 입력해주세요\n모델링 서버 시동에 최대 5분이 소요됩니다"
                 android:textColor="@color/subColor500"
-                android:textSize="17sp"
+                android:textSize="16sp"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toBottomOf="@id/tvPairingCode" />
@@ -191,7 +180,7 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_marginHorizontal="60dp"
-            android:background="@drawable/bg_glass_card"
+            android:background="@drawable/bg_scan_card"
             android:padding="32dp"
             android:visibility="gone"
             app:layout_constraintBottom_toBottomOf="parent"
@@ -206,7 +195,7 @@
                 android:layout_height="wrap_content"
                 android:text="3D 얼굴 복원을 진행 중입니다..."
                 android:textColor="@color/white"
-                android:textSize="24sp"
+                android:textSize="20sp"
                 android:textStyle="bold"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
@@ -248,6 +237,22 @@
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintTop_toTopOf="@id/tvProgressPercent"
                 tools:text="예상 남은 시간: 약 25초" />
+
+            <!-- 3초 뒤 측정자 정보 입력 자동 실행 안내 -->
+            <TextView
+                android:id="@+id/tvUserSetupHint"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:gravity="center"
+                android:textColor="@color/accent300"
+                android:textSize="14sp"
+                android:visibility="gone"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@id/tvProgressPercent"
+                tools:text="3초 뒤 측정자 정보 입력을 시작합니다..."
+                tools:visibility="visible" />
 
         </androidx.constraintlayout.widget.ConstraintLayout>
 
@@ -291,112 +296,21 @@
                 app:layout_constraintTop_toBottomOf="@id/tvDoneTitle" />
 
             <androidx.appcompat.widget.AppCompatButton
-                android:id="@+id/btnNewScan"
+                android:id="@+id/btnViewScanResult"
                 android:layout_width="wrap_content"
-                android:layout_height="48dp"
+                android:layout_height="52dp"
                 android:layout_marginTop="28dp"
-                android:background="@drawable/bg_glass_card_accent"
-                android:paddingHorizontal="28dp"
-                android:text="새로운 스캔 시작"
+                android:background="@drawable/effect_glass_card_accent"
+                android:paddingHorizontal="36dp"
+                android:text="결과 보기"
                 android:textColor="@color/subColor100"
                 android:textSize="18sp"
                 android:textStyle="bold"
-                app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toBottomOf="@id/tvDoneMessage" />
-
-        </androidx.constraintlayout.widget.ConstraintLayout>
-
-    </androidx.constraintlayout.widget.ConstraintLayout>
-
-    <!-- 4. 스캔 내역 관리 오버레이 뷰 (내역 관리 목록) -->
-    <androidx.constraintlayout.widget.ConstraintLayout
-        android:id="@+id/clHistoryOverlay"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:background="#D0000000"
-        android:clickable="true"
-        android:focusable="true"
-        android:padding="32dp"
-        android:visibility="gone"
-        tools:visibility="visible">
-
-        <androidx.constraintlayout.widget.ConstraintLayout
-            android:layout_width="0dp"
-            android:layout_height="0dp"
-            android:background="@drawable/bg_glass_card"
-            android:padding="24dp"
-            app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="parent"
-            app:layout_constraintWidth_percent="0.85">
-
-            <!-- 내역 상단 바 -->
-            <TextView
-                android:id="@+id/tvHistoryHeaderTitle"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="스캔 내역 관리"
-                android:textColor="@color/white"
-                android:textSize="24sp"
-                android:textStyle="bold"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toTopOf="parent" />
-
-            <!-- 실패 내역 일괄 삭제 버튼 -->
-            <androidx.appcompat.widget.AppCompatButton
-                android:id="@+id/btnDeleteAllFailed"
-                android:layout_width="wrap_content"
-                android:layout_height="38dp"
-                android:layout_marginEnd="12dp"
-                android:background="@drawable/effect_20"
-                android:paddingHorizontal="14dp"
-                android:text="실패 내역 전체 삭제"
-                android:textColor="@color/accent300"
-                android:textSize="14sp"
-                app:layout_constraintBottom_toBottomOf="@id/tvHistoryHeaderTitle"
-                app:layout_constraintEnd_toStartOf="@id/btnCloseHistory"
-                app:layout_constraintTop_toTopOf="@id/tvHistoryHeaderTitle" />
-
-            <!-- 닫기 버튼 -->
-            <androidx.appcompat.widget.AppCompatButton
-                android:id="@+id/btnCloseHistory"
-                android:layout_width="40dp"
-                android:layout_height="38dp"
-                android:background="@drawable/effect_20"
-                android:text="✕"
-                android:textColor="@color/white"
-                android:textSize="18sp"
-                app:layout_constraintBottom_toBottomOf="@id/tvHistoryHeaderTitle"
-                app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintTop_toTopOf="@id/tvHistoryHeaderTitle" />
-
-            <!-- 내역 목록 리사이클러뷰 -->
-            <androidx.recyclerview.widget.RecyclerView
-                android:id="@+id/rvScanHistory"
-                android:layout_width="0dp"
-                android:layout_height="0dp"
-                android:layout_marginTop="20dp"
-                app:layout_constraintBottom_toBottomOf="parent"
-                app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toBottomOf="@id/tvHistoryHeaderTitle" />
-
-            <!-- 빈 내역 안내 문구 -->
-            <TextView
-                android:id="@+id/tvEmptyHistory"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="진행되었거나 완료된 스캔 내역이 없습니다."
-                android:textColor="@color/subColor500"
-                android:textSize="18sp"
                 android:visibility="gone"
-                app:layout_constraintBottom_toBottomOf="parent"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toBottomOf="@id/tvHistoryHeaderTitle"
-                tools:visibility="gone" />
+                app:layout_constraintTop_toBottomOf="@id/tvDoneMessage"
+                tools:visibility="visible" />
 
         </androidx.constraintlayout.widget.ConstraintLayout>
 

@@ -86,7 +86,7 @@ class UserRVAdapter(
 					MeasureType.BOW ->  R.drawable.ic_bow
 					MeasureType.EXPERT -> R.drawable.ic_expert
 					MeasureType.IMAGE -> R.drawable.ic_image
-					else -> R.drawable.ic_image
+					else -> R.drawable.ic_3dscan
 				}
 			)
 			ivMVIType.setImageDrawable(typeDrawable)

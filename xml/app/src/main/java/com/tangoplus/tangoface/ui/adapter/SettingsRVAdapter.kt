@@ -38,7 +38,7 @@ class SettingsRVAdapter(private val fragment: Fragment) : RecyclerView.Adapter<R
 				when (currentItem) {
 					"슬라이드 포스터 관리" -> (fragment.requireActivity() as MainActivity).navigateToSubFragment(PosterManageFragment())
 					"사전 체크리스트 통계" -> (fragment.requireActivity() as MainActivity).navigateToSubFragment(StatisticsFragment())
-					"백업 파일 확인하기" -> { openSpecificFolder() }
+//					"백업 파일 확인하기" -> { openSpecificFolder() }
 					"깊이 카메라 각도 조정" -> { startSettingsDepthCamera() }
 					"측정 데이터 내보내기/불러오기" -> (fragment.requireActivity() as MainActivity).navigateToSubFragment(BackupFragment())
 				}

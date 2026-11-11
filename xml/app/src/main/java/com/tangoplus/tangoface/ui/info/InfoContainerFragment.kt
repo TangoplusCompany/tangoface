@@ -60,15 +60,21 @@ class InfoContainerFragment : Fragment() {
 
     ivm.setSeq(Sequence.COMFORT)
     ivm.releaseUnitIdx()
+    ivm.clearScanResult()
   }
 
   override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
     super.onViewCreated(view, savedInstanceState)
     val measureTypeNum = arguments?.getInt(ARG_M_TYPE) ?: 0
+    if (measureTypeNum == MeasureType.SCAN.idx) {
+      ivm.setScanResultFromFaceResult(mvm.currentResult.value)
+    }
+
     val frg = when (measureTypeNum) {
       0 -> INormalFragment()
       1 -> IExpertFragment()
       3 -> IImageFragment()
+      4 -> IModelScanFragment()
       else -> INormalFragment()
     }
 

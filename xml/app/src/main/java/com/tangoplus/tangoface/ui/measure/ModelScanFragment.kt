@@ -1,33 +1,41 @@
 package com.tangoplus.tangoface.ui.measure
 
 import android.os.Bundle
-import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.Toast
-import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AlertDialog
 import androidx.core.view.isVisible
+import androidx.fragment.app.DialogFragment
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
-import androidx.recyclerview.widget.LinearLayoutManager
-import com.tangoplus.tangoface.data.api.ScanHistoryItem
+import com.tangoplus.tangoface.data.db.FaceDatabase
 import com.tangoplus.tangoface.databinding.FragmentModelScanBinding
-import com.tangoplus.tangoface.ui.adapter.ScanHistoryAdapter
+import com.tangoplus.tangoface.domain.util.FileUtility
+import com.tangoplus.tangoface.ui.main.MainActivity
+import com.tangoplus.tangoface.ui.main.vm.MainViewModel
+import com.tangoplus.tangoface.ui.measure.vm.InputViewModel
+import com.tangoplus.tangoface.ui.measure.vm.MeasureViewModel
 import com.tangoplus.tangoface.ui.measure.vm.ScanUiState
+import com.tangoplus.tangoface.ui.measure.vm.ScanUserInfo
 import com.tangoplus.tangoface.ui.measure.vm.ScanViewModel
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.io.File
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
 
 /**
  * 3D 얼굴 스캔 프래그먼트:
- * - 화면 진입 시 QR 코드 안내 후 1초 뒤 PIN 번호 표시
- * - 뒤로가기 시에도 백그라운드 3D 렌더링/폴링 유실 방지
- * - 스캔 내역 관리 목록 (실패 내역 삭제, 이전 세션 복원 등) 제공
+ * - 화면 진입 시 QR 코드 안내 후 1초 뒤 새 PIN 번호 발급
+ * - 3D 복원 진행 시작 3초 뒤 측정자 정보 입력창(UserSetupDialogFragment) 자동 노출
+ * - 화면 이탈/종료 시 진행 상태 및 입력 정보 전체 초기화
  */
 class ModelScanFragment : Fragment() {
 
@@ -35,9 +43,18 @@ class ModelScanFragment : Fragment() {
     private val bd get() = _binding!!
 
     private val svm: ScanViewModel by activityViewModels()
+    private val mainVm: MainViewModel by activityViewModels()
+    private val ivm: InputViewModel by activityViewModels()
+    private val mvm: MeasureViewModel by activityViewModels()
 
-    private lateinit var historyAdapter: ScanHistoryAdapter
     private var errorDialog: AlertDialog? = null
+    private var hasShownUserSetup = false
+    private var hasStartedUserSetupCountdown = false
+    private var userSetupDelayJob: Job? = null
+
+    companion object {
+        private const val TAG_USER_SETUP = "ModelScanUserSetupDialog"
+    }
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -51,78 +68,103 @@ class ModelScanFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        initViews()
-        initHistoryRecyclerView()
-        setupBackPressHandler()
-        observeViewModel()
+        hasShownUserSetup = false
+        hasStartedUserSetupCountdown = false
+        resetInputState()
 
-        // 화면 진입 시 신규 또는 기존 진행 중인 세션 복원 (strings.xml 태블릿 키 주입)
+        initViews()
+        observeViewModel()
+        observeUserSetupResult()
+
+        // 화면 진입 시 기존 상태 초기화 후 신규 세션(QR + 새 PIN) 발급
         val tabletKey = com.tangoplus.tangoface.data.api.FaceScanApiClient.getTabletKey(requireContext())
-        Log.v("키가져와지나요?", "$tabletKey")
         svm.onFragmentEnter(tabletKey)
     }
 
     private fun initViews() {
-        // 스캔 내역 버튼 클릭 시 오버레이 토글
-        bd.btnHistoryToggle.setOnClickListener {
-            bd.clHistoryOverlay.isVisible = true
-        }
-
-        // 스캔 내역 닫기
-        bd.btnCloseHistory.setOnClickListener {
-            bd.clHistoryOverlay.isVisible = false
-        }
-
-        // 실패한 내역 전체 삭제
-        bd.btnDeleteAllFailed.setOnClickListener {
-            svm.deleteFailedHistories()
-            Toast.makeText(requireContext(), "실패한 내역이 모두 삭제되었습니다.", Toast.LENGTH_SHORT).show()
-        }
-
-        // 복원 완료 후 새로운 스캔 시작
-        bd.btnNewScan.setOnClickListener {
-            val key = com.tangoplus.tangoface.data.api.FaceScanApiClient.getTabletKey(requireContext())
-            svm.startNewScanFlow(delayMillis = 1000L, tabletKey = key)
-        }
-    }
-
-    private fun initHistoryRecyclerView() {
-        historyAdapter = ScanHistoryAdapter(
-            onItemClick = { item ->
-                // 목록에서 세션 탭 시 해당 세션 상태 화면으로 복원
-                svm.selectSession(item.sessionId)
-                bd.clHistoryOverlay.isVisible = false
-            },
-            onDeleteClick = { item ->
-                // 개별 내역 삭제
-                svm.deleteHistory(item.sessionId)
-                Toast.makeText(requireContext(), "내역이 삭제되었습니다.", Toast.LENGTH_SHORT).show()
+        // 저장된 3D GLB 모델 결과 보기 (IModelScanFragment로 이동)
+        bd.btnViewScanResult.setOnClickListener {
+            val savedSn = svm.uiState.value.savedTempServerSn ?: return@setOnClickListener
+            viewLifecycleOwner.lifecycleScope.launch {
+                val result = withContext(Dispatchers.IO) {
+                    val dao = FaceDatabase.getDatabase(requireContext()).faceDao()
+                    mainVm.convertToFaceResult(requireContext(), dao, savedSn)
+                }
+                mainVm.currentResult.value = result
+                mainVm.loadUserDataFromDB(requireContext())
+                (requireActivity() as? MainActivity)?.navigateToMeasureHistoryInformation(result.measureType)
             }
-        )
-
-        bd.rvScanHistory.apply {
-            layoutManager = LinearLayoutManager(requireContext())
-            adapter = historyAdapter
         }
     }
 
     /**
-     * 뒤로가기 키 처리: 내역 창이 열려있으면 닫기
+     * UserSetupDialogFragment 입력 완료/건너뛰기 결과 수신 -> ScanViewModel 및 Room DB 저장
      */
-    private fun setupBackPressHandler() {
-        requireActivity().onBackPressedDispatcher.addCallback(
-            viewLifecycleOwner,
-            object : OnBackPressedCallback(true) {
-                override fun handleOnBackPressed() {
-                    if (bd.clHistoryOverlay.isVisible) {
-                        bd.clHistoryOverlay.isVisible = false
-                    } else {
-                        isEnabled = false
-                        requireActivity().onBackPressedDispatcher.onBackPressed()
-                    }
+    private fun observeUserSetupResult() {
+        ivm.isFinishInput.observe(viewLifecycleOwner) { finished ->
+            if (finished != true) return@observe
+
+            val rawBirthday = ivm.birthdayValue.value.orEmpty()
+            val sanitizedBirthday = if (rawBirthday == "날짜 선택") "" else rawBirthday
+            val userInfo = ScanUserInfo(
+                name = ivm.nameValue.value?.trim()?.takeIf { it.isNotEmpty() } ?: "GUEST",
+                mobile = ivm.mobileValue.value.orEmpty(),
+                birthday = sanitizedBirthday,
+                gender = ivm.genderValue.value ?: -1,
+                nationality = ivm.nationalityValue.value.orEmpty(),
+                uuid = mvm.currentUUID.ifBlank { svm.uiState.value.sessionId }
+            )
+            svm.saveUserInfoAndPersistToDb(requireContext(), userInfo)
+            ivm.isFinishInput.value = false
+        }
+    }
+
+    private fun showUserSetupDialog() {
+        if (!isAdded || hasShownUserSetup) return
+        if (parentFragmentManager.findFragmentByTag(TAG_USER_SETUP) != null) return
+
+        hasShownUserSetup = true
+        resetInputState()
+        UserSetupDialogFragment.newInstance(1).show(parentFragmentManager, TAG_USER_SETUP)
+    }
+
+    private fun resetInputState() {
+        ivm.nameCondition.value = false
+        ivm.nameValue.value = ""
+        ivm.mobileCondition.value = false
+        ivm.mobileValue.value = ""
+        ivm.genderCondition.value = false
+        ivm.genderValue.value = -1
+        ivm.birthdayCondition.value = false
+        ivm.birthdayValue.value = "날짜 선택"
+        ivm.nationalityValue.value = ""
+        ivm.isShownBtn = false
+        ivm.isFinishInput.value = false
+        mvm.currentUUID = ""
+    }
+
+    private fun startUserSetupCountdownIfNeeded() {
+        if (hasShownUserSetup || hasStartedUserSetupCountdown) return
+        hasStartedUserSetupCountdown = true
+
+        userSetupDelayJob?.cancel()
+        userSetupDelayJob = viewLifecycleOwner.lifecycleScope.launch {
+            for (sec in 3 downTo 1) {
+                _binding?.tvUserSetupHint?.apply {
+                    isVisible = true
+                    text = "${sec}초 뒤 측정자 정보 입력을 시작합니다..."
                 }
+                delay(1000L)
             }
-        )
+            _binding?.tvUserSetupHint?.isVisible = false
+            showUserSetupDialog()
+        }
+    }
+
+    private fun cancelUserSetupCountdown() {
+        userSetupDelayJob?.cancel()
+        userSetupDelayJob = null
+        _binding?.tvUserSetupHint?.isVisible = false
     }
 
     /**
@@ -131,16 +173,8 @@ class ModelScanFragment : Fragment() {
     private fun observeViewModel() {
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
-                launch {
-                    svm.uiState.collect { state ->
-                        renderUiState(state)
-                    }
-                }
-
-                launch {
-                    svm.historyList.collect { list ->
-                        renderHistoryList(list)
-                    }
+                svm.uiState.collect { state ->
+                    renderUiState(state)
                 }
             }
         }
@@ -218,7 +252,7 @@ class ModelScanFragment : Fragment() {
             }
 
             "PROCESSING" -> {
-                // 실시간 3D 복원 진행률 및 남은 시간 표시 (뒤로 가기 해도 계속 유지)
+                // 실시간 3D 복원 진행률 및 남은 시간 표시
                 bd.clPairingContainer.isVisible = false
                 bd.clProgressContainer.isVisible = true
                 bd.clDoneContainer.isVisible = false
@@ -231,59 +265,71 @@ class ModelScanFragment : Fragment() {
                     "잠시만 기다려주세요..."
                 }
                 bd.tvProgressStage.text = state.stageMessage.ifEmpty { "3D 얼굴 복원 진행 중..." }
+
+                if (!state.isQueued && !state.isUserSetupCompleted) {
+                    startUserSetupCountdownIfNeeded()
+                }
             }
 
             "DONE" -> {
-                // 복원 완료 안내 및 GLB 로컬 다운로드 자동 실행
+                // 복원 완료 안내 및 GLB 공용 폴더(Documents/TangoPlus/3DModels) 다운로드 -> Room DB 저장
+                cancelUserSetupCountdown()
                 bd.clPairingContainer.isVisible = false
                 bd.clProgressContainer.isVisible = false
                 bd.clDoneContainer.isVisible = true
 
                 val downloadUrl = state.glbDownloadUrl
-                val localPath = state.localGlbPath
+                val savedSn = state.savedTempServerSn
 
-                if (localPath != null) {
-                    val savedFile = File(localPath)
-                    val sizeKb = savedFile.length() / 1024
-                    bd.tvDoneTitle.text = "3D 얼굴 복원 완료!"
-                    bd.tvDoneMessage.text = "GLB 모델 다운로드가 완료되었습니다.\n파일: ${savedFile.name} (${sizeKb} KB)"
+                if (state.isUserSetupCompleted && savedSn != null) {
+                    val sizeKb = state.localGlbSizeBytes / 1024
+                    bd.tvDoneTitle.text = "3D 얼굴 생성 완료!"
+                    bd.tvDoneMessage.text = "3D 모델 저장이 완료되었습니다. (${sizeKb} KB)"
+                    bd.btnViewScanResult.isVisible = true
+                } else if (state.isUserSetupCompleted && state.localGlbFileName != null) {
+                    bd.tvDoneTitle.text = "3D 얼굴 생성 완료!"
+                    bd.tvDoneMessage.text = "3D 모델 파일을 저장하는 중입니다..."
+                    bd.btnViewScanResult.isVisible = false
+                } else if (!state.isUserSetupCompleted && state.localGlbFileName != null) {
+                    bd.tvDoneTitle.text = "3D 얼굴 생성 완료!"
+                    bd.tvDoneMessage.text = "사용자 정보를 입력해주세요."
+                    bd.btnViewScanResult.isVisible = false
+                    showUserSetupDialog()
                 } else if (state.isDownloadingGlb) {
-                    bd.tvDoneTitle.text = "3D 얼굴 복원 완료!"
-                    bd.tvDoneMessage.text = "서버에서 3D GLB 모델을 내려받고 있습니다..."
+                    bd.tvDoneTitle.text = "3D 얼굴 생성 완료!"
+                    bd.tvDoneMessage.text = "서버에서 파일을 내려받고 있습니다..."
+                    bd.btnViewScanResult.isVisible = false
                 } else if (downloadUrl != null && state.sessionId.isNotEmpty() && state.errorMessage == null) {
-                    bd.tvDoneTitle.text = "3D 얼굴 복원 완료!"
-                    bd.tvDoneMessage.text = "3D GLB 모델 다운로드를 시작합니다..."
-                    val destFile = File(requireContext().filesDir, "models/${state.sessionId}.glb")
-                    svm.downloadGlbToLocal(state.sessionId, downloadUrl, destFile)
+                    bd.tvDoneTitle.text = "3D 얼굴 생성 완료!"
+                    bd.tvDoneMessage.text = "3D 얼굴 파일 다운로드를 시작합니다..."
+                    bd.btnViewScanResult.isVisible = false
+                    val timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"))
+                    val destFile = File(FileUtility.get3DModelsDir(), "scan_${timestamp}.glb")
+                    svm.downloadGlbToLocal(requireContext(), state.sessionId, downloadUrl, destFile)
                 } else {
-                    bd.tvDoneTitle.text = "3D 얼굴 복원 완료!"
+                    bd.tvDoneTitle.text = "3D 얼굴 생성 완료!"
                     bd.tvDoneMessage.text = state.errorMessage ?: "3D 모델 복원이 완료되었습니다."
+                    bd.btnViewScanResult.isVisible = false
                 }
             }
 
             "FAILED" -> {
+                cancelUserSetupCountdown()
+                (parentFragmentManager.findFragmentByTag(TAG_USER_SETUP) as? DialogFragment)?.dismissAllowingStateLoss()
+
                 bd.clPairingContainer.isVisible = true
                 bd.clProgressContainer.isVisible = false
                 bd.clDoneContainer.isVisible = false
 
                 bd.pbPinLoading.isVisible = false
                 bd.tvPairingCode.isVisible = false
-                bd.tvPairingSub.text = state.errorMessage ?: "스캔에 실패했습니다. 내역에서 삭제 후 다시 시도해주세요."
+                bd.tvPairingSub.text = state.errorMessage ?: "스캔에 실패했습니다. 다시 시도해주세요."
 
                 state.errorMessage?.let { msg ->
                     showErrorDialog(msg)
                 }
             }
         }
-    }
-
-    /**
-     * 스캔 내역 목록 렌더링 및 뱃지 카운트 갱신
-     */
-    private fun renderHistoryList(list: List<ScanHistoryItem>) {
-        historyAdapter.submitList(list)
-        bd.btnHistoryToggle.text = "스캔 내역 (${list.size})"
-        bd.tvEmptyHistory.isVisible = list.isEmpty()
     }
 
     private fun showErrorDialog(message: String) {
@@ -294,6 +340,9 @@ class ModelScanFragment : Fragment() {
             .setMessage(message)
             .setPositiveButton("다시 시도") { dialog, _ ->
                 dialog.dismiss()
+                hasShownUserSetup = false
+                hasStartedUserSetupCountdown = false
+                resetInputState()
                 val key = com.tangoplus.tangoface.data.api.FaceScanApiClient.getTabletKey(requireContext())
                 svm.startNewScanFlow(delayMillis = 500L, tabletKey = key)
             }
@@ -306,8 +355,17 @@ class ModelScanFragment : Fragment() {
     }
 
     override fun onDestroyView() {
+        cancelUserSetupCountdown()
         errorDialog?.dismiss()
         errorDialog = null
+        (parentFragmentManager.findFragmentByTag(TAG_USER_SETUP) as? DialogFragment)?.dismissAllowingStateLoss()
+
+        if (activity?.isChangingConfigurations != true) {
+            svm.resetAll()
+            resetInputState()
+        }
+        hasShownUserSetup = false
+        hasStartedUserSetupCountdown = false
         _binding = null
         super.onDestroyView()
     }

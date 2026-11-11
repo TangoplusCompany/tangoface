@@ -1,0 +1,68 @@
+
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="48dp"
+    android:height="48dp"
+    android:viewportWidth="48"
+    android:viewportHeight="48">
+
+  <!-- Grid with narrow person clearance -->
+  <group>
+    <clip-path
+        android:pathData="
+                M0,0 H48 V48 H0 Z
+
+                M24,20.5
+                C20.91,20.5 17.5,23.91 17.5,27
+                C17.5,29.2 18.5,31.2 20.1,32.4
+                C15.8,34 13,37.5 13,44.5
+                H35
+                C35,37.5 32.2,34 27.9,32.4
+                C29.5,31.2 30.5,29.2 30.5,27
+                C30.5,23.91 27.09,20.5 24,20.5 Z"/>
+
+    <path
+        android:pathData="M5,8L24,12L43,8V36L24,32L5,36V8Z"
+        android:strokeLineJoin="round"
+        android:strokeWidth="3"
+        android:fillColor="#00000000"
+        android:strokeColor="@color/accent400"/>
+
+    <path
+        android:pathData="M16,10.3V34"
+        android:strokeWidth="3"
+        android:fillColor="#00000000"
+        android:strokeColor="@color/accent400"/>
+
+    <path
+        android:pathData="M32,10.3V34"
+        android:strokeWidth="3"
+        android:fillColor="#00000000"
+        android:strokeColor="@color/accent400"/>
+
+    <path
+        android:pathData="M5,22H43"
+        android:strokeWidth="3"
+        android:fillColor="#00000000"
+        android:strokeColor="@color/accent400"/>
+  </group>
+
+  <!-- Filled Person Head: Original Size -->
+  <path
+      android:pathData="
+            M28.8,27
+            C28.8,29.65 26.65,31.8 24,31.8
+            C21.35,31.8 19.2,29.65 19.2,27
+            C19.2,24.35 21.35,22.2 24,22.2
+            C26.65,22.2 28.8,24.35 28.8,27 Z"
+      android:fillColor="@color/accent400"/>
+
+  <!-- Filled Person Body: Original Size -->
+  <path
+      android:pathData="
+            M14,44
+            C14,37.5 18,35 24,35
+            C30,35 34,37.5 34,44
+            Z"
+      android:fillColor="@color/accent400"/>
+
+</vector>
