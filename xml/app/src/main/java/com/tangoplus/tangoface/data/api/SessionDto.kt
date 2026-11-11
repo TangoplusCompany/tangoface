@@ -25,19 +25,25 @@ data class CreateSessionResponse(
  */
 data class ProcessingProgressInfo(
     @SerializedName("elapsed_seconds")
-    val elapsedSeconds: Int, // 경과 시간 (초)
+    val elapsedSeconds: Int = 0, // 경과 시간 (초)
 
     @SerializedName("estimated_total_seconds")
-    val estimatedTotalSeconds: Int, // 총 예상 소요 시간 (초, 예: 45)
+    val estimatedTotalSeconds: Int = 45, // 총 예상 소요 시간 (초, 예: 45)
 
     @SerializedName("remaining_seconds")
-    val remainingSeconds: Int, // 예상 남은 시간 (초)
+    val remainingSeconds: Int = 0, // 예상 남은 시간 (초)
 
     @SerializedName("progress_percent")
-    val progressPercent: Int, // 진행률 (0 ~ 100%)
+    val progressPercent: Int = 0, // 진행률 (0 ~ 100%)
 
     @SerializedName("stage")
-    val stage: String // 단계 안내 문구 ("1단계: 특징점 추출 중...", 등)
+    val stage: String = "", // 단계 안내 문구
+
+    @SerializedName("queue_position")
+    val queuePosition: Int? = null, // 대기열 순번 (1부터 시작, 1이 다음 차례)
+
+    @SerializedName("eta_seconds")
+    val etaSeconds: Int? = null // 예상 대기 시간 (초)
 )
 
 /**
@@ -54,9 +60,35 @@ data class SessionStatusResponse(
     @SerializedName("fail_reason")
     val failReason: String? = null,
 
+    @SerializedName("fail_code")
+    val failCode: String? = null,
+
     @SerializedName("progress")
     val progress: ProcessingProgressInfo? = null
 )
+
+/**
+ * Colab 워커 / 백엔드 에러 코드 -> 사용자 안내 문구 매퍼
+ */
+object ScanErrorCodeMapper {
+    private val ERROR_MESSAGES = mapOf(
+        "FACE_NOT_FOUND" to "영상에서 얼굴을 인식하지 못했습니다. 밝은 곳에서 정면을 바라보고 다시 촬영해 주세요.",
+        "TOO_BLURRY" to "영상이 흔들리거나 흐리게 촬영되었습니다. 카메라를 고정하고 천천히 다시 촬영해 주세요.",
+        "ANGLE_RANGE_TOO_NARROW" to "촬영 각도 범위가 부족합니다. 좌측(-60°)에서 우측(+60°)까지 곡선으로 천천히 회전해 주세요.",
+        "GPU_OOM" to "서버 그래픽 처리 용량이 일시적으로 부족합니다. 잠시 후 다시 시도해 주세요.",
+        "TIMEOUT" to "3D 모델 생성 시간이 제한(6분)을 초과했습니다. 잠시 후 다시 시도해 주세요.",
+        "VIDEO_DOWNLOAD_FAILED" to "서버가 업로드된 영상을 불러오지 못했습니다. 다시 시도해 주세요.",
+        "UPLOAD_FAILED" to "생성된 3D 모델 저장에 실패했습니다. 잠시 후 다시 시도해 주세요.",
+        "RECONSTRUCTION_FAILED" to "3D 얼굴 모델 생성에 실패했습니다. 가이드를 확인한 뒤 다시 촬영해 주세요.",
+        "WORKER_RESTARTED" to "3D 변환 서버가 재시작되어 작업이 중단되었습니다. 다시 시도해 주세요."
+    )
+
+    fun toMessage(failReason: String?): String {
+        val raw = failReason?.trim().orEmpty()
+        if (raw.isEmpty()) return "3D 복원 중 오류가 발생했습니다. 다시 시도해 주세요."
+        return ERROR_MESSAGES[raw.uppercase()] ?: raw
+    }
+}
 
 /**
  * 4. 3D GLB 모델 결과 서명 다운로드 URL 응답 DTO

@@ -3,11 +3,13 @@ import { StyleSheet, Text, View, TouchableOpacity } from 'react-native';
 
 interface UploadSuccessViewProps {
   sessionId: string;
+  queueFull?: boolean;
   onReset: () => void;
 }
 
 export const UploadSuccessView: React.FC<UploadSuccessViewProps> = ({
   sessionId,
+  queueFull = false,
   onReset,
 }) => {
   return (
@@ -34,8 +36,18 @@ export const UploadSuccessView: React.FC<UploadSuccessViewProps> = ({
 
         <View style={styles.guideBox}>
           <Text style={styles.guideText}>
-            이제 <Text style={styles.boldText}>태블릿 화면</Text>을 확인해주세요.{'\n'}
-            3D 모델 복원(RunPod)이 진행되며 결과가 태블릿에 표시됩니다.
+            {queueFull ? (
+              <>
+                현재 처리 요청이 혼잡합니다.{'\n'}
+                잠시 후 자동으로 작업이 시작되며,{'\n'}
+                진행 상황은 <Text style={styles.boldText}>태블릿 화면</Text>에서 확인할 수 있습니다.
+              </>
+            ) : (
+              <>
+                이제 <Text style={styles.boldText}>태블릿 화면</Text>을 확인해주세요.{'\n'}
+                3D 모델 복원이 진행되며 결과가 태블릿에 표시됩니다.
+              </>
+            )}
           </Text>
         </View>
 

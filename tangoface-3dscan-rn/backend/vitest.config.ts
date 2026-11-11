@@ -13,6 +13,7 @@ export default defineConfig({
       'tests/pairing.test.ts',
       'tests/rateLimiter.test.ts',
       'tests/webhook.test.ts',
+      'tests/workerLogic.test.ts',
     ],
   },
 });

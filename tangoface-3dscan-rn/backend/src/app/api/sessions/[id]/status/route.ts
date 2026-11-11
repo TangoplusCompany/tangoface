@@ -5,7 +5,8 @@ import { hashToken, timingSafeMatch } from '@/lib/crypto';
 import { jsonWithCors, handleOptionsCors } from '@/lib/cors';
 import { calculateProcessingProgress } from '@/lib/progressEstimator';
 import { syncColabJobStatusIfNeeded } from '@/lib/runpod';
-import { SessionStatusResponse } from '@/types/api';
+import { mapFailReasonToMessage } from '@/lib/errorMapper';
+import { ProcessingProgressInfo, SessionStatusResponse } from '@/types/api';
 import { SessionStatus } from '@/types/session';
 
 export const runtime = 'nodejs';
@@ -40,7 +41,7 @@ export async function GET(
 
     const { data: session, error } = await supabase
       .from('sessions')
-      .select('id, status, fail_reason, result_path, session_secret_hash, paired_at, uploaded_at, created_at')
+      .select('*')
       .eq('id', sessionId)
       .maybeSingle();
 
@@ -60,14 +61,27 @@ export async function GET(
     // Colab 워커(/jobs/{id}) 및 Storage 상태 동기화
     const synced = await syncColabJobStatusIfNeeded(supabase, session);
     const effectiveStatus = synced.status as SessionStatus;
-    const effectiveFailReason = synced.fail_reason;
+    const rawFailReason = synced.fail_reason;
+    const friendlyFailReason = mapFailReasonToMessage(rawFailReason);
 
-    // 3D 모델 복원 중(PROCESSING)일 때 스마트 진행률 및 남은 시간 산출
-    let progress = null;
+    // 상태에 따른 스마트 진행률 및 대기열 정보 산출
+    let progress: ProcessingProgressInfo | null = null;
     if (effectiveStatus === 'PROCESSING') {
-      // 업로드 완료 시점 또는 세션 생성 시점을 기준 시작 시각으로 사용
-      const startedAt = session.uploaded_at || session.created_at;
-      progress = calculateProcessingProgress(startedAt);
+      if (synced.workerProgress) {
+        progress = synced.workerProgress;
+      } else {
+        const startedAt =
+          session.processing_started_at || session.uploaded_at || session.created_at;
+        progress = calculateProcessingProgress(startedAt);
+      }
+    } else if (effectiveStatus === 'UPLOADED' && synced.queueFull) {
+      progress = {
+        elapsed_seconds: 0,
+        estimated_total_seconds: 60,
+        remaining_seconds: 60,
+        progress_percent: 0,
+        stage: '요청이 혼잡합니다. 잠시 후 자동으로 다시 시도됩니다...',
+      };
     } else if (effectiveStatus === 'DONE') {
       progress = {
         elapsed_seconds: 0,
@@ -81,7 +95,8 @@ export async function GET(
     const response: SessionStatusResponse = {
       session_id: session.id,
       status: effectiveStatus,
-      fail_reason: effectiveFailReason,
+      fail_reason: friendlyFailReason,
+      fail_code: rawFailReason || null,
       paired_at: session.paired_at,
       uploaded_at: session.uploaded_at,
       created_at: session.created_at,

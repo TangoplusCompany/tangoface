@@ -113,9 +113,12 @@ export async function POST(request: NextRequest) {
 
     const response: CompleteUploadResponse = {
       status: processingRes.status === 'SUBMITTED' ? 'PROCESSING' : 'UPLOADED',
+      queue_full: processingRes.queueFull || false,
       message:
         processingRes.status === 'SUBMITTED'
           ? '영상 업로드가 완료되어 Colab 3D 복원 작업을 시작했습니다.'
+          : processingRes.queueFull
+          ? '현재 처리 요청이 혼잡합니다. 잠시 후 자동으로 다시 시도됩니다.'
           : '영상 파일이 확인되어 UPLOADED 상태로 변경되었습니다.',
     };
 

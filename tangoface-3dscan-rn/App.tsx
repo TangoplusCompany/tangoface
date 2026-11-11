@@ -21,6 +21,7 @@ import {
 import { PhonePairingView } from './src/components/PhonePairingView';
 import { UploadSuccessView } from './src/components/UploadSuccessView';
 import { ScanGuideModal } from './src/components/ScanGuideModal';
+import { ServerStatusBadge } from './src/components/ServerStatusBadge';
 import {
   getPresignedUploadUrl,
   uploadVideoDirectly,
@@ -51,6 +52,8 @@ export default function App() {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [uploadStatusText, setUploadStatusText] = useState('');
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const [isVideoSaved, setIsVideoSaved] = useState(false);
+  const [isQueueFull, setIsQueueFull] = useState(false);
 
   // 4. 촬영 가이드 모달 상태 (PIN 통과 후 화면 전환 전 먼저 노출)
   const [showGuideModal, setShowGuideModal] = useState<boolean>(false);
@@ -147,6 +150,7 @@ export default function App() {
       calibrateToCurrentPosition();
       setRecordSeconds(0);
       setLevelDurationCount(0);
+      setIsVideoSaved(false);
 
       if (cameraRef.current) {
         cameraRef.current.startRecording();
@@ -208,12 +212,44 @@ export default function App() {
         throw new Error(completeRes.error || '업로드 완료 검증에 실패했습니다.');
       }
 
+      setIsQueueFull(Boolean(completeRes.queueFull));
       setAppStep('success');
     } catch (err: any) {
       setUploadError(err.message || '업로드 중 오류가 발생했습니다.');
     } finally {
       setIsUploading(false);
       setUploadStatusText('');
+    }
+  };
+
+  // 촬영된 영상 로컬 다운로드 (기기 저장)
+  const handleSaveRecordedVideo = () => {
+    if (!recordedBlob) {
+      alert('저장할 영상 데이터가 없습니다.');
+      return;
+    }
+
+    if (Platform.OS === 'web' && typeof document !== 'undefined') {
+      const ext = recordedBlob.type.includes('mp4') ? 'mp4' : 'webm';
+      const now = new Date();
+      const pad = (n: number) => n.toString().padStart(2, '0');
+      const timestamp = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(
+        now.getDate()
+      )}_${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
+      const fileName = `tangoface_scan_${timestamp}.${ext}`;
+
+      const downloadUrl = recordedPreviewUrl || URL.createObjectURL(recordedBlob);
+      const link = document.createElement('a');
+      link.href = downloadUrl;
+      link.download = fileName;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      if (!recordedPreviewUrl) {
+        URL.revokeObjectURL(downloadUrl);
+      }
+      setIsVideoSaved(true);
     }
   };
 
@@ -224,6 +260,8 @@ export default function App() {
     }
     setRecordedBlob(null);
     setRecordedPreviewUrl(null);
+    setIsVideoSaved(false);
+    setIsQueueFull(false);
     setUploadError(null);
     setUploadProgress(0);
     setAppStep('scanning');
@@ -238,6 +276,8 @@ export default function App() {
     setSessionId(null);
     setRecordedBlob(null);
     setRecordedPreviewUrl(null);
+    setIsVideoSaved(false);
+    setIsQueueFull(false);
     setIsRecording(false);
     setRecordSeconds(0);
     setLevelDurationCount(0);
@@ -403,7 +443,10 @@ export default function App() {
             {scanMode === 'upload' && pairToken ? (
               <VideoUploadView
                 pairToken={pairToken}
-                onUploadSuccess={() => setAppStep('success')}
+                onUploadSuccess={(queueFull) => {
+                  setIsQueueFull(Boolean(queueFull));
+                  setAppStep('success');
+                }}
               />
             ) : !hasCameraPermission ? (
               // 카메라 권한이 아직 없는 경우 권한 안내 화면으로 이동
@@ -510,6 +553,9 @@ export default function App() {
                 )}
               </View>
 
+              {/* Colab 3D 변환 서버 가동 상태 (10초 주기 자동 체크) */}
+              <ServerStatusBadge paused={isUploading} />
+
               {uploadError && (
                 <View style={styles.errorBox}>
                   <Text style={styles.errorText}>{uploadError}</Text>
@@ -551,13 +597,30 @@ export default function App() {
                 </TouchableOpacity>
 
                 {!isUploading && (
-                  <TouchableOpacity
-                    style={styles.retakeButton}
-                    onPress={handleRetake}
-                    activeOpacity={0.8}
-                  >
-                    <Text style={styles.retakeButtonText}>다시 촬영하기</Text>
-                  </TouchableOpacity>
+                  <View style={styles.secondaryButtonRow}>
+                    <TouchableOpacity
+                      style={styles.saveVideoButton}
+                      onPress={handleSaveRecordedVideo}
+                      activeOpacity={0.8}
+                    >
+                      <Text
+                        style={[
+                          styles.saveVideoButtonText,
+                          isVideoSaved && styles.saveVideoDoneText,
+                        ]}
+                      >
+                        {isVideoSaved ? '저장 완료' : '영상 저장하기'}
+                      </Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      style={styles.retakeButtonHalf}
+                      onPress={handleRetake}
+                      activeOpacity={0.8}
+                    >
+                      <Text style={styles.retakeButtonText}>다시 촬영하기</Text>
+                    </TouchableOpacity>
+                  </View>
                 )}
               </View>
             </View>
@@ -570,6 +633,7 @@ export default function App() {
         {appStep === 'success' && sessionId && (
           <UploadSuccessView
             sessionId={sessionId}
+            queueFull={isQueueFull}
             onReset={handleResetAll}
           />
         )}
@@ -853,7 +917,7 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     overflow: 'hidden',
     backgroundColor: '#000000',
-    marginBottom: 20,
+    marginBottom: 14,
   },
   placeholderBox: {
     width: '100%',
@@ -940,6 +1004,35 @@ const styles = StyleSheet.create({
   disabledButton: {
     backgroundColor: '#30292B',
     opacity: 0.6,
+  },
+  secondaryButtonRow: {
+    flexDirection: 'row',
+    width: '100%',
+    gap: 8,
+  },
+  saveVideoButton: {
+    flex: 1,
+    height: 44,
+    backgroundColor: '#30292B',
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  saveVideoButtonText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  saveVideoDoneText: {
+    color: '#00FFCC',
+  },
+  retakeButtonHalf: {
+    flex: 1,
+    height: 44,
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   retakeButton: {
     width: '100%',

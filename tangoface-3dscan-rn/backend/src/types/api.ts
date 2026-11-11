@@ -24,6 +24,7 @@ export interface PresignUploadResponse {
 export interface CompleteUploadResponse {
   status: 'UPLOADED' | 'PROCESSING';
   message: string;
+  queue_full?: boolean;
 }
 
 // 3D 모델 복원 진행률 및 남은 시간 예측 정보
@@ -33,12 +34,15 @@ export interface ProcessingProgressInfo {
   remaining_seconds: number;      // 예상 남은 시간 (초)
   progress_percent: number;       // 0 ~ 99% 점근 진행률
   stage: string;                  // 현재 처리 단계 안내 문구
+  queue_position?: number;        // 대기열 순번 (1부터 시작, 1이 다음 차례)
+  eta_seconds?: number;           // 예상 대기 시간 (초)
 }
 
 export interface SessionStatusResponse {
   session_id: string;
   status: SessionStatus;
   fail_reason: string | null;
+  fail_code?: string | null;
   paired_at: string | null;
   uploaded_at: string | null;
   created_at: string;

@@ -155,6 +155,9 @@ export function uploadVideoDirectly(
  */
 export async function completeUpload(pairToken: string): Promise<{
   success: boolean;
+  status?: string;
+  queueFull?: boolean;
+  message?: string;
   session?: any;
   error?: string;
 }> {
@@ -175,12 +178,59 @@ export async function completeUpload(pairToken: string): Promise<{
 
     return {
       success: true,
+      status: data.status,
+      queueFull: Boolean(data.queue_full),
+      message: data.message,
       session: data.session,
     };
   } catch (err: any) {
     return {
       success: false,
       error: `완료 보고 중 오류: ${err.message}`,
+    };
+  }
+}
+
+export interface ColabHealthStatus {
+  alive: boolean;
+  status: string;
+  message: string;
+  busy?: boolean;
+  queue?: number;
+}
+
+/**
+ * 5. Colab 3D 복원 서버 가동 상태 확인 (/api/worker/health)
+ */
+export async function checkColabHealth(): Promise<ColabHealthStatus> {
+  try {
+    const baseUrl = getApiBaseUrl();
+    const res = await fetch(`${baseUrl}/api/worker/health`, {
+      method: 'GET',
+      cache: 'no-store',
+    });
+
+    if (!res.ok) {
+      return {
+        alive: false,
+        status: 'ERROR',
+        message: '서버 상태 조회에 실패했습니다.',
+      };
+    }
+
+    const data = await res.json();
+    return {
+      alive: Boolean(data.alive),
+      status: data.status || 'UNKNOWN',
+      message: data.message || '',
+      busy: typeof data.busy === 'boolean' ? data.busy : undefined,
+      queue: typeof data.queue === 'number' ? data.queue : undefined,
+    };
+  } catch {
+    return {
+      alive: false,
+      status: 'NETWORK_ERROR',
+      message: '백엔드 서버에 연결할 수 없습니다.',
     };
   }
 }

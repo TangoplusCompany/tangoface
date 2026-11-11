@@ -16,10 +16,11 @@ import {
   uploadVideoDirectly,
   completeUpload,
 } from '../config/api';
+import { ServerStatusBadge } from './ServerStatusBadge';
 
 interface VideoUploadViewProps {
   pairToken: string;
-  onUploadSuccess: () => void;
+  onUploadSuccess: (queueFull?: boolean) => void;
 }
 
 export const VideoUploadView: React.FC<VideoUploadViewProps> = ({
@@ -98,7 +99,7 @@ export const VideoUploadView: React.FC<VideoUploadViewProps> = ({
       }
 
       // 성공 완료 알림
-      onUploadSuccess();
+      onUploadSuccess(completeRes.queueFull);
     } catch (err: any) {
       setErrorMessage(err.message || '업로드 처리 중 오류가 발생했습니다.');
     } finally {
@@ -184,6 +185,9 @@ export const VideoUploadView: React.FC<VideoUploadViewProps> = ({
               <Text style={styles.infoValue}>{selectedVideo.sizeMB} MB</Text>
             </View>
           </View>
+
+          {/* Colab 3D 변환 서버 가동 상태 (10초 주기 자동 체크) */}
+          <ServerStatusBadge paused={isUploading} />
 
           {/* 에러 메시지 */}
           {errorMessage && (

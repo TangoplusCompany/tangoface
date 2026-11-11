@@ -6,6 +6,7 @@ import com.tangoplus.tangoface.data.api.FaceScanApiClient
 import com.tangoplus.tangoface.data.api.FaceScanApiService
 import com.tangoplus.tangoface.data.api.FaceScanRepository
 import com.tangoplus.tangoface.data.api.FaceScanRepositoryImpl
+import com.tangoplus.tangoface.data.api.ScanErrorCodeMapper
 import com.tangoplus.tangoface.data.api.ScanHistoryItem
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
@@ -197,9 +198,16 @@ class ScanViewModel(
                     when (statusUpper) {
                         "PROCESSING" -> {
                             val progress = statusBody.progress
+                            val queuePos = progress?.queuePosition
                             val percent = progress?.progressPercent ?: 0
-                            val remaining = progress?.remainingSeconds ?: 0
-                            val stage = progress?.stage ?: "3D 얼굴 복원 진행 중..."
+                            val remaining = progress?.etaSeconds ?: progress?.remainingSeconds ?: 0
+                            val stage = when {
+                                queuePos != null && queuePos >= 1 -> {
+                                    val ahead = (queuePos - 1).coerceAtLeast(0)
+                                    progress.stage.ifBlank { "대기 중 (앞에 ${ahead}명)" }
+                                }
+                                else -> progress?.stage?.ifBlank { null } ?: "3D 얼굴 복원 진행 중..."
+                            }
 
                             updateHistoryItem(sessionId) { item ->
                                 item.copy(
@@ -275,16 +283,19 @@ class ScanViewModel(
                         }
 
                         "FAILED" -> {
-                            val failReason = statusBody.failReason ?: "3D 복원 중 오류가 발생했습니다."
-                            handleSessionFailure(sessionId, failReason)
+                            val friendlyReason = ScanErrorCodeMapper.toMessage(
+                                statusBody.failCode ?: statusBody.failReason
+                            )
+                            handleSessionFailure(sessionId, friendlyReason)
                             break
                         }
 
                         else -> {
+                            val serverStage = statusBody.progress?.stage?.takeIf { it.isNotBlank() }
                             val stageMsg = when (statusUpper) {
                                 "CREATED" -> "스마트폰에서 6자리 코드를 입력해주세요."
                                 "PAIRED" -> "스마트폰과 연결되었습니다. 촬영을 진행해주세요."
-                                "UPLOADED" -> "영상이 업로드되었습니다. 3D 복원을 준비 중입니다."
+                                "UPLOADED" -> serverStage ?: "영상이 업로드되었습니다. 3D 복원을 준비 중입니다."
                                 else -> statusBody.status
                             }
 

@@ -6,15 +6,66 @@ import {
   createResultSignedUploadUrl,
   checkResultFileExists,
 } from '@/lib/storage';
+import {
+  calculateProcessingProgressFromElapsed,
+  DEFAULT_ESTIMATED_DURATION_SECONDS,
+} from '@/lib/progressEstimator';
+import { ProcessingProgressInfo } from '@/types/api';
 
 export interface StartProcessingResult {
   jobId?: string;
   status: 'SUBMITTED' | 'SKIPPED';
+  queueFull?: boolean;
   reason?: string;
+}
+
+export interface SyncSessionResult {
+  status: string;
+  fail_reason: string | null;
+  workerProgress?: ProcessingProgressInfo | null;
+  queueFull?: boolean;
 }
 
 const COLAB_DONE_STATUSES = new Set(['done', 'completed', 'succeeded', 'success']);
 const COLAB_FAILED_STATUSES = new Set(['failed', 'error']);
+const COLAB_PROCESSING_STATUSES = new Set(['processing', 'running']);
+
+const PROCESSING_TIMEOUT_SECONDS = 6 * 60; // 6분 (360초)
+const MAX_CONSECUTIVE_NOT_FOUND = 3;
+
+// DB 마이그레이션(20261111000000) 적용 전 환경에서도 동작하도록 보조 인메모리 캐시 유지
+const memoryProcessingStartedAt = new Map<string, string>();
+const memoryNotFoundCounts = new Map<string, number>();
+
+/**
+ * 확장 컬럼(processing_started_at, not_found_count)이 DB에 없을 경우 기본 컬럼만으로 폴백 업데이트
+ */
+async function safeUpdateSession(
+  supabase: SupabaseClient,
+  sessionId: string,
+  payload: Record<string, any>,
+  expectedStatus?: string
+): Promise<void> {
+  let query = supabase.from('sessions').update(payload).eq('id', sessionId);
+  if (expectedStatus) {
+    query = query.eq('status', expectedStatus);
+  }
+  const { error } = await query;
+  if (!error) return;
+
+  // 확장 컬럼 누락(schema cache / undefined column) 시 핵심 컬럼만으로 재시도
+  const { processing_started_at: _p, not_found_count: _n, ...corePayload } = payload;
+  if (Object.keys(corePayload).length === 0) return;
+
+  let fallbackQuery = supabase.from('sessions').update(corePayload).eq('id', sessionId);
+  if (expectedStatus) {
+    fallbackQuery = fallbackQuery.eq('status', expectedStatus);
+  }
+  const { error: fbError } = await fallbackQuery;
+  if (fbError) {
+    console.error(`[Colab Worker] 세션 업데이트 실패 (${sessionId}):`, fbError.message);
+  }
+}
 
 /**
  * DB(worker_configs) 또는 환경변수에서 최신 활성 Colab FastAPI URL 조회
@@ -41,7 +92,9 @@ export async function getActiveColabWorkerUrl(
 }
 
 /**
- * 업로드 완료된 세션을 Colab FastAPI 워커(/jobs)로 전달하고 PROCESSING 상태로 전이
+ * 업로드 완료된 세션을 Colab FastAPI 워커(/jobs)로 전달
+ * - 200 OK 시 PROCESSING 전이 (queued 상태는 6분 타임아웃에서 제외하므로 processing_started_at=null)
+ * - 503(queue full) 시 FAILED로 두지 않고 UPLOADED 유지(재시도 가능)
  */
 export async function startProcessing(sessionId: string): Promise<StartProcessingResult> {
   try {
@@ -91,6 +144,16 @@ export async function startProcessing(sessionId: string): Promise<StartProcessin
       signal: AbortSignal.timeout(10000),
     });
 
+    // 503 Queue Full: FAILED 처리하지 않고 UPLOADED 상태 유지하여 자동 재시도 허용
+    if (res.status === 503) {
+      console.warn(`[Colab Worker] 워커 대기열 가득 참(503), 재시도 대기 유지: session=${sessionId}`);
+      return {
+        status: 'SKIPPED',
+        queueFull: true,
+        reason: '현재 대기 요청이 많아 혼잡합니다. 잠시 후 다시 시도해 주세요.',
+      };
+    }
+
     if (!res.ok) {
       const errText = await res.text().catch(() => '');
       console.error(
@@ -99,21 +162,23 @@ export async function startProcessing(sessionId: string): Promise<StartProcessin
       return { status: 'SKIPPED', reason: `Colab 요청 실패 (${res.status})` };
     }
 
-    // 작업 접수 성공 시 UPLOADED -> PROCESSING 전이
-    const { error: updateError } = await supabase
-      .from('sessions')
-      .update({
+    // 작업 접수 성공 시 UPLOADED -> PROCESSING 전이 (실제 processing 시작 전까지는 타이머 미시작)
+    memoryNotFoundCounts.delete(sessionId);
+    memoryProcessingStartedAt.delete(sessionId);
+
+    await safeUpdateSession(
+      supabase,
+      sessionId,
+      {
         status: 'PROCESSING',
         result_path: resultPath,
-      })
-      .eq('id', sessionId)
-      .eq('status', 'UPLOADED');
+        not_found_count: 0,
+        processing_started_at: null,
+      },
+      'UPLOADED'
+    );
 
-    if (updateError) {
-      console.error(`[Colab Worker] PROCESSING 상태 업데이트 실패:`, updateError);
-    } else {
-      console.log(`[Colab Worker] 작업 전송 완료 -> PROCESSING: session=${sessionId}`);
-    }
+    console.log(`[Colab Worker] 작업 전송 완료 -> PROCESSING(queued 대기 포함): session=${sessionId}`);
 
     return {
       jobId: sessionId,
@@ -130,7 +195,9 @@ export async function startProcessing(sessionId: string): Promise<StartProcessin
 
 /**
  * 태블릿 폴링 시 UPLOADED 또는 PROCESSING 세션 상태를 Colab /jobs/{id} 및 Storage와 동기화
- * - Colab이 웹훅을 별도로 호출하지 않고 JOBS[job_id]에만 상태를 기록하는 경우에도 DONE/FAILED 자동 감지
+ * - queued: "대기 중 (앞에 N명)" progress 반환, 6분 타임아웃 미계산
+ * - processing: 진입 시점부터 6분 초과 시 FAILED(TIMEOUT)
+ * - not_found: 3회 연속 반환 시 FAILED(WORKER_RESTARTED)
  */
 export async function syncColabJobStatusIfNeeded(
   supabase: SupabaseClient,
@@ -139,15 +206,21 @@ export async function syncColabJobStatusIfNeeded(
     status: string;
     result_path?: string | null;
     fail_reason?: string | null;
+    processing_started_at?: string | null;
+    not_found_count?: number | null;
   }
-): Promise<{ status: string; fail_reason: string | null }> {
-  // 아직 UPLOADED 상태에 머물러 있으면 (예: Colab이 뒤늦게 켜짐) 작업 전송 재시도
+): Promise<SyncSessionResult> {
+  // 1. 아직 UPLOADED 상태면(503 혼잡 또는 뒤늦은 워커 기동) 자동 재시도
   if (session.status === 'UPLOADED') {
     const triggerRes = await startProcessing(session.id);
     if (triggerRes.status === 'SUBMITTED') {
       return { status: 'PROCESSING', fail_reason: null };
     }
-    return { status: session.status, fail_reason: session.fail_reason || null };
+    return {
+      status: 'UPLOADED',
+      fail_reason: session.fail_reason || null,
+      queueFull: triggerRes.queueFull,
+    };
   }
 
   if (session.status !== 'PROCESSING') {
@@ -155,6 +228,24 @@ export async function syncColabJobStatusIfNeeded(
   }
 
   const resultPath = session.result_path || `${session.id}/model.glb`;
+  const effectiveProcStartIso =
+    session.processing_started_at || memoryProcessingStartedAt.get(session.id) || null;
+
+  // 2. processing 전이 후 6분(360초) 초과 여부 검사 (queued 대기 시간 제외)
+  if (effectiveProcStartIso) {
+    const elapsedSec = (Date.now() - new Date(effectiveProcStartIso).getTime()) / 1000;
+    if (elapsedSec >= PROCESSING_TIMEOUT_SECONDS) {
+      await safeUpdateSession(
+        supabase,
+        session.id,
+        { status: 'FAILED', fail_reason: 'TIMEOUT' },
+        'PROCESSING'
+      );
+      memoryProcessingStartedAt.delete(session.id);
+      memoryNotFoundCounts.delete(session.id);
+      return { status: 'FAILED', fail_reason: 'TIMEOUT' };
+    }
+  }
 
   try {
     const workerUrl = await getActiveColabWorkerUrl(supabase);
@@ -172,26 +263,159 @@ export async function syncColabJobStatusIfNeeded(
         const jobData = (await res.json()) as Record<string, any>;
         const colabStatus = String(jobData?.status || '').toLowerCase();
 
+        // 2-1. 완료(done) 처리
         if (COLAB_DONE_STATUSES.has(colabStatus) || jobData?.ok === true) {
           const exists = await checkResultFileExists(supabase, resultPath);
           if (exists) {
-            await supabase
-              .from('sessions')
-              .update({ status: 'DONE', result_path: resultPath })
-              .eq('id', session.id)
-              .eq('status', 'PROCESSING');
+            await safeUpdateSession(
+              supabase,
+              session.id,
+              { status: 'DONE', result_path: resultPath, not_found_count: 0 },
+              'PROCESSING'
+            );
+            memoryProcessingStartedAt.delete(session.id);
+            memoryNotFoundCounts.delete(session.id);
             return { status: 'DONE', fail_reason: null };
           }
-        } else if (COLAB_FAILED_STATUSES.has(colabStatus)) {
+        }
+
+        // 2-2. 실패(failed) 처리 (에러 코드 전달)
+        if (COLAB_FAILED_STATUSES.has(colabStatus)) {
           const reason =
-            String(jobData?.error || jobData?.fail_reason || jobData?.message || '') ||
-            '3D 모델 생성 중 오류가 발생했습니다.';
-          await supabase
-            .from('sessions')
-            .update({ status: 'FAILED', fail_reason: reason })
-            .eq('id', session.id)
-            .eq('status', 'PROCESSING');
+            String(jobData?.error || jobData?.fail_reason || jobData?.message || '').trim() ||
+            'RECONSTRUCTION_FAILED';
+          await safeUpdateSession(
+            supabase,
+            session.id,
+            { status: 'FAILED', fail_reason: reason, not_found_count: 0 },
+            'PROCESSING'
+          );
+          memoryProcessingStartedAt.delete(session.id);
+          memoryNotFoundCounts.delete(session.id);
           return { status: 'FAILED', fail_reason: reason };
+        }
+
+        // 2-3. 대기열(queued) 상태 처리 -> 6분 타이머 미시작
+        if (colabStatus === 'queued') {
+          memoryNotFoundCounts.set(session.id, 0);
+          if ((session.not_found_count ?? 0) !== 0) {
+            await safeUpdateSession(supabase, session.id, { not_found_count: 0 });
+          }
+
+          const queuePos =
+            typeof jobData.queue_position === 'number' && jobData.queue_position >= 1
+              ? Math.floor(jobData.queue_position)
+              : 1;
+          const aheadCount = Math.max(0, queuePos - 1);
+          const etaSec =
+            typeof jobData.eta_seconds === 'number' && jobData.eta_seconds >= 0
+              ? Math.round(jobData.eta_seconds)
+              : undefined;
+
+          const workerProgress: ProcessingProgressInfo = {
+            elapsed_seconds: 0,
+            estimated_total_seconds: etaSec ?? DEFAULT_ESTIMATED_DURATION_SECONDS,
+            remaining_seconds: etaSec ?? DEFAULT_ESTIMATED_DURATION_SECONDS,
+            progress_percent: 0,
+            stage: `대기 중 (앞에 ${aheadCount}명)`,
+            queue_position: queuePos,
+            ...(etaSec !== undefined ? { eta_seconds: etaSec } : {}),
+          };
+
+          return {
+            status: 'PROCESSING',
+            fail_reason: null,
+            workerProgress,
+          };
+        }
+
+        // 2-4. 실제 처리 중(processing / running) -> 처음 감지된 시점부터 6분 타이머 시작
+        if (COLAB_PROCESSING_STATUSES.has(colabStatus)) {
+          const workerElapsed =
+            typeof jobData.elapsed_seconds === 'number' && jobData.elapsed_seconds >= 0
+              ? Math.floor(jobData.elapsed_seconds)
+              : undefined;
+
+          if (workerElapsed !== undefined && workerElapsed >= PROCESSING_TIMEOUT_SECONDS) {
+            await safeUpdateSession(
+              supabase,
+              session.id,
+              { status: 'FAILED', fail_reason: 'TIMEOUT' },
+              'PROCESSING'
+            );
+            memoryProcessingStartedAt.delete(session.id);
+            memoryNotFoundCounts.delete(session.id);
+            return { status: 'FAILED', fail_reason: 'TIMEOUT' };
+          }
+
+          let procStartIso = effectiveProcStartIso;
+          const updateFields: Record<string, any> = {};
+
+          if (!procStartIso) {
+            const startMs =
+              workerElapsed !== undefined ? Date.now() - workerElapsed * 1000 : Date.now();
+            procStartIso = new Date(startMs).toISOString();
+            memoryProcessingStartedAt.set(session.id, procStartIso);
+            updateFields.processing_started_at = procStartIso;
+          }
+
+          if ((session.not_found_count ?? 0) !== 0 || (memoryNotFoundCounts.get(session.id) ?? 0) !== 0) {
+            memoryNotFoundCounts.set(session.id, 0);
+            updateFields.not_found_count = 0;
+          }
+
+          if (Object.keys(updateFields).length > 0) {
+            await safeUpdateSession(supabase, session.id, updateFields);
+          }
+
+          const effectiveElapsed =
+            workerElapsed !== undefined
+              ? workerElapsed
+              : Math.floor((Date.now() - new Date(procStartIso).getTime()) / 1000);
+
+          return {
+            status: 'PROCESSING',
+            fail_reason: null,
+            workerProgress: calculateProcessingProgressFromElapsed(effectiveElapsed),
+          };
+        }
+
+        // 2-5. not_found 상태 처리 -> 3회 연속 시 FAILED(WORKER_RESTARTED)
+        if (colabStatus === 'not_found') {
+          const exists = await checkResultFileExists(supabase, resultPath);
+          if (exists) {
+            await safeUpdateSession(
+              supabase,
+              session.id,
+              { status: 'DONE', result_path: resultPath, not_found_count: 0 },
+              'PROCESSING'
+            );
+            memoryProcessingStartedAt.delete(session.id);
+            memoryNotFoundCounts.delete(session.id);
+            return { status: 'DONE', fail_reason: null };
+          }
+
+          const prevCount = Math.max(
+            session.not_found_count ?? 0,
+            memoryNotFoundCounts.get(session.id) ?? 0
+          );
+          const nextCount = prevCount + 1;
+          memoryNotFoundCounts.set(session.id, nextCount);
+
+          if (nextCount >= MAX_CONSECUTIVE_NOT_FOUND) {
+            await safeUpdateSession(
+              supabase,
+              session.id,
+              { status: 'FAILED', fail_reason: 'WORKER_RESTARTED', not_found_count: nextCount },
+              'PROCESSING'
+            );
+            memoryProcessingStartedAt.delete(session.id);
+            memoryNotFoundCounts.delete(session.id);
+            return { status: 'FAILED', fail_reason: 'WORKER_RESTARTED' };
+          }
+
+          await safeUpdateSession(supabase, session.id, { not_found_count: nextCount });
+          return { status: 'PROCESSING', fail_reason: null };
         }
       }
     }
@@ -199,11 +423,14 @@ export async function syncColabJobStatusIfNeeded(
     // 워커 조회와 무관하게 results 버킷에 이미 model.glb가 업로드된 경우 안전하게 DONE 처리
     const fileReady = await checkResultFileExists(supabase, resultPath);
     if (fileReady) {
-      await supabase
-        .from('sessions')
-        .update({ status: 'DONE', result_path: resultPath })
-        .eq('id', session.id)
-        .eq('status', 'PROCESSING');
+      await safeUpdateSession(
+        supabase,
+        session.id,
+        { status: 'DONE', result_path: resultPath, not_found_count: 0 },
+        'PROCESSING'
+      );
+      memoryProcessingStartedAt.delete(session.id);
+      memoryNotFoundCounts.delete(session.id);
       return { status: 'DONE', fail_reason: null };
     }
   } catch (err: any) {
