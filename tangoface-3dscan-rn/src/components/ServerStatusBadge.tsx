@@ -9,10 +9,6 @@ interface ServerStatusBadgeProps {
   intervalSeconds?: number;
 }
 
-/**
- * Colab 3D 복원 서버 가동 상태를 10초 주기로 확인하고
- * 남은 카운트다운("10초 뒤 확인합니다", "9초..." 등)을 표시하는 상태 배지
- */
 export const ServerStatusBadge: React.FC<ServerStatusBadgeProps> = ({
   paused = false,
   intervalSeconds = 10,

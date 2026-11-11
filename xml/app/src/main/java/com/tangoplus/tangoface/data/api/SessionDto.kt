@@ -136,6 +136,7 @@ data class ScanHistoryItem(
     var stageMessage: String = "",
     var glbDownloadUrl: String? = null,
     var localGlbPath: String? = null,
+    var savedTempServerSn: Int? = null,
     var failReason: String? = null
 ) {
     val isDone: Boolean get() = status == "DONE"

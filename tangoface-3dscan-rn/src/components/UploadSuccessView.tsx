@@ -15,24 +15,13 @@ export const UploadSuccessView: React.FC<UploadSuccessViewProps> = ({
   return (
     <View style={styles.container}>
       <View style={styles.card}>
-        <View style={styles.iconCircle}>
-          <Text style={styles.iconText}>DONE</Text>
-        </View>
+        
 
         <Text style={styles.title}>영상 전송 완료</Text>
         <Text style={styles.subtitle}>
           얼굴 3D 스캔 영상이{'\n'}
           성공적으로 전달되었습니다.
         </Text>
-
-        <View style={styles.statusBox}>
-          <View style={[styles.statusRow, { marginBottom: 0 }]}>
-            <Text style={styles.statusLabel}>상태</Text>
-            <View style={styles.statusBadge}>
-              <Text style={styles.statusBadgeText}>UPLOADED</Text>
-            </View>
-          </View>
-        </View>
 
         <View style={styles.guideBox}>
           <Text style={styles.guideText}>

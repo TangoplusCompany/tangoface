@@ -162,6 +162,33 @@ object FileUtility {
 		return null
 	}
 
+	fun get3DModelsDir(): File = File(
+		Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS),
+		"TangoPlus/3DModels"
+	)
+
+	fun getGlbUriFromFileName(context: Context, fileName: String): Uri? {
+		if (fileName.isBlank()) return null
+		val collection = MediaStore.Files.getContentUri("external")
+		val projection = arrayOf(MediaStore.Files.FileColumns._ID)
+		val selection =
+			"${MediaStore.Files.FileColumns.DISPLAY_NAME} = ? AND ${MediaStore.Files.FileColumns.RELATIVE_PATH} LIKE ?"
+		val selectionArgs = arrayOf(fileName, "%Documents/Tango%3DModels%")
+		context.contentResolver.query(
+			collection,
+			projection,
+			selection,
+			selectionArgs,
+			null
+		)?.use { cursor ->
+			if (cursor.moveToFirst()) {
+				val id = cursor.getLong(cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns._ID))
+				return ContentUris.withAppendedId(collection, id)
+			}
+		}
+		return null
+	}
+
 	fun readJsonFromFile(fileName: String): JSONObject? {
 		return try {
 			// fileName 유효성 체크
@@ -239,129 +266,129 @@ object FileUtility {
 
 
 	// --------------------------------------# 백업 기능 #-------------------------------------------
-	fun deleteExistingBackupFiles(context: Context) {
-		try {
-			val projection = arrayOf(
-				MediaStore.Files.FileColumns._ID,
-				MediaStore.Files.FileColumns.DISPLAY_NAME
-			)
-
-			val selection = "${MediaStore.Files.FileColumns.RELATIVE_PATH} = ? AND " +
-				"${MediaStore.Files.FileColumns.DISPLAY_NAME} LIKE ?"
-			val selectionArgs = arrayOf("Documents/TangoPlusBackup/", "tango_face_general_backup_%.zip")
-
-			val cursor = context.contentResolver.query(
-				MediaStore.Files.getContentUri("external"),
-				projection,
-				selection,
-				selectionArgs,
-				null
-			)
-
-			cursor?.use {
-				val idColumn = it.getColumnIndexOrThrow(MediaStore.Files.FileColumns._ID)
-				val nameColumn = it.getColumnIndexOrThrow(MediaStore.Files.FileColumns.DISPLAY_NAME)
-
-				while (it.moveToNext()) {
-					val id = it.getLong(idColumn)
-					val name = it.getString(nameColumn)
-					val uri = MediaStore.Files.getContentUri("external").buildUpon()
-						.appendPath(id.toString()).build()
-
-					val deleted = context.contentResolver.delete(uri, null, null)
-					if (deleted > 0) {
-						Log.d("Backup", "기존 백업 파일 삭제: $name")
-					}
-				}
-			}
-		} catch (e: Exception) {
-			Log.e("Backup", "기존 백업 파일 삭제 실패", e)
-		}
-	}
-
-	private fun deleteIfExists(context: Context, fileName: String) {
-		val collection = MediaStore.Files.getContentUri("external")
-		val projection = arrayOf(MediaStore.MediaColumns._ID)
-		val selection = "${MediaStore.MediaColumns.DISPLAY_NAME} = ?"
-		val selectionArgs = arrayOf(fileName)
-
-		context.contentResolver.query(collection, projection, selection, selectionArgs, null)
-			?.use { cursor ->
-				val idCol = cursor.getColumnIndexOrThrow(MediaStore.MediaColumns._ID)
-				while (cursor.moveToNext()) {
-					val id = cursor.getLong(idCol)
-					val uri = ContentUris.withAppendedId(collection, id)
-					val deleted = context.contentResolver.delete(uri, null, null)
-					Log.d("Backup", "기존 파일 삭제: $fileName ($deleted)")
-				}
-			}
-	}
-
-	fun backupUserData(context: Context) {
-		val dateStr = SimpleDateFormat("yyyyMMdd", Locale.getDefault()).format(Date())
-		val backupFileName = "tango_face_expert_backup_$dateStr.zip"
-
-		try {
-			// 기존 백업 파일들 삭제
-			deleteIfExists(context, backupFileName)
-			deleteExistingBackupFiles(context)
-
-			// MediaStore를 통해 Documents 폴더에 ZIP 파일 생성
-			val contentValues = ContentValues().apply {
-				put(MediaStore.MediaColumns.DISPLAY_NAME, backupFileName)
-				put(MediaStore.MediaColumns.MIME_TYPE, "application/zip")
-				put(MediaStore.Files.FileColumns.RELATIVE_PATH, "Documents/TangoPlusBackup")
-			}
-			val uri =
-				context.contentResolver.insert(MediaStore.Files.getContentUri("external"), contentValues)
-
-			uri?.let { fileUri ->
-				context.contentResolver.openOutputStream(fileUri)?.use { outputStream ->
-					ZipOutputStream(outputStream).use { zipOut ->
-
-						// 압축 대상 디렉토리들
-						val dbDir = File("/data/data/${context.packageName}/databases")
-						val pictureDir = File(
-							Environment.getExternalStoragePublicDirectory(
-								Environment.DIRECTORY_PICTURES
-							), "TangoPlus"
-						)
-						val documentsJsonDir = File(
-							Environment.getExternalStoragePublicDirectory(
-								Environment.DIRECTORY_DOCUMENTS
-							), "TangoPlus"
-						)
-						val appInternalJsonDir = File(context.filesDir, "json")
-
-						// 1. 데이터베이스 파일들 압축
-						if (dbDir.exists() && dbDir.canRead()) {
-							addDirectoryToZip(zipOut, dbDir, "databases/")
-							Log.d("Backup", "Database 파일 압축 완료")
-						}
-
-						// 2. Pictures 파일들 압축
-						if (pictureDir.exists() && pictureDir.canRead()) {
-							addDirectoryToZip(zipOut, pictureDir, "pictures/")
-							Log.d("Backup", "Picture 파일 압축 완료")
-						}
-
-						// 3. Documents JSON 파일들 압축
-						if (documentsJsonDir.exists() && documentsJsonDir.canRead()) {
-							addDirectoryToZip(zipOut, documentsJsonDir, "documents/")
-							Log.d("Backup", "Documents JSON 파일 압축 완료")
-						}
-					}
-				}
-
-				Log.d("Backup", "MediaStore 백업 완료: $backupFileName")
-				Log.d("Backup", "URI: $fileUri")
-
-			} ?: throw Exception("MediaStore URI 생성 실패")
-
-		} catch (e: Exception) {
-			Log.e("Backup", "MediaStore 백업 실패", e)
-		}
-	}
+//	fun deleteExistingBackupFiles(context: Context) {
+//		try {
+//			val projection = arrayOf(
+//				MediaStore.Files.FileColumns._ID,
+//				MediaStore.Files.FileColumns.DISPLAY_NAME
+//			)
+//
+//			val selection = "${MediaStore.Files.FileColumns.RELATIVE_PATH} = ? AND " +
+//				"${MediaStore.Files.FileColumns.DISPLAY_NAME} LIKE ?"
+//			val selectionArgs = arrayOf("Documents/TangoPlusBackup/", "tango_face_general_backup_%.zip")
+//
+//			val cursor = context.contentResolver.query(
+//				MediaStore.Files.getContentUri("external"),
+//				projection,
+//				selection,
+//				selectionArgs,
+//				null
+//			)
+//
+//			cursor?.use {
+//				val idColumn = it.getColumnIndexOrThrow(MediaStore.Files.FileColumns._ID)
+//				val nameColumn = it.getColumnIndexOrThrow(MediaStore.Files.FileColumns.DISPLAY_NAME)
+//
+//				while (it.moveToNext()) {
+//					val id = it.getLong(idColumn)
+//					val name = it.getString(nameColumn)
+//					val uri = MediaStore.Files.getContentUri("external").buildUpon()
+//						.appendPath(id.toString()).build()
+//
+//					val deleted = context.contentResolver.delete(uri, null, null)
+//					if (deleted > 0) {
+//						Log.d("Backup", "기존 백업 파일 삭제: $name")
+//					}
+//				}
+//			}
+//		} catch (e: Exception) {
+//			Log.e("Backup", "기존 백업 파일 삭제 실패", e)
+//		}
+//	}
+//
+//	private fun deleteIfExists(context: Context, fileName: String) {
+//		val collection = MediaStore.Files.getContentUri("external")
+//		val projection = arrayOf(MediaStore.MediaColumns._ID)
+//		val selection = "${MediaStore.MediaColumns.DISPLAY_NAME} = ?"
+//		val selectionArgs = arrayOf(fileName)
+//
+//		context.contentResolver.query(collection, projection, selection, selectionArgs, null)
+//			?.use { cursor ->
+//				val idCol = cursor.getColumnIndexOrThrow(MediaStore.MediaColumns._ID)
+//				while (cursor.moveToNext()) {
+//					val id = cursor.getLong(idCol)
+//					val uri = ContentUris.withAppendedId(collection, id)
+//					val deleted = context.contentResolver.delete(uri, null, null)
+//					Log.d("Backup", "기존 파일 삭제: $fileName ($deleted)")
+//				}
+//			}
+//	}
+//
+//	fun backupUserData(context: Context) {
+//		val dateStr = SimpleDateFormat("yyyyMMdd", Locale.getDefault()).format(Date())
+//		val backupFileName = "tango_face_expert_backup_$dateStr.zip"
+//
+//		try {
+//			// 기존 백업 파일들 삭제
+//			deleteIfExists(context, backupFileName)
+//			deleteExistingBackupFiles(context)
+//
+//			// MediaStore를 통해 Documents 폴더에 ZIP 파일 생성
+//			val contentValues = ContentValues().apply {
+//				put(MediaStore.MediaColumns.DISPLAY_NAME, backupFileName)
+//				put(MediaStore.MediaColumns.MIME_TYPE, "application/zip")
+//				put(MediaStore.Files.FileColumns.RELATIVE_PATH, "Documents/TangoPlusBackup")
+//			}
+//			val uri =
+//				context.contentResolver.insert(MediaStore.Files.getContentUri("external"), contentValues)
+//
+//			uri?.let { fileUri ->
+//				context.contentResolver.openOutputStream(fileUri)?.use { outputStream ->
+//					ZipOutputStream(outputStream).use { zipOut ->
+//
+//						// 압축 대상 디렉토리들
+//						val dbDir = File("/data/data/${context.packageName}/databases")
+//						val pictureDir = File(
+//							Environment.getExternalStoragePublicDirectory(
+//								Environment.DIRECTORY_PICTURES
+//							), "TangoPlus"
+//						)
+//						val documentsJsonDir = File(
+//							Environment.getExternalStoragePublicDirectory(
+//								Environment.DIRECTORY_DOCUMENTS
+//							), "TangoPlus"
+//						)
+//						val appInternalJsonDir = File(context.filesDir, "json")
+//
+//						// 1. 데이터베이스 파일들 압축
+//						if (dbDir.exists() && dbDir.canRead()) {
+//							addDirectoryToZip(zipOut, dbDir, "databases/")
+//							Log.d("Backup", "Database 파일 압축 완료")
+//						}
+//
+//						// 2. Pictures 파일들 압축
+//						if (pictureDir.exists() && pictureDir.canRead()) {
+//							addDirectoryToZip(zipOut, pictureDir, "pictures/")
+//							Log.d("Backup", "Picture 파일 압축 완료")
+//						}
+//
+//						// 3. Documents JSON 파일들 압축
+//						if (documentsJsonDir.exists() && documentsJsonDir.canRead()) {
+//							addDirectoryToZip(zipOut, documentsJsonDir, "documents/")
+//							Log.d("Backup", "Documents JSON 파일 압축 완료")
+//						}
+//					}
+//				}
+//
+//				Log.d("Backup", "MediaStore 백업 완료: $backupFileName")
+//				Log.d("Backup", "URI: $fileUri")
+//
+//			} ?: throw Exception("MediaStore URI 생성 실패")
+//
+//		} catch (e: Exception) {
+//			Log.e("Backup", "MediaStore 백업 실패", e)
+//		}
+//	}
 
 	private fun addDirectoryToZip(zipOut: ZipOutputStream, sourceDir: File, basePath: String) {
 		if (!sourceDir.exists() || !sourceDir.canRead()) {

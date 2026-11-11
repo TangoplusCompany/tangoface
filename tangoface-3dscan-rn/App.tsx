@@ -193,7 +193,7 @@ export default function App() {
         throw new Error(presignRes.error || '업로드 URL 발급에 실패했습니다.');
       }
 
-      setUploadStatusText('2/3 Supabase 스토리지로 영상 직접 전송 중...');
+      setUploadStatusText('2/3 영상 전송 중...');
       const uploadRes = await uploadVideoDirectly(
         presignRes.upload_url,
         recordedBlob,

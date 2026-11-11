@@ -78,7 +78,7 @@ export const VideoUploadView: React.FC<VideoUploadViewProps> = ({
       }
 
       // 2. Supabase Storage로 직접 PUT 전송
-      setUploadStatusText('2/3 Supabase 스토리지로 영상 직접 전송 중...');
+      setUploadStatusText('2/3 영상 전송 중...');
       const uploadRes = await uploadVideoDirectly(
         presignRes.upload_url,
         selectedVideo.file,
@@ -86,7 +86,6 @@ export const VideoUploadView: React.FC<VideoUploadViewProps> = ({
           setUploadProgress(percent);
         }
       );
-
       if (!uploadRes.success) {
         throw new Error(uploadRes.error || '영상 파일 전송에 실패했습니다.');
       }

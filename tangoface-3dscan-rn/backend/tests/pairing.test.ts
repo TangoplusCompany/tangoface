@@ -42,19 +42,19 @@ describe('Pairing & Crypto Utilities', () => {
     expect(timingSafeMatch(secret, 'short')).toBe(false);
   });
 
-  it('10분 만료 계산이 정확해야 한다', () => {
+  it('15분 만료 계산이 정확해야 한다', () => {
     const now = 1700000000000;
     const createdAt = new Date(now).toISOString();
-    const tenMinutesMs = 10 * 60 * 1000;
+    const fifteenMinutesMs = 15 * 60 * 1000;
 
-    // 9분 경과: 유효
-    const nineMinsLater = now + 9 * 60 * 1000;
-    const isValidAt9Mins = new Date(createdAt).getTime() + tenMinutesMs > nineMinsLater;
-    expect(isValidAt9Mins).toBe(true);
+    // 14분 경과: 유효
+    const fourteenMinsLater = now + 14 * 60 * 1000;
+    const isValidAt14Mins = new Date(createdAt).getTime() + fifteenMinutesMs > fourteenMinsLater;
+    expect(isValidAt14Mins).toBe(true);
 
-    // 10분 1초 경과: 만료
-    const tenMinsOneSecLater = now + 10 * 60 * 1000 + 1000;
-    const isValidAt10Mins = new Date(createdAt).getTime() + tenMinutesMs > tenMinsOneSecLater;
-    expect(isValidAt10Mins).toBe(false);
+    // 15분 1초 경과: 만료
+    const fifteenMinsOneSecLater = now + 15 * 60 * 1000 + 1000;
+    const isValidAt15Mins = new Date(createdAt).getTime() + fifteenMinutesMs > fifteenMinsOneSecLater;
+    expect(isValidAt15Mins).toBe(false);
   });
 });

@@ -19,6 +19,7 @@ import com.tangoplus.tangoface.domain.util.FileUtility.getImageUriFromFileName
 import com.tangoplus.tangoface.domain.util.FileUtility.getVideoUriFromFileName
 import com.tangoplus.tangoface.domain.vision.face.FaceLandmarkerHelper
 import com.tangoplus.tangoface.domain.vo.FaceResult
+import com.tangoplus.tangoface.domain.vo.MeasureType
 import com.tangoplus.tangoface.domain.vo.Sequence
 import com.tangoplus.tangoface.ui.info.vo.DateDisplay
 import com.tangoplus.tangoface.ui.info.vo.Factor
@@ -36,6 +37,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
+import java.io.File
 import java.lang.Math.random
 import java.text.Collator
 import java.util.Locale
@@ -201,9 +203,22 @@ class MainViewModel : ViewModel() {
 			Log.v("정렬확인", "dbSeq=${it.seq}, fromId=${Sequence.fromId(it.seq)}, file=${it.json_file_name}")
 		}
 		sortedStatics.forEachIndexed { indexx, faceStatic ->
-			// 이미지 URI 변환
+			// 이미지 / 영상 / 3D GLB URI 변환
 			try {
-				if (faceStatic.seq in listOf(2, 3)) { // DB에 저장된 seq Int값
+				if (faceStatic.measure_type == MeasureType.SCAN.idx) {
+					val rawName = faceStatic.media_file_name
+					val glbFile = listOf(
+						File(FileUtility.get3DModelsDir(), rawName),
+						File(context.filesDir, "models/$rawName"),
+						File(rawName)
+					).firstOrNull { it.exists() && it.isFile }
+					val resolvedUri = if (glbFile != null) {
+						Uri.fromFile(glbFile)
+					} else {
+						FileUtility.getGlbUriFromFileName(context, rawName)
+					}
+					mediaUris.add(resolvedUri)
+				} else if (faceStatic.seq in listOf(2, 3)) { // DB에 저장된 seq Int값
 					val videoUri = getVideoUriFromFileName(context, faceStatic.media_file_name)
 					mediaUris.add(videoUri)
 					Log.v("비디오", "$indexx ${faceStatic.media_file_name}")
@@ -219,14 +234,18 @@ class MainViewModel : ViewModel() {
 				}
 			} catch (e: Exception) {
 				mediaUris.add(null)
-				Log.e("FaceResultConverter", "이미지 URI 파싱 실패: ${faceStatic.media_file_name}", e)
+				Log.e("FaceResultConverter", "미디어 URI 파싱 실패: ${faceStatic.media_file_name}", e)
 			}
 
-			// JSON 읽기
+			// JSON 읽기 (SCAN 등 JSON이 없는 경우 빈 객체)
 			try {
-				val jsonObject = FileUtility.readJsonFromFile(faceStatic.json_file_name) ?: JSONObject()
-				Log.v("faceResult", "$indexx => ${faceStatic.json_file_name}")
-				jsonArray.put(jsonObject)
+				if (faceStatic.json_file_name.isNotBlank()) {
+					val jsonObject = FileUtility.readJsonFromFile(faceStatic.json_file_name) ?: JSONObject()
+					Log.v("faceResult", "$indexx => ${faceStatic.json_file_name}")
+					jsonArray.put(jsonObject)
+				} else {
+					jsonArray.put(JSONObject())
+				}
 			} catch (e: Exception) {
 				Log.e("FaceResultConverter", "JSON 파일 읽기 실패", e)
 				jsonArray.put(JSONObject())

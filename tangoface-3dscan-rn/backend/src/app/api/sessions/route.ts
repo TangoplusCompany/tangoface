@@ -35,7 +35,7 @@ export async function GET(request: NextRequest) {
 
 /**
  * POST /api/sessions
- * 안드로이드 태블릿이 세션을 생성: 6자리 번호(만료 10분), session_id, session_secret 반환
+ * 안드로이드 태블릿이 세션을 생성: 6자리 번호(만료 15분), session_id, session_secret 반환
  * 보안: TABLET_API_KEY 헤더(x-tablet-key)를 검증하여 인가된 태블릿 기기만 세션을 생성할 수 있도록 차단
  */
 export async function POST(request: NextRequest) {
@@ -81,7 +81,7 @@ export async function POST(request: NextRequest) {
 
     const supabase = getSupabaseAdmin();
     const now = new Date();
-    const codeExpiresAt = new Date(now.getTime() + 10 * 60 * 1000); // 10분 만료
+    const pinTtlMs = 15 * 60 * 1000; // 15분 만료 (최소 12분 이상 넉넉한 유효시간)
     const sessionExpiresAt = new Date(now.getTime() + 24 * 60 * 60 * 1000); // 24시간 만료
 
     // 활성 세션 간 6자리 번호 충돌 방지 루프 (최대 5회 재시도)
@@ -94,7 +94,7 @@ export async function POST(request: NextRequest) {
         .from('sessions')
         .select('id')
         .eq('code', candidateCode)
-        .gte('created_at', new Date(now.getTime() - 10 * 60 * 1000).toISOString())
+        .gte('created_at', new Date(now.getTime() - pinTtlMs).toISOString())
         .maybeSingle();
 
       if (!existing) {
@@ -132,7 +132,7 @@ export async function POST(request: NextRequest) {
       session_id: newSession.id,
       code,
       session_secret: sessionSecret,
-      expires_in_seconds: 600,
+      expires_in_seconds: 900,
     };
 
     return jsonWithCors(request, response, { status: 201 });

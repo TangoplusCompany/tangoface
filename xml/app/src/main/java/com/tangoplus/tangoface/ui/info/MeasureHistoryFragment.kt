@@ -110,7 +110,8 @@ class MeasureHistoryFragment : Fragment(), OnUserClickListener {
 						replace(R.id.flMain, InfoContainerFragment.newInstance(result.measureType))
 						addToBackStack("information")
 						commit()
-					} }
+					}
+					}
 				}
 			}
 		}
@@ -121,7 +122,7 @@ class MeasureHistoryFragment : Fragment(), OnUserClickListener {
 		userAdapter = UserRVAdapter(requireContext(), mvm).apply {
 			onUserClickListener = this@MeasureHistoryFragment
 		}
-		bd.llMHEmpty.visibility = if (mvm.currentUserItems.size > 0 ) View.GONE else View.VISIBLE
+		bd.llMHEmpty.visibility = if (mvm.currentUserItems.isNotEmpty()) View.GONE else View.VISIBLE
 		val lm = GridLayoutManager(requireContext(), currentSpanCount).apply {
 			spanSizeLookup = object : GridLayoutManager.SpanSizeLookup() {
 				override fun getSpanSize(p0: Int): Int {

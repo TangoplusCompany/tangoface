@@ -1,9 +1,11 @@
 package com.tangoplus.tangoface.ui.info.vm
 
 import android.content.Context
+import android.net.Uri
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import com.tangoplus.tangoface.data.db.FaceDao
+import com.tangoplus.tangoface.domain.vo.FaceResult
 import com.tangoplus.tangoface.domain.vo.FaceStaticItem
 import com.tangoplus.tangoface.domain.vo.Sequence
 import com.tangoplus.tangoface.ui.info.vo.BowItem
@@ -133,5 +135,33 @@ class InformationViewModel : ViewModel() {
 		if (_isAngleModeActive.value) {
 			_isAngleModeActive.value = false
 		}
+	}
+
+	// --------------------# 3D 스캔(SCAN) 결과 상태 (3D 모델 + DB 측정 날짜) #--------------------
+	data class ScanResultInfo(
+		val modelUri: Uri? = null,
+		val modelFilePath: String? = null,
+		val measuredDate: String = ""
+	)
+
+	private val _scanResultInfo = MutableStateFlow<ScanResultInfo?>(null)
+	val scanResultInfo = _scanResultInfo.asStateFlow()
+
+	fun setScanResultFromFaceResult(faceResult: FaceResult?) {
+		if (faceResult == null) {
+			_scanResultInfo.value = null
+			return
+		}
+		val modelUri = faceResult.mediaUri.firstOrNull()
+		val filePath = if (modelUri?.scheme == "file") modelUri.path else null
+		_scanResultInfo.value = ScanResultInfo(
+			modelUri = modelUri,
+			modelFilePath = filePath,
+			measuredDate = faceResult.regDate.orEmpty()
+		)
+	}
+
+	fun clearScanResult() {
+		_scanResultInfo.value = null
 	}
 }

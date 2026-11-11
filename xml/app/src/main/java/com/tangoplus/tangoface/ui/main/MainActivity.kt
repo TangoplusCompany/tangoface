@@ -33,11 +33,9 @@ import com.tangoplus.tangoface.data.db.FaceDatabase
 import com.tangoplus.tangoface.R
 import com.tangoplus.tangoface.data.db.FaceDao
 import com.tangoplus.tangoface.databinding.ActivityMainBinding
-import com.tangoplus.tangoface.domain.util.FileUtility.backupUserData
 import com.tangoplus.tangoface.domain.util.PermissionUtility.getAllPermissions
 import com.tangoplus.tangoface.domain.util.PreferenceUtility
 import com.tangoplus.tangoface.domain.util.UXUtility
-import com.tangoplus.tangoface.domain.util.UXUtility.startLongVibrate
 import com.tangoplus.tangoface.ui.info.InfoContainerFragment
 import com.tangoplus.tangoface.ui.info.MeasureHistoryFragment
 import com.tangoplus.tangoface.ui.main.vm.FragmentViewModel
@@ -204,14 +202,14 @@ class MainActivity : AppCompatActivity() {
 					val fDao = FaceDatabase.getDatabase(this@MainActivity).faceDao()
 					val dbDataCount = fDao.getDataCount() // 3
 					withContext(Dispatchers.Main) {
-						val prefs = PreferenceUtility(this@MainActivity)
-						val saveDataCount = prefs.getLastDataCount() // 0
-						Log.v("저장할까요?", "$saveDataCount < $dbDataCount DB저장된 갯수가 더 커야함")
-						if (saveDataCount < dbDataCount) {
-							backupUserData(this@MainActivity)
-							Log.v("저장할까요?", "저장합니다.")
-							prefs.setDataCount(dbDataCount)
-						}
+//						val prefs = PreferenceUtility(this@MainActivity)
+//						val saveDataCount = prefs.getLastDataCount() // 0
+//						Log.v("저장할까요?", "$saveDataCount < $dbDataCount DB저장된 갯수가 더 커야함")
+//						if (saveDataCount < dbDataCount) {
+//							backupUserData(this@MainActivity)
+//							Log.v("저장할까요?", "저장합니다.")
+//							prefs.setDataCount(dbDataCount)
+//						}
 						exportedMeasureSettings()
 					}
 				}
