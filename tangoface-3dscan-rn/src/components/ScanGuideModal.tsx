@@ -16,6 +16,12 @@ interface ScanGuideModalProps {
   onClose: () => void;
 }
 
+const guideVideoAsset = require('../../assets/3dModelScanGuide.mp4');
+const guideVideoUri: string | undefined =
+  typeof guideVideoAsset === 'string'
+    ? guideVideoAsset
+    : guideVideoAsset?.uri ?? guideVideoAsset?.default;
+
 /**
  * 1번 일러스트: 카메라는 최대한 흔들리지 않게 곡선으로 천천히 움직여주세요
  * - 중앙 2.5D 동그란 얼굴 (심플한 눈코입 선)
@@ -167,37 +173,68 @@ export const ScanGuideModal: React.FC<ScanGuideModalProps> = ({
   visible,
   onClose,
 }) => {
-  const [hasScrolledToBottom, setHasScrolledToBottom] = useState(false);
-  const scrollViewRef = useRef<React.ComponentRef<typeof ScrollView> | null>(null);
-  const scrollViewHeightRef = useRef(0);
-  const contentHeightRef = useRef(0);
+  const hasVideoStep = Platform.OS === 'web' && Boolean(guideVideoUri);
+  const totalSteps = hasVideoStep ? 4 : 3;
 
-  // 모달이 열릴 때마다 스크롤 완료 상태 및 스크롤 위치 초기화
+  const [currentStep, setCurrentStep] = useState(0);
+  const [hasReachedEnd, setHasReachedEnd] = useState(false);
+  const [cardWidth, setCardWidth] = useState(0);
+
+  const scrollViewRef = useRef<React.ComponentRef<typeof ScrollView> | null>(null);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+
+  const isLastStep = currentStep >= totalSteps - 1;
+
+  // 모달이 열릴 때마다 첫 카드(영상)로 초기화
   useEffect(() => {
     if (visible) {
-      setHasScrolledToBottom(false);
+      setCurrentStep(0);
+      setHasReachedEnd(false);
       if (typeof scrollViewRef.current?.scrollTo === 'function') {
-        scrollViewRef.current.scrollTo({ y: 0, animated: false });
+        scrollViewRef.current.scrollTo({ x: 0, animated: false });
       }
+    } else if (Platform.OS === 'web' && videoRef.current) {
+      videoRef.current.pause();
     }
   }, [visible]);
 
-  const checkScrollable = () => {
-    if (scrollViewHeightRef.current > 0 && contentHeightRef.current > 0) {
-      if (contentHeightRef.current <= scrollViewHeightRef.current + 12) {
-        setHasScrolledToBottom(true);
-      }
+  // 영상 카드(0번)가 보일 때만 자동 재생, 벗어나면 일시정지
+  useEffect(() => {
+    if (Platform.OS !== 'web' || !videoRef.current) return;
+    if (visible && hasVideoStep && currentStep === 0) {
+      videoRef.current.currentTime = 0;
+      videoRef.current.muted = true;
+      videoRef.current.play().catch(() => {});
+    } else {
+      videoRef.current.pause();
+    }
+  }, [visible, hasVideoStep, currentStep]);
+
+  const goToStep = (nextStep: number) => {
+    const clamped = Math.max(0, Math.min(totalSteps - 1, nextStep));
+    setCurrentStep(clamped);
+    if (clamped >= totalSteps - 1) {
+      setHasReachedEnd(true);
+    }
+    if (cardWidth > 0 && typeof scrollViewRef.current?.scrollTo === 'function') {
+      scrollViewRef.current.scrollTo({ x: clamped * cardWidth, animated: true });
     }
   };
 
-  const handleScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
-    if (hasScrolledToBottom) return;
-    const { layoutMeasurement, contentOffset, contentSize } = event.nativeEvent;
-    const paddingToBottom = 20;
-    if (layoutMeasurement.height + contentOffset.y >= contentSize.height - paddingToBottom) {
-      setHasScrolledToBottom(true);
+  const handleHorizontalScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+    if (cardWidth <= 0) return;
+    const offsetX = event.nativeEvent.contentOffset.x;
+    const index = Math.round(offsetX / cardWidth);
+    const clamped = Math.max(0, Math.min(totalSteps - 1, index));
+    if (clamped !== currentStep) {
+      setCurrentStep(clamped);
+    }
+    if (clamped >= totalSteps - 1 && !hasReachedEnd) {
+      setHasReachedEnd(true);
     }
   };
+
+  const showConfirmButton = isLastStep || hasReachedEnd;
 
   return (
     <Modal
@@ -205,7 +242,7 @@ export const ScanGuideModal: React.FC<ScanGuideModalProps> = ({
       transparent
       animationType="fade"
       onRequestClose={() => {
-        if (hasScrolledToBottom) onClose();
+        if (showConfirmButton) onClose();
       }}
     >
       <View style={styles.overlay}>
@@ -217,70 +254,146 @@ export const ScanGuideModal: React.FC<ScanGuideModalProps> = ({
             </Text>
           </View>
 
-          {/* 3가지 촬영 가이드 카드 리스트 (끝까지 스크롤해야 확인 버튼 노출) */}
-          <ScrollView
-            ref={scrollViewRef}
-            style={styles.scrollArea}
-            contentContainerStyle={styles.scrollContent}
-            showsVerticalScrollIndicator={true}
-            scrollEventThrottle={16}
-            onScroll={handleScroll}
+          {/* 가로 스와이프 / 버튼 넘김 카드 영역 */}
+          <View
+            style={styles.carouselWrapper}
             onLayout={(e) => {
-              scrollViewHeightRef.current = e.nativeEvent.layout.height;
-              checkScrollable();
-            }}
-            onContentSizeChange={(_, contentHeight) => {
-              contentHeightRef.current = contentHeight;
-              checkScrollable();
+              const w = Math.round(e.nativeEvent.layout.width);
+              if (w > 0 && w !== cardWidth) {
+                setCardWidth(w);
+              }
             }}
           >
-            {/* 1번 가이드: 카메라 곡선 이동 */}
-            <View style={styles.guideItemCard}>
-              <View style={styles.iconContainerWide}>
-                <CameraCurveGuideIcon />
-              </View>
-              <Text style={styles.guideItemText}>
-                1. 카메라는 최대한 흔들리지 않게{'\n'}곡선으로 천천히 움직여주세요
-              </Text>
-            </View>
-
-            {/* 2번 가이드: 눈 깜빡임 방지 */}
-            <View style={styles.guideItemCard}>
-              <View style={styles.iconContainer}>
-                <EyeGuideIcon />
-              </View>
-              <Text style={styles.guideItemText}>
-                2. 스캔 할 때는 눈을 깜빡이지 마세요!
-              </Text>
-            </View>
-
-            {/* 3번 가이드: 몸 움직임 방지 */}
-            <View style={styles.guideItemCard}>
-              <View style={styles.iconContainer}>
-                <BodyStillGuideIcon />
-              </View>
-              <Text style={styles.guideItemText}>
-                3. 몸을 최대한 움직이지 마세요
-              </Text>
-            </View>
-          </ScrollView>
-
-          {/* 스크롤 완료 여부에 따라 확인 버튼 또는 스크롤 안내 표시 */}
-          {hasScrolledToBottom ? (
-            <TouchableOpacity
-              style={styles.confirmButton}
-              onPress={onClose}
-              activeOpacity={0.85}
+            <ScrollView
+              ref={scrollViewRef}
+              horizontal
+              pagingEnabled
+              showsHorizontalScrollIndicator={false}
+              scrollEventThrottle={16}
+              onScroll={handleHorizontalScroll}
+              onMomentumScrollEnd={handleHorizontalScroll}
+              style={styles.carouselScroll}
+              contentContainerStyle={styles.carouselContent}
             >
-              <Text style={styles.confirmButtonText}>확인했습니다</Text>
-            </TouchableOpacity>
-          ) : (
-            <View style={styles.scrollPromptBox}>
-              <Text style={styles.scrollPromptText}>
-                아래로 끝까지 스크롤하여 가이드를 확인해주세요
-              </Text>
-            </View>
-          )}
+              {/* 0번 카드: 가이드 영상 자동 재생 */}
+              {hasVideoStep ? (
+                <View style={[styles.slidePage, cardWidth > 0 && { width: cardWidth }]}>
+                  <View style={styles.videoCard}>
+                    <View style={styles.videoWrapper}>
+                      {/* @ts-ignore - React Native Web HTML5 video */}
+                      <video
+                        ref={videoRef}
+                        src={guideVideoUri}
+                        autoPlay
+                        loop
+                        muted
+                        playsInline
+                        controls
+                        preload="auto"
+                        style={{
+                          width: '100%',
+                          height: '100%',
+                          backgroundColor: '#000000',
+                          objectFit: 'contain',
+                          display: 'block',
+                        }}
+                      />
+                    </View>
+                    <View style={styles.videoCaptionContainer}>
+                      <Text style={styles.videoCaptionText}>
+                        촬영 예시 영상을 참고해 주세요
+                      </Text>
+                    </View>
+                  </View>
+                </View>
+              ) : null}
+
+              {/* 1번 카드: 카메라 곡선 이동 */}
+              <View style={[styles.slidePage, cardWidth > 0 && { width: cardWidth }]}>
+                <View style={styles.guideItemCard}>
+                  <View style={styles.iconContainerWide}>
+                    <CameraCurveGuideIcon />
+                  </View>
+                  <Text style={styles.guideItemText}>
+                    1. 카메라는 최대한 흔들리지 않게{'\n'}곡선으로 천천히 움직여주세요
+                  </Text>
+                </View>
+              </View>
+
+              {/* 2번 카드: 눈 깜빡임 방지 */}
+              <View style={[styles.slidePage, cardWidth > 0 && { width: cardWidth }]}>
+                <View style={styles.guideItemCard}>
+                  <View style={styles.iconContainer}>
+                    <EyeGuideIcon />
+                  </View>
+                  <Text style={styles.guideItemText}>
+                    2. 스캔 할 때는 눈을 깜빡이지 마세요!
+                  </Text>
+                </View>
+              </View>
+
+              {/* 3번 카드: 몸 움직임 방지 */}
+              <View style={[styles.slidePage, cardWidth > 0 && { width: cardWidth }]}>
+                <View style={styles.guideItemCard}>
+                  <View style={styles.iconContainer}>
+                    <BodyStillGuideIcon />
+                  </View>
+                  <Text style={styles.guideItemText}>
+                    3. 몸을 최대한 움직이지 마세요
+                  </Text>
+                </View>
+              </View>
+            </ScrollView>
+          </View>
+
+          {/* 페이지 인디케이터 점 */}
+          <View style={styles.paginationRow}>
+            {Array.from({ length: totalSteps }).map((_, idx) => {
+              const active = idx === currentStep;
+              return (
+                <TouchableOpacity
+                  key={idx}
+                  onPress={() => goToStep(idx)}
+                  hitSlop={{ top: 8, bottom: 8, left: 6, right: 6 }}
+                  style={[styles.dot, active && styles.dotActive]}
+                />
+              );
+            })}
+          </View>
+
+          {/* 마지막 카드(3번)까지 넘기면 바로 확인했습니다 버튼 표시 */}
+          <View style={styles.bottomActions}>
+            {showConfirmButton ? (
+              <TouchableOpacity
+                style={styles.confirmButton}
+                onPress={onClose}
+                activeOpacity={0.85}
+              >
+                <Text style={styles.confirmButtonText}>확인했습니다</Text>
+              </TouchableOpacity>
+            ) : (
+              <View style={styles.navRow}>
+                {currentStep > 0 ? (
+                  <TouchableOpacity
+                    style={styles.prevButton}
+                    onPress={() => goToStep(currentStep - 1)}
+                    activeOpacity={0.85}
+                  >
+                    <Text style={styles.prevButtonText}>이전</Text>
+                  </TouchableOpacity>
+                ) : null}
+                <TouchableOpacity
+                  style={styles.nextButton}
+                  onPress={() => goToStep(currentStep + 1)}
+                  activeOpacity={0.85}
+                >
+                  <Text style={styles.nextButtonText}>
+                    다음 ({currentStep + 1}/{totalSteps})
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            )}
+          </View>
         </View>
       </View>
     </Modal>
@@ -290,31 +403,22 @@ export const ScanGuideModal: React.FC<ScanGuideModalProps> = ({
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.85)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 16,
+    backgroundColor: '#161214',
     zIndex: 9999,
   },
   modalCard: {
+    flex: 1,
     width: '100%',
-    maxWidth: 380,
-    maxHeight: '88%',
+    height: '100%',
     backgroundColor: '#161214',
-    borderRadius: 24,
-    paddingHorizontal: 20,
-    paddingTop: 24,
+    paddingTop: 16,
     paddingBottom: 20,
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.5,
-    shadowRadius: 20,
-    elevation: 10,
   },
   header: {
     width: '100%',
-    marginBottom: 16,
+    paddingHorizontal: 20,
+    marginBottom: 12,
     alignItems: 'center',
   },
   mainTitle: {
@@ -325,20 +429,87 @@ const styles = StyleSheet.create({
     lineHeight: 25,
     letterSpacing: -0.3,
   },
-  scrollArea: {
+  carouselWrapper: {
+    flex: 1,
     width: '100%',
-    maxHeight: 340,
   },
-  scrollContent: {
-    gap: 12,
-    paddingBottom: 12,
+  carouselScroll: {
+    flex: 1,
+    width: '100%',
+  },
+  carouselContent: {
+    height: '100%',
+  },
+  slidePage: {
+    width: '100%',
+    height: '100%',
+    paddingHorizontal: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  videoCard: {
+    flex: 1,
+    width: '100%',
+    maxWidth: 440,
+    backgroundColor: '#000000',
+    borderRadius: 20,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  videoWrapper: {
+    flex: 1,
+    width: '100%',
+    backgroundColor: '#000000',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  videoCaptionContainer: {
+    width: '100%',
+    backgroundColor: '#1E191C',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255, 255, 255, 0.06)',
+  },
+  videoCaptionText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    textAlign: 'center',
+    letterSpacing: -0.2,
   },
   guideItemCard: {
+    flex: 1,
+    width: '100%',
+    maxWidth: 440,
     backgroundColor: '#1C191A',
-    borderRadius: 16,
-    paddingVertical: 14,
-    paddingHorizontal: 14,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+    paddingVertical: 24,
+    paddingHorizontal: 20,
     alignItems: 'center',
+    justifyContent: 'center',
+  },
+  paginationRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    marginTop: 14,
+  },
+  dot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#3A3134',
+  },
+  dotActive: {
+    width: 20,
+    backgroundColor: '#FF0055',
   },
   iconContainer: {
     height: 76,
@@ -365,6 +536,11 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255, 0, 85, 0.1)',
     borderRadius: 8,
   },
+  bottomActions: {
+    width: '100%',
+    paddingHorizontal: 16,
+    marginTop: 14,
+  },
   confirmButton: {
     width: '100%',
     height: 48,
@@ -372,25 +548,41 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop: 14,
   },
   confirmButtonText: {
     color: '#ffffff',
     fontSize: 15,
     fontWeight: '700',
   },
-  scrollPromptBox: {
+  navRow: {
     width: '100%',
+    flexDirection: 'row',
+    gap: 10,
+  },
+  prevButton: {
+    flex: 1,
     height: 48,
-    backgroundColor: '#30292B',
+    backgroundColor: '#2B2326',
     borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop: 14,
   },
-  scrollPromptText: {
-    color: '#FF8794',
-    fontSize: 13,
+  prevButtonText: {
+    color: '#CFC6C9',
+    fontSize: 15,
     fontWeight: '600',
+  },
+  nextButton: {
+    flex: 2,
+    height: 48,
+    backgroundColor: '#FF0055',
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  nextButtonText: {
+    color: '#ffffff',
+    fontSize: 15,
+    fontWeight: '700',
   },
 });
