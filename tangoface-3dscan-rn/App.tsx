@@ -32,15 +32,73 @@ import {
 type AppStep = 'pairing' | 'permissions' | 'scanning' | 'recorded_preview' | 'success';
 type ScanMode = 'panorama' | 'upload';
 
+const SESSION_STORAGE_KEY = 'tangoface_active_session_v1';
+
+interface SavedSessionState {
+  pairToken: string;
+  sessionId: string;
+  appStep: AppStep;
+  scanMode: ScanMode;
+}
+
+function loadSavedSession(): SavedSessionState | null {
+  if (Platform.OS !== 'web' || typeof window === 'undefined' || !window.sessionStorage) {
+    return null;
+  }
+  try {
+    const raw = window.sessionStorage.getItem(SESSION_STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (!parsed?.pairToken || !parsed?.sessionId) return null;
+    const step: AppStep =
+      parsed.appStep === 'permissions' || parsed.appStep === 'scanning'
+        ? parsed.appStep
+        : 'scanning';
+    const mode: ScanMode = parsed.scanMode === 'upload' ? 'upload' : 'panorama';
+    return {
+      pairToken: parsed.pairToken,
+      sessionId: parsed.sessionId,
+      appStep: step,
+      scanMode: mode,
+    };
+  } catch {
+    return null;
+  }
+}
+
+function saveActiveSession(state: SavedSessionState) {
+  if (Platform.OS !== 'web' || typeof window === 'undefined' || !window.sessionStorage) {
+    return;
+  }
+  try {
+    window.sessionStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(state));
+  } catch {
+    // ignore storage quota errors
+  }
+}
+
+function clearSavedSession() {
+  if (Platform.OS !== 'web' || typeof window === 'undefined' || !window.sessionStorage) {
+    return;
+  }
+  try {
+    window.sessionStorage.removeItem(SESSION_STORAGE_KEY);
+  } catch {
+    // ignore
+  }
+}
+
 export default function App() {
-  // 1. 세션 & 페어링 상태
-  const [appStep, setAppStep] = useState<AppStep>('pairing');
-  const [pairToken, setPairToken] = useState<string | null>(null);
-  const [sessionId, setSessionId] = useState<string | null>(null);
+  const [restoredSession] = useState<SavedSessionState | null>(() => loadSavedSession());
+
+  // 1. 세션 & 페어링 상태 (모바일 브라우저 파일 선택 중 탭 리로드 시에도 페어링 유지)
+  const [appStep, setAppStep] = useState<AppStep>(() => restoredSession?.appStep || 'pairing');
+  const [pairToken, setPairToken] = useState<string | null>(() => restoredSession?.pairToken || null);
+  const [sessionId, setSessionId] = useState<string | null>(() => restoredSession?.sessionId || null);
 
   // 2. 카메라 & 모드 상태
   const [facing, setFacing] = useState<CameraType>('back');
-  const [scanMode, setScanMode] = useState<ScanMode>('panorama');
+  const [scanMode, setScanMode] = useState<ScanMode>(() => restoredSession?.scanMode || 'panorama');
   const [isRecording, setIsRecording] = useState(false);
   const [recordSeconds, setRecordSeconds] = useState(0);
   const [levelDurationCount, setLevelDurationCount] = useState(0);
@@ -86,10 +144,39 @@ export default function App() {
     setSimulatedValues,
   } = useDeviceOrientation(2.5);
 
+  // 활성 세션 상태 동기화 (모바일 브라우저 파일 선택/백그라운드 복귀 시 초기화 방지)
+  useEffect(() => {
+    if (pairToken && sessionId && (appStep === 'permissions' || appStep === 'scanning')) {
+      saveActiveSession({
+        pairToken,
+        sessionId,
+        appStep,
+        scanMode,
+      });
+    } else if (appStep === 'pairing' || appStep === 'success') {
+      clearSavedSession();
+    }
+  }, [pairToken, sessionId, appStep, scanMode]);
+
   // 1단계: PIN 번호 입력 성공 시 -> 화면 전환 전 촬영 가이드 먼저 노출
   const handlePaired = (token: string, sessId: string) => {
+    if (recordedPreviewUrl) {
+      URL.revokeObjectURL(recordedPreviewUrl);
+    }
     setPairToken(token);
     setSessionId(sessId);
+    setScanMode('panorama');
+    setRecordedBlob(null);
+    setRecordedPreviewUrl(null);
+    setIsVideoSaved(false);
+    setIsQueueFull(false);
+    setIsRecording(false);
+    setRecordSeconds(0);
+    setLevelDurationCount(0);
+    setIsUploading(false);
+    setUploadStatusText('');
+    setUploadError(null);
+    setUploadProgress(0);
     // 가이드 확인 후 넘어갈 다음 화면 예약
     setPendingStepAfterGuide(hasCameraPermission ? 'scanning' : 'permissions');
     setShowGuideModal(true);
@@ -147,14 +234,19 @@ export default function App() {
   // 촬영 토글 (시작 시 현재 위치를 자동으로 기준 영점으로 캘리브레이션!)
   const handleToggleRecord = async () => {
     if (!isRecording) {
+      if (!cameraRef.current) {
+        alert('카메라가 준비 중입니다. 잠시 후 다시 시도해주세요.');
+        return;
+      }
+      const started = cameraRef.current.startRecording();
+      if (!started) {
+        alert('카메라 스트림을 준비 중입니다. 1~2초 후 다시 시도해주세요.');
+        return;
+      }
       calibrateToCurrentPosition();
       setRecordSeconds(0);
       setLevelDurationCount(0);
       setIsVideoSaved(false);
-
-      if (cameraRef.current) {
-        cameraRef.current.startRecording();
-      }
       setIsRecording(true);
     } else {
       setIsRecording(false);
@@ -165,6 +257,9 @@ export default function App() {
       }
 
       if (blob && blob.size > 0) {
+        if (recordedPreviewUrl) {
+          URL.revokeObjectURL(recordedPreviewUrl);
+        }
         setRecordedBlob(blob);
         const url = URL.createObjectURL(blob);
         setRecordedPreviewUrl(url);
@@ -269,11 +364,13 @@ export default function App() {
 
   // 전체 초기화
   const handleResetAll = () => {
+    clearSavedSession();
     if (recordedPreviewUrl) {
       URL.revokeObjectURL(recordedPreviewUrl);
     }
     setPairToken(null);
     setSessionId(null);
+    setScanMode('panorama');
     setRecordedBlob(null);
     setRecordedPreviewUrl(null);
     setIsVideoSaved(false);
@@ -281,6 +378,8 @@ export default function App() {
     setIsRecording(false);
     setRecordSeconds(0);
     setLevelDurationCount(0);
+    setIsUploading(false);
+    setUploadStatusText('');
     setUploadError(null);
     setUploadProgress(0);
     setShowGuideModal(false);
@@ -409,6 +508,7 @@ export default function App() {
                     scanMode === 'panorama' && styles.activeModeTab,
                   ]}
                   onPress={() => setScanMode('panorama')}
+                  disabled={isRecording}
                 >
                   <Text
                     style={[
@@ -426,6 +526,7 @@ export default function App() {
                     scanMode === 'upload' && styles.activeModeTab,
                   ]}
                   onPress={() => setScanMode('upload')}
+                  disabled={isRecording}
                 >
                   <Text
                     style={[
@@ -442,11 +543,13 @@ export default function App() {
             {/* 메인 컨텐츠 영역 */}
             {scanMode === 'upload' && pairToken ? (
               <VideoUploadView
+                key={pairToken}
                 pairToken={pairToken}
                 onUploadSuccess={(queueFull) => {
                   setIsQueueFull(Boolean(queueFull));
                   setAppStep('success');
                 }}
+                onResetSession={handleResetAll}
               />
             ) : !hasCameraPermission ? (
               // 카메라 권한이 아직 없는 경우 권한 안내 화면으로 이동
@@ -559,6 +662,14 @@ export default function App() {
               {uploadError && (
                 <View style={styles.errorBox}>
                   <Text style={styles.errorText}>{uploadError}</Text>
+                  <TouchableOpacity
+                    style={{ marginTop: 8, alignItems: 'center' }}
+                    onPress={handleResetAll}
+                  >
+                    <Text style={{ color: '#FF8794', fontSize: 12, fontWeight: '700', textDecorationLine: 'underline' }}>
+                      새 PIN 번호로 다시 연결하기
+                    </Text>
+                  </TouchableOpacity>
                 </View>
               )}
 
@@ -632,6 +743,7 @@ export default function App() {
         {/* ========================================================= */}
         {appStep === 'success' && sessionId && (
           <UploadSuccessView
+            key={sessionId}
             sessionId={sessionId}
             queueFull={isQueueFull}
             onReset={handleResetAll}

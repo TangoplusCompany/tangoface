@@ -120,7 +120,7 @@ class IModelScanFragment : Fragment() {
 
                     if (glbFile == null && contentUri == null) {
                         bd.tvIModelScanStatus.isVisible = true
-                        bd.tvIModelScanStatus.text = "저장된 GLB 파일을 찾을 수 없습니다."
+                        bd.tvIModelScanStatus.text = "저장된 3D 모델 파일을 찾을 수 없습니다."
                         return@collect
                     }
 

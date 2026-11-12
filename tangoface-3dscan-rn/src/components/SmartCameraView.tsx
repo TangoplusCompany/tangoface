@@ -108,16 +108,43 @@ const WebDirectCamera = forwardRef<SmartCameraHandle, SmartCameraViewProps>(
       },
       stopRecording: () => {
         return new Promise<Blob | null>((resolve) => {
-          if (
-            !mediaRecorderRef.current ||
-            mediaRecorderRef.current.state === 'inactive'
-          ) {
+          const recorder = mediaRecorderRef.current;
+          if (!recorder || recorder.state === 'inactive') {
             resolve(null);
             return;
           }
 
-          stopPromiseResolveRef.current = resolve;
-          mediaRecorderRef.current.stop();
+          let settled = false;
+          const timeoutId = setTimeout(() => {
+            if (settled) return;
+            settled = true;
+            stopPromiseResolveRef.current = null;
+            if (recordedChunksRef.current.length > 0) {
+              const fallbackMime = recorder.mimeType || 'video/mp4';
+              resolve(new Blob(recordedChunksRef.current, { type: fallbackMime }));
+            } else {
+              resolve(null);
+            }
+          }, 3000);
+
+          stopPromiseResolveRef.current = (blob) => {
+            if (settled) return;
+            settled = true;
+            clearTimeout(timeoutId);
+            resolve(blob);
+          };
+
+          try {
+            recorder.stop();
+          } catch (e) {
+            console.error('MediaRecorder 중지 실패:', e);
+            if (!settled) {
+              settled = true;
+              clearTimeout(timeoutId);
+              stopPromiseResolveRef.current = null;
+              resolve(null);
+            }
+          }
         });
       },
     }));
@@ -181,9 +208,22 @@ const WebDirectCamera = forwardRef<SmartCameraHandle, SmartCameraViewProps>(
 
       return () => {
         isCancelled = true;
+        if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+          try {
+            mediaRecorderRef.current.stop();
+          } catch {
+            // ignore
+          }
+        }
+        mediaRecorderRef.current = null;
+        stopPromiseResolveRef.current = null;
+        recordedChunksRef.current = [];
         if (activeStreamRef.current) {
           activeStreamRef.current.getTracks().forEach((track) => track.stop());
           activeStreamRef.current = null;
+        }
+        if (videoRef.current) {
+          videoRef.current.srcObject = null;
         }
       };
     }, [facing]);

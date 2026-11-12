@@ -372,18 +372,18 @@ class ModelScanFragment : Fragment() {
             }
 
             "UPLOADED" -> {
-                // 영상 업로드 완료 -> 3D 복원 준비
+                // 영상 업로드 완료 -> 3D 얼굴 생성 준비
                 bd.clPairingContainer.isVisible = false
                 bd.clProgressContainer.isVisible = true
                 bd.clDoneContainer.isVisible = false
 
-                bd.tvProgressStage.text = state.stageMessage.ifEmpty { "영상 업로드 완료! 3D 모델 생성을 준비 중입니다..." }
+                bd.tvProgressStage.text = state.stageMessage.ifEmpty { "영상 업로드 완료! 3D 얼굴 생성을 준비 중입니다..." }
                 bd.pbScanProgress.progress = 0
                 bd.tvRemainingTime.text = "준비 중..."
             }
 
             "PROCESSING" -> {
-                // 실시간 3D 복원 진행률 및 남은 시간 표시
+                // 실시간 3D 얼굴 생성 진행률 및 남은 시간 표시
                 bd.clPairingContainer.isVisible = false
                 bd.clProgressContainer.isVisible = true
                 bd.clDoneContainer.isVisible = false
@@ -394,7 +394,7 @@ class ModelScanFragment : Fragment() {
                 } else {
                     "잠시만 기다려주세요..."
                 }
-                bd.tvProgressStage.text = state.stageMessage.ifEmpty { "3D 얼굴 복원 진행 중..." }
+                bd.tvProgressStage.text = state.stageMessage.ifEmpty { "3D 얼굴 생성 진행 중..." }
 
                 if (!state.isQueued && !state.isUserSetupCompleted) {
                     startUserSetupCountdownIfNeeded()
@@ -402,7 +402,7 @@ class ModelScanFragment : Fragment() {
             }
 
             "DONE" -> {
-                // 복원 완료 안내 및 GLB 공용 폴더(Documents/TangoPlus/3DModels) 다운로드 -> Room DB 저장
+                // 3D 얼굴 생성 완료 안내 및 파일 저장 -> Room DB 저장
                 cancelUserSetupCountdown()
                 bd.clPairingContainer.isVisible = false
                 bd.clProgressContainer.isVisible = false
@@ -413,32 +413,32 @@ class ModelScanFragment : Fragment() {
 
                 if (state.isUserSetupCompleted && savedSn != null) {
                     val sizeKb = state.localGlbSizeBytes / 1024
-                    bd.tvDoneTitle.text = "3D 얼굴 생성 완료!"
-                    bd.tvDoneMessage.text = "3D 모델 저장이 완료되었습니다. (${sizeKb} KB)"
+                    bd.tvDoneTitle.text = "3D 얼굴 완성!"
+                    bd.tvDoneMessage.text = "3D 얼굴 저장이 완료되었습니다. (${sizeKb} KB)"
                     bd.btnViewScanResult.isVisible = true
                 } else if (state.isUserSetupCompleted && state.localGlbFileName != null) {
-                    bd.tvDoneTitle.text = "3D 얼굴 생성 완료!"
-                    bd.tvDoneMessage.text = "3D 모델 파일을 저장하는 중입니다..."
+                    bd.tvDoneTitle.text = "3D 얼굴 완성!"
+                    bd.tvDoneMessage.text = "3D 얼굴 파일을 저장하는 중입니다..."
                     bd.btnViewScanResult.isVisible = false
                 } else if (!state.isUserSetupCompleted && state.localGlbFileName != null) {
-                    bd.tvDoneTitle.text = "3D 얼굴 생성 완료!"
+                    bd.tvDoneTitle.text = "3D 얼굴 완성!"
                     bd.tvDoneMessage.text = "사용자 정보를 입력해주세요."
                     bd.btnViewScanResult.isVisible = false
                     showUserSetupDialog()
                 } else if (state.isDownloadingGlb) {
-                    bd.tvDoneTitle.text = "3D 얼굴 생성 완료!"
+                    bd.tvDoneTitle.text = "3D 얼굴 완성!"
                     bd.tvDoneMessage.text = "서버에서 파일을 내려받고 있습니다..."
                     bd.btnViewScanResult.isVisible = false
                 } else if (downloadUrl != null && state.sessionId.isNotEmpty() && state.errorMessage == null) {
-                    bd.tvDoneTitle.text = "3D 얼굴 생성 완료!"
+                    bd.tvDoneTitle.text = "3D 얼굴 완성!"
                     bd.tvDoneMessage.text = "3D 얼굴 파일 다운로드를 시작합니다..."
                     bd.btnViewScanResult.isVisible = false
                     val timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"))
                     val destFile = File(FileUtility.get3DModelsDir(), "scan_${timestamp}.glb")
                     svm.downloadGlbToLocal(requireContext(), state.sessionId, downloadUrl, destFile)
                 } else {
-                    bd.tvDoneTitle.text = "3D 얼굴 생성 완료!"
-                    bd.tvDoneMessage.text = state.errorMessage ?: "3D 모델 복원이 완료되었습니다."
+                    bd.tvDoneTitle.text = "3D 얼굴 완성!"
+                    bd.tvDoneMessage.text = state.errorMessage ?: "3D 얼굴 생성이 완료되었습니다."
                     bd.btnViewScanResult.isVisible = false
                 }
             }

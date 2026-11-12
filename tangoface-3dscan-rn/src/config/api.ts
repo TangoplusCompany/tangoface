@@ -114,10 +114,12 @@ export function uploadVideoDirectly(
   return new Promise((resolve) => {
     const xhr = new XMLHttpRequest();
     xhr.open('PUT', uploadUrl, true);
+    xhr.timeout = 120000;
 
-    // Supabase Storage Signed Upload URL 표준 Content-Type (코덱 파라미터 제거)
-    const rawType = (fileOrBlob.type || 'video/mp4').split(';')[0].trim();
-    const contentType = rawType || 'video/mp4';
+    // Supabase Storage 'videos' 버킷 정책(video/mp4, video/quicktime) 호환 Content-Type 설정
+    // (브라우저 MediaRecorder의 video/webm 및 기타 모바일 영상도 바이트 그대로 업로드 가능하도록 정규화)
+    const rawType = (fileOrBlob.type || 'video/mp4').split(';')[0].trim().toLowerCase();
+    const contentType = rawType === 'video/quicktime' ? 'video/quicktime' : 'video/mp4';
     xhr.setRequestHeader('Content-Type', contentType);
 
     if (xhr.upload && onProgress) {
@@ -144,6 +146,13 @@ export function uploadVideoDirectly(
       resolve({
         success: false,
         error: '스토리지 업로드 중 네트워크 에러가 발생했습니다.',
+      });
+    };
+
+    xhr.ontimeout = () => {
+      resolve({
+        success: false,
+        error: '영상 업로드 시간이 초과되었습니다. 네트워크 상태를 확인 후 다시 시도해주세요.',
       });
     };
 
@@ -174,7 +183,7 @@ export async function completeUpload(pairToken: string): Promise<{
 
     const data = await res.json();
     if (!res.ok) {
-      return { success: false, error: data.error || '업로드 검증 실패' };
+      return { success: false, error: data.message || data.error || '업로드 검증 실패' };
     }
 
     return {
