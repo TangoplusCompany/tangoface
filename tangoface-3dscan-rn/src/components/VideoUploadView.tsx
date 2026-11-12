@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   StyleSheet,
   Text,
@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import {
   pickVideoWithDurationLimit,
+  inspectWebVideoFile,
   SelectedVideoInfo,
 } from '../utils/videoPicker';
 import {
@@ -21,11 +22,13 @@ import { ServerStatusBadge } from './ServerStatusBadge';
 interface VideoUploadViewProps {
   pairToken: string;
   onUploadSuccess: (queueFull?: boolean) => void;
+  onResetSession?: () => void;
 }
 
 export const VideoUploadView: React.FC<VideoUploadViewProps> = ({
   pairToken,
   onUploadSuccess,
+  onResetSession,
 }) => {
   const [selectedVideo, setSelectedVideo] = useState<SelectedVideoInfo | null>(
     null
@@ -35,6 +38,51 @@ export const VideoUploadView: React.FC<VideoUploadViewProps> = ({
   const [uploadProgress, setUploadProgress] = useState(0);
   const [uploadStatusText, setUploadStatusText] = useState('');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const selectedUriRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    selectedUriRef.current = selectedVideo?.uri || null;
+  }, [selectedVideo]);
+
+  useEffect(() => {
+    return () => {
+      if (
+        Platform.OS === 'web' &&
+        selectedUriRef.current &&
+        selectedUriRef.current.startsWith('blob:')
+      ) {
+        URL.revokeObjectURL(selectedUriRef.current);
+      }
+    };
+  }, []);
+
+  const handleWebFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    // 같은 파일을 다시 선택해도 onChange가 발생하도록 값 초기화
+    e.target.value = '';
+    if (!file) return;
+
+    setIsLoading(true);
+    setErrorMessage(null);
+    try {
+      const video = await inspectWebVideoFile(file);
+      if (video) {
+        if (
+          Platform.OS === 'web' &&
+          selectedVideo?.uri &&
+          selectedVideo.uri.startsWith('blob:')
+        ) {
+          URL.revokeObjectURL(selectedVideo.uri);
+        }
+        setSelectedVideo(video);
+      }
+    } catch {
+      alert('영상 선택을 완료하지 못했습니다.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handlePickVideo = async () => {
     setIsLoading(true);
@@ -52,9 +100,19 @@ export const VideoUploadView: React.FC<VideoUploadViewProps> = ({
   };
 
   const handleReset = () => {
+    if (
+      Platform.OS === 'web' &&
+      selectedVideo?.uri &&
+      selectedVideo.uri.startsWith('blob:')
+    ) {
+      URL.revokeObjectURL(selectedVideo.uri);
+    }
     setSelectedVideo(null);
     setErrorMessage(null);
     setUploadProgress(0);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
   };
 
   // 영상 업로드 파이프라인 실행:
@@ -117,25 +175,46 @@ export const VideoUploadView: React.FC<VideoUploadViewProps> = ({
           {/* 파일 제약조건 안내 태그 */}
           <View style={styles.badgeRow}>
             <View style={styles.conditionBadge}>
-              <Text style={styles.badgeText}>최대 20초 이내</Text>
+              <Text style={styles.badgeText}>최대 30초 이내</Text>
             </View>
             <View style={styles.conditionBadge}>
               <Text style={styles.badgeText}>최대 50MB 이내</Text>
             </View>
           </View>
 
-          <TouchableOpacity
-            style={styles.selectButton}
-            onPress={handlePickVideo}
-            disabled={isLoading}
-            activeOpacity={0.8}
-          >
-            {isLoading ? (
-              <ActivityIndicator color="#ffffff" />
-            ) : (
-              <Text style={styles.selectButtonText}>비디오 파일 선택하기</Text>
+          <View style={styles.selectButtonWrapper}>
+            <TouchableOpacity
+              style={styles.selectButton}
+              onPress={Platform.OS === 'web' ? undefined : handlePickVideo}
+              disabled={isLoading}
+              activeOpacity={0.8}
+            >
+              {isLoading ? (
+                <ActivityIndicator color="#ffffff" />
+              ) : (
+                <Text style={styles.selectButtonText}>비디오 파일 선택하기</Text>
+              )}
+            </TouchableOpacity>
+            {Platform.OS === 'web' && !isLoading && (
+              // @ts-ignore - React Native Web supports native input element
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="video/mp4,video/quicktime,video/webm,video/*"
+                onChange={handleWebFileChange}
+                style={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  width: '100%',
+                  height: '100%',
+                  opacity: 0,
+                  cursor: 'pointer',
+                  zIndex: 10,
+                }}
+              />
             )}
-          </TouchableOpacity>
+          </View>
         </View>
       ) : (
         // 파일 선택 완료 후 미리보기 & 정보 UI
@@ -176,7 +255,9 @@ export const VideoUploadView: React.FC<VideoUploadViewProps> = ({
             <View style={styles.infoRow}>
               <Text style={styles.infoLabel}>재생 시간</Text>
               <Text style={styles.infoHighlight}>
-                {selectedVideo.durationSec}초 (기준 충족)
+                {selectedVideo.durationSec > 0
+                  ? `${selectedVideo.durationSec}초 (기준 충족)`
+                  : '확인됨 (업로드 가능)'}
               </Text>
             </View>
             <View style={styles.infoRow}>
@@ -192,6 +273,16 @@ export const VideoUploadView: React.FC<VideoUploadViewProps> = ({
           {errorMessage && (
             <View style={styles.errorBox}>
               <Text style={styles.errorText}>{errorMessage}</Text>
+              {onResetSession && (
+                <TouchableOpacity
+                  style={{ marginTop: 8, alignItems: 'center' }}
+                  onPress={onResetSession}
+                >
+                  <Text style={{ color: '#FF8794', fontSize: 12, fontWeight: '700', textDecorationLine: 'underline' }}>
+                    새 PIN 번호로 다시 연결하기
+                  </Text>
+                </TouchableOpacity>
+              )}
             </View>
           )}
 
@@ -282,6 +373,13 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#FF8794',
     fontWeight: '600',
+  },
+  selectButtonWrapper: {
+    position: 'relative',
+    width: '100%',
+    height: 48,
+    overflow: 'hidden',
+    borderRadius: 12,
   },
   selectButton: {
     width: '100%',

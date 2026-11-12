@@ -4,7 +4,13 @@ import { SupabaseClient } from '@supabase/supabase-js';
 export const VIDEOS_BUCKET = 'videos';
 export const RESULTS_BUCKET = 'results';
 export const MAX_VIDEO_SIZE_BYTES = 200 * 1024 * 1024; // 200MB
-export const ALLOWED_VIDEO_MIME_TYPES = ['video/mp4', 'video/quicktime'];
+export const ALLOWED_VIDEO_MIME_TYPES = [
+  'video/mp4',
+  'video/quicktime',
+  'video/webm',
+  'video/x-m4v',
+  'video/3gpp',
+];
 export const RESULT_DOWNLOAD_EXPIRY_SECONDS = 300; // 5분
 
 /**
@@ -84,12 +90,13 @@ export async function verifyAndInspectVideo(
     };
   }
 
-  // 2. MIME 타입 검사 (video/mp4, video/quicktime)
-  if (mimeType && !ALLOWED_VIDEO_MIME_TYPES.includes(mimeType)) {
+  // 2. MIME 타입 검사 (파라미터 제거 후 video/* 지원 여부 확인)
+  const normalizedMime = mimeType ? mimeType.split(';')[0].trim().toLowerCase() : '';
+  if (normalizedMime && !ALLOWED_VIDEO_MIME_TYPES.includes(normalizedMime) && !normalizedMime.startsWith('video/')) {
     await supabase.storage.from(VIDEOS_BUCKET).remove([uploadPath]);
     return {
       valid: false,
-      reason: `지원되지 않는 형식(${mimeType})입니다. video/mp4 또는 video/quicktime만 지원됩니다.`,
+      reason: `지원되지 않는 형식(${mimeType})입니다. 동영상 파일만 지원됩니다.`,
       size,
       mimeType,
     };

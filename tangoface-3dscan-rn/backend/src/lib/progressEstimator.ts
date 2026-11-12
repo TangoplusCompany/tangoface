@@ -11,10 +11,10 @@ export const DEFAULT_ESTIMATED_DURATION_SECONDS = 45;
  * 단계별 안내 문구 매핑 (경과 비율 기준)
  */
 const PROCESSING_STAGES = [
-  { minRatio: 0.0, maxRatio: 0.3, label: '1단계: 얼굴 특징점 및 프레임 정렬 중...' },
-  { minRatio: 0.3, maxRatio: 0.7, label: '2단계: 고밀도 3D 메쉬 및 포인트클라우드 복원 중...' },
-  { minRatio: 0.7, maxRatio: 0.95, label: '3단계: 텍스처 매핑 및 GLB 3D 모델 패키징 중...' },
-  { minRatio: 0.95, maxRatio: 1.0, label: '마무리 검증 및 업로드 준비 중...' },
+  { minRatio: 0.0, maxRatio: 0.3, label: '1단계: 이미지 처리 중...' },
+  { minRatio: 0.3, maxRatio: 0.7, label: '2단계: 3차원 계산 중...' },
+  { minRatio: 0.7, maxRatio: 0.95, label: '3단계: 3D 얼굴 생성 중...' },
+  { minRatio: 0.95, maxRatio: 1.0, label: '마무리 확인 중...' },
 ];
 
 /**
@@ -42,7 +42,7 @@ export function calculateProcessingProgressFromElapsed(
   const matchedStage = PROCESSING_STAGES.find(
     (s) => ratio >= s.minRatio && ratio < s.maxRatio
   );
-  const stageText = matchedStage ? matchedStage.label : '마무리 검증 및 업로드 준비 중...';
+  const stageText = matchedStage ? matchedStage.label : '마무리 확인 중...';
 
   return {
     elapsed_seconds: elapsedSeconds,

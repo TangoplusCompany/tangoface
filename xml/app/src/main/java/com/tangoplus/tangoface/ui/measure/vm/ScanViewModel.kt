@@ -122,7 +122,7 @@ class ScanViewModel(
             if (upper == "CREATED" || upper == "PAIRED") {
                 prev.copy(
                     status = "UPLOADED",
-                    stageMessage = "영상이 업로드되었습니다. 3D 복원을 준비 중입니다."
+                    stageMessage = "영상이 업로드되었습니다. 3D 얼굴 생성을 준비 중입니다."
                 )
             } else {
                 prev
@@ -286,7 +286,7 @@ class ScanViewModel(
                                     val ahead = (queuePos!! - 1).coerceAtLeast(0)
                                     progress?.stage?.ifBlank { null } ?: "대기 중 (앞에 ${ahead}명)"
                                 }
-                                else -> progress?.stage?.ifBlank { null } ?: "3D 얼굴 복원 진행 중..."
+                                else -> progress?.stage?.ifBlank { null } ?: "3D 얼굴 생성 진행 중..."
                             }
 
                             updateHistoryItem(sessionId) { item ->
@@ -312,7 +312,7 @@ class ScanViewModel(
                         }
 
                         "DONE" -> {
-                            // 복원 완료 시 3D GLB 결과 서명 URL 요청 (일시 오류 시 다음 폴링에서 재시도)
+                            // 3D 얼굴 생성 완료 시 결과 서명 URL 요청 (일시 오류 시 다음 폴링에서 재시도)
                             val resultResponse = apiService.getSessionResult(sessionId, sessionSecret)
                             if (!resultResponse.isSuccessful) {
                                 val code = resultResponse.code()
@@ -344,7 +344,7 @@ class ScanViewModel(
                                     status = "DONE",
                                     progressPercent = 100,
                                     remainingSeconds = 0,
-                                    stageMessage = "3D 복원이 완료되었습니다.",
+                                    stageMessage = "3D 얼굴 생성이 완료되었습니다.",
                                     glbDownloadUrl = downloadUrl
                                 )
                             }
@@ -356,7 +356,7 @@ class ScanViewModel(
                                         progressPercent = 100,
                                         remainingSeconds = 0,
                                         isQueued = false,
-                                        stageMessage = "3D 복원이 완료되었습니다.",
+                                        stageMessage = "3D 얼굴 생성이 완료되었습니다.",
                                         glbDownloadUrl = downloadUrl
                                     )
                                 }
@@ -377,7 +377,7 @@ class ScanViewModel(
                             val stageMsg = when (statusUpper) {
                                 "CREATED" -> "스마트폰에서 6자리 코드를 입력해주세요."
                                 "PAIRED" -> "스마트폰과 연결되었습니다. 촬영을 진행해주세요."
-                                "UPLOADED" -> serverStage ?: "영상이 업로드되었습니다. 3D 복원을 준비 중입니다."
+                                "UPLOADED" -> serverStage ?: "영상이 업로드되었습니다. 3D 얼굴 생성을 준비 중입니다."
                                 else -> statusBody.status
                             }
 
@@ -505,7 +505,7 @@ class ScanViewModel(
                         it.copy(
                             isDownloadingGlb = true,
                             errorMessage = null,
-                            stageMessage = "3D GLB 모델을 다운로드하는 중입니다..."
+                            stageMessage = "3D 얼굴 파일을 다운로드하는 중입니다..."
                         )
                     }
                 }
@@ -568,7 +568,7 @@ class ScanViewModel(
                     updateHistoryItem(sessionId) { item ->
                         item.copy(
                             localGlbPath = savedPath ?: mediaStoreUriString,
-                            stageMessage = if (alreadyCompletedUser != null) "3D 모델 저장 중..." else "사용자 정보를 입력해주세요."
+                            stageMessage = if (alreadyCompletedUser != null) "3D 얼굴 저장 중..." else "사용자 정보를 입력해주세요."
                         )
                     }
                     if (currentSessionId == sessionId) {
@@ -580,7 +580,7 @@ class ScanViewModel(
                                 localGlbFileName = fileName,
                                 localGlbSizeBytes = fileSizeBytes,
                                 errorMessage = null,
-                                stageMessage = if (alreadyCompletedUser != null) "3D 모델 저장 중..." else "사용자 정보를 입력해주세요."
+                                stageMessage = if (alreadyCompletedUser != null) "3D 얼굴 저장 중..." else "사용자 정보를 입력해주세요."
                             )
                         }
                     }
@@ -590,7 +590,7 @@ class ScanViewModel(
                         persistScanWithUserInfo(appContext, sessionId, alreadyCompletedUser)
                     }
                 } else {
-                    val errMsg = lastError?.message ?: "GLB 파일 다운로드에 실패했습니다."
+                    val errMsg = lastError?.message ?: "3D 파일 다운로드에 실패했습니다."
                     if (currentSessionId == sessionId) {
                         updateState {
                             it.copy(

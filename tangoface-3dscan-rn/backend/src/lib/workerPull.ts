@@ -428,7 +428,7 @@ export async function calculateSessionProgress(
       estimated_total_seconds: 45,
       remaining_seconds: 0,
       progress_percent: 100,
-      stage: '3D 모델 복원 완료!',
+      stage: '3D 얼굴 생성 완료!',
     };
   } else {
     progress = null;

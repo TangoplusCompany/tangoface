@@ -36,7 +36,7 @@
         app:layout_constraintBottom_toBottomOf="@id/tvItemPinCode"
         app:layout_constraintStart_toEndOf="@id/tvItemPinCode"
         app:layout_constraintTop_toTopOf="@id/tvItemPinCode"
-        tools:text="3D 복원 중 (45%)" />
+        tools:text="3D 생성 중 (45%)" />
 
     <!-- 생성 일시 및 단계 안내 -->
     <TextView
@@ -52,7 +52,7 @@
         app:layout_constraintEnd_toStartOf="@id/btnItemDelete"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/tvItemPinCode"
-        tools:text="1단계: 특징점 추출 중... | 예상 25초 남음" />
+        tools:text="1단계: 이미지 처리 중... | 예상 25초 남음" />
 
     <!-- 삭제 버튼 (실패 내역 또는 개별 내역 삭제) -->
     <androidx.appcompat.widget.AppCompatButton

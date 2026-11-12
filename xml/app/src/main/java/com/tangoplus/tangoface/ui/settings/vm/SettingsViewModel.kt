@@ -70,15 +70,17 @@ class SettingsViewModel(app: Application) : AndroidViewModel(app) {
 					return@launch
 				}
 
-				// export 대상 파일 수 / 용량 (export()와 같은 규칙)
+				// export 대상 파일 수 / 용량 (export()와 같은 규칙: 사진, JSON, 동영상, 3D 모델)
 				val targets = listOf(
-					Environment.DIRECTORY_PICTURES to "jpg",
-					Environment.DIRECTORY_DOCUMENTS to "json",
-					Environment.DIRECTORY_MOVIES to "mp4"
-				).flatMap { (type, ext) ->
-					val dir = File(Environment.getExternalStoragePublicDirectory(type), "TangoPlus")
-					dir.listFiles { f -> f.isFile && f.extension.equals(ext, true) }?.toList() ?: emptyList()
-				}
+					File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES), "TangoPlus") to "jpg",
+					File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS), "TangoPlus") to "json",
+					File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS), "TangoPlus/3DModels") to "glb",
+					File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS), "TangoPlus") to "glb",
+					File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_MOVIES), "TangoPlus") to "mp4"
+				).flatMap { (dir, ext) ->
+					if (!dir.exists()) emptyList()
+					else dir.listFiles { f -> f.isFile && f.extension.equals(ext, true) }?.toList() ?: emptyList()
+				}.distinctBy { it.name }
 				val dbBytes = ctx.getDatabasePath("face_database").parentFile
 					?.listFiles()?.filter { it.isFile && it.name.startsWith("face_database") }
 					?.sumOf { it.length() } ?: 0L

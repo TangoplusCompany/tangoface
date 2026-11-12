@@ -74,11 +74,18 @@ object MeasurementBackupUtility {
 							e.name.startsWith("databases/") ->
 								copyWithProgress(ins, File(tmpDir, name), progress)
 							e.name.startsWith("pictures/") ->
-								if (restore(ins, Environment.DIRECTORY_PICTURES, name, progress)) restored++
-							e.name.startsWith("documents/") ->
-								if (restore(ins, Environment.DIRECTORY_DOCUMENTS, name, progress)) restored++
+								if (restore(ins, Environment.DIRECTORY_PICTURES, null, name, progress)) restored++
+							e.name.startsWith("documents/3DModels/") || e.name.startsWith("models/") ->
+								if (restore(ins, Environment.DIRECTORY_DOCUMENTS, "3DModels", name, progress)) restored++
+							e.name.startsWith("documents/") -> {
+								if (name.endsWith(".glb", ignoreCase = true)) {
+									if (restore(ins, Environment.DIRECTORY_DOCUMENTS, "3DModels", name, progress)) restored++
+								} else {
+									if (restore(ins, Environment.DIRECTORY_DOCUMENTS, null, name, progress)) restored++
+								}
+							}
 							e.name.startsWith("movies/") ->
-								if (restore(ins, Environment.DIRECTORY_MOVIES, name, progress)) restored++
+								if (restore(ins, Environment.DIRECTORY_MOVIES, null, name, progress)) restored++
 						}
 					}
 				}
@@ -114,16 +121,33 @@ object MeasurementBackupUtility {
 
 			dst.beginTransaction()
 			try {
-				// FaceStatic: json_file_name 중복이면 스킵
-				val existingJson = dst.query("SELECT json_file_name FROM t_face_static").use { c ->
+				// FaceStatic: json_file_name(일반 측정) 또는 media_file_name(3D 모델 스캔) 중복 스킵
+				val existingJson = dst.query(
+					"SELECT json_file_name FROM t_face_static WHERE json_file_name IS NOT NULL AND json_file_name != ''"
+				).use { c ->
+					generateSequence { if (c.moveToNext()) c.getString(0) else null }.toHashSet()
+				}
+				val existingMedia = dst.query(
+					"SELECT media_file_name FROM t_face_static WHERE (json_file_name IS NULL OR json_file_name = '') AND media_file_name IS NOT NULL AND media_file_name != ''"
+				).use { c ->
 					generateSequence { if (c.moveToNext()) c.getString(0) else null }.toHashSet()
 				}
 				copyRows(src, dst, "t_face_static") { cv ->
 					val json = cv.getAsString("json_file_name").orEmpty()
-					if (json.isNotEmpty() && json in existingJson) return@copyRows false
+					val media = cv.getAsString("media_file_name").orEmpty()
+					val isDup = if (json.isNotEmpty()) {
+						json in existingJson
+					} else if (media.isNotEmpty()) {
+						media in existingMedia
+					} else {
+						false
+					}
+					if (isDup) return@copyRows false
+
 					val old = cv.getAsInteger("temp_server_sn") ?: 0
 					cv.put("temp_server_sn", tempSnMap.getOrPut(old) { nextSn++ })
-					existingJson += json
+					if (json.isNotEmpty()) existingJson += json
+					if (media.isNotEmpty()) existingMedia += media
 					true
 				}
 
@@ -212,8 +236,16 @@ object MeasurementBackupUtility {
 		}
 
 	/** 이미 있는 파일은 덮어쓰지 않고 스킵. 새로 쓰면 true */
-	private fun restore(ins: InputStream, type: String, name: String, progress: ByteProgress): Boolean {
-		val dir = File(Environment.getExternalStoragePublicDirectory(type), "TangoPlus").apply { mkdirs() }
+	private fun restore(
+		ins: InputStream,
+		type: String,
+		subDir: String? = null,
+		name: String,
+		progress: ByteProgress
+	): Boolean {
+		val parentDir = File(Environment.getExternalStoragePublicDirectory(type), "TangoPlus")
+		val dir = if (subDir != null) File(parentDir, subDir) else parentDir
+		dir.mkdirs()
 		val target = File(dir, name)
 		if (target.exists()) {
 			// 건너뛴 파일도 진행률에는 반영해야 100%에 도달함
@@ -225,10 +257,19 @@ object MeasurementBackupUtility {
 	}
 
 	private fun scanMedia(context: Context) {
-		val paths = listOf(Environment.DIRECTORY_PICTURES, Environment.DIRECTORY_MOVIES)
-			.flatMap { File(Environment.getExternalStoragePublicDirectory(it), "TangoPlus").listFiles()?.toList() ?: emptyList() }
-			.map { it.absolutePath }.toTypedArray()
-		if (paths.isNotEmpty()) MediaScannerConnection.scanFile(context, paths, null, null)
+		val dirs = listOf(
+			File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES), "TangoPlus"),
+			File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_MOVIES), "TangoPlus"),
+			File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS), "TangoPlus/3DModels")
+		)
+		val paths = dirs
+			.filter { it.exists() }
+			.flatMap { it.listFiles()?.toList() ?: emptyList() }
+			.map { it.absolutePath }
+			.toTypedArray()
+		if (paths.isNotEmpty()) {
+			MediaScannerConnection.scanFile(context, paths, null, null)
+		}
 	}
 
 	private fun copyToCache(context: Context, uri: Uri): File {
@@ -299,15 +340,31 @@ object MeasurementBackupUtility {
 				val src = SQLiteDatabase.openDatabase(srcFile.path, null, SQLiteDatabase.OPEN_READONLY)
 				val dst = FaceDatabase.getDatabase(context).openHelper.readableDatabase
 				try {
-					val existingJson = dst.query("SELECT json_file_name FROM t_face_static").use { c ->
+					val existingJson = dst.query(
+						"SELECT json_file_name FROM t_face_static WHERE json_file_name IS NOT NULL AND json_file_name != ''"
+					).use { c ->
+						generateSequence { if (c.moveToNext()) c.getString(0) else null }.toHashSet()
+					}
+					val existingMedia = dst.query(
+						"SELECT media_file_name FROM t_face_static WHERE (json_file_name IS NULL OR json_file_name = '') AND media_file_name IS NOT NULL AND media_file_name != ''"
+					).use { c ->
 						generateSequence { if (c.moveToNext()) c.getString(0) else null }.toHashSet()
 					}
 					val newSn = mutableSetOf<Int>()
 					val dupSn = mutableSetOf<Int>()
-					src.rawQuery("SELECT temp_server_sn, json_file_name FROM t_face_static", null).use { c ->
+					src.rawQuery("SELECT temp_server_sn, json_file_name, media_file_name FROM t_face_static", null).use { c ->
 						while (c.moveToNext()) {
 							val sn = c.getInt(0)
-							if (c.getString(1) in existingJson) dupSn.add(sn) else newSn.add(sn)
+							val json = c.getString(1).orEmpty()
+							val media = c.getString(2).orEmpty()
+							val isDup = if (json.isNotEmpty()) {
+								json in existingJson
+							} else if (media.isNotEmpty()) {
+								media in existingMedia
+							} else {
+								false
+							}
+							if (isDup) dupSn.add(sn) else newSn.add(sn)
 						}
 					}
 					// 한 측정의 일부 행만 중복이어도 새 건수와 겹치지 않도록
@@ -345,13 +402,17 @@ object MeasurementBackupUtility {
 			val sources = listOf(
 				Source("pictures/", publicDir(Environment.DIRECTORY_PICTURES), "jpg"),
 				Source("documents/", publicDir(Environment.DIRECTORY_DOCUMENTS), "json"),
+				Source("documents/3DModels/", File(publicDir(Environment.DIRECTORY_DOCUMENTS), "3DModels"), "glb"),
+				Source("documents/3DModels/", publicDir(Environment.DIRECTORY_DOCUMENTS), "glb"),
 				Source("movies/", publicDir(Environment.DIRECTORY_MOVIES), "mp4")
 			)
 
-			// 대상 파일 수집 (전체)
+			// 대상 파일 수집 (전체: 사진, json, 3D 모델 glb, 영상)
+			val seenNames = mutableSetOf<String>()
 			val targets = sources.flatMap { src ->
 				if (!src.dir.exists()) emptyList()
 				else src.dir.listFiles { f -> f.isFile && f.extension.equals(src.extension, true) }
+					?.filter { seenNames.add(it.name) }
 					?.map { src.zipPrefix to it } ?: emptyList()
 			}
 

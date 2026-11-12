@@ -34,22 +34,22 @@ class ScanHistoryAdapter(
 
             when (item.status.uppercase()) {
                 "PROCESSING" -> {
-                    binding.tvItemStatusBadge.text = "복원 중 (${item.progressPercent}%)"
+                    binding.tvItemStatusBadge.text = "생성 중 (${item.progressPercent}%)"
                     binding.tvItemStatusBadge.setTextColor(ContextCompat.getColor(context, R.color.subColor100))
                     val remainStr = if (item.remainingSeconds > 0) " | 예상 ${item.remainingSeconds}초 남음" else ""
                     binding.tvItemSubInfo.text = "[$timeStr] ${item.stageMessage}$remainStr"
                 }
 
                 "DONE" -> {
-                    binding.tvItemStatusBadge.text = "복원 완료"
+                    binding.tvItemStatusBadge.text = "생성 완료"
                     binding.tvItemStatusBadge.setTextColor(ContextCompat.getColor(context, R.color.accentContrast))
-                    binding.tvItemSubInfo.text = "[$timeStr] 3D 모델 생성이 완료되었습니다."
+                    binding.tvItemSubInfo.text = "[$timeStr] 3D 얼굴 생성이 완료되었습니다."
                 }
 
                 "FAILED" -> {
                     binding.tvItemStatusBadge.text = "실패"
                     binding.tvItemStatusBadge.setTextColor(ContextCompat.getColor(context, R.color.red))
-                    binding.tvItemSubInfo.text = "[$timeStr] ${item.failReason ?: "3D 복원에 실패했습니다."}"
+                    binding.tvItemSubInfo.text = "[$timeStr] ${item.failReason ?: "3D 얼굴 생성에 실패했습니다."}"
                 }
 
                 "PAIRED" -> {
