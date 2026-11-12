@@ -3,13 +3,13 @@ import { NextRequest } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 import { hashToken, timingSafeMatch } from '@/lib/crypto';
 import { jsonWithCors, handleOptionsCors } from '@/lib/cors';
-import { calculateProcessingProgress } from '@/lib/progressEstimator';
-import { syncColabJobStatusIfNeeded } from '@/lib/runpod';
+import { calculateSessionProgress } from '@/lib/workerPull';
 import { mapFailReasonToMessage } from '@/lib/errorMapper';
-import { ProcessingProgressInfo, SessionStatusResponse } from '@/types/api';
+import { SessionStatusResponse } from '@/types/api';
 import { SessionStatus } from '@/types/session';
 
 export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
 
 export async function OPTIONS(request: NextRequest) {
   return handleOptionsCors(request);
@@ -18,6 +18,7 @@ export async function OPTIONS(request: NextRequest) {
 /**
  * GET /api/sessions/[id]/status
  * 태블릿이 세션 상태 및 진행률을 폴링 조회
+ * - Colab Pull 방식: 외부 워커 HTTP 호출 없이 DB 기반으로 큐 순번, 경과 시간, 안전장치(타임아웃/유실) 지연 평가
  * 인증: X-Session-Secret 헤더
  */
 export async function GET(
@@ -58,43 +59,18 @@ export async function GET(
       );
     }
 
-    // Colab 워커(/jobs/{id}) 및 Storage 상태 동기화
-    const synced = await syncColabJobStatusIfNeeded(supabase, session);
-    const effectiveStatus = synced.status as SessionStatus;
-    const rawFailReason = synced.fail_reason;
-    const friendlyFailReason = mapFailReasonToMessage(rawFailReason);
+    // Pull 아키텍처에 따른 상태 및 진행률 지연 계산 (타임아웃, 워커 유실, 큐 순번)
+    const {
+      status: effectiveStatus,
+      fail_reason: rawFailReason,
+      progress,
+    } = await calculateSessionProgress(supabase, session);
 
-    // 상태에 따른 스마트 진행률 및 대기열 정보 산출
-    let progress: ProcessingProgressInfo | null = null;
-    if (effectiveStatus === 'PROCESSING') {
-      if (synced.workerProgress) {
-        progress = synced.workerProgress;
-      } else {
-        const startedAt =
-          session.processing_started_at || session.uploaded_at || session.created_at;
-        progress = calculateProcessingProgress(startedAt);
-      }
-    } else if (effectiveStatus === 'UPLOADED' && synced.queueFull) {
-      progress = {
-        elapsed_seconds: 0,
-        estimated_total_seconds: 60,
-        remaining_seconds: 60,
-        progress_percent: 0,
-        stage: '요청이 혼잡합니다. 잠시 후 자동으로 다시 시도됩니다...',
-      };
-    } else if (effectiveStatus === 'DONE') {
-      progress = {
-        elapsed_seconds: 0,
-        estimated_total_seconds: 45,
-        remaining_seconds: 0,
-        progress_percent: 100,
-        stage: '3D 모델 복원 완료!',
-      };
-    }
+    const friendlyFailReason = mapFailReasonToMessage(rawFailReason);
 
     const response: SessionStatusResponse = {
       session_id: session.id,
-      status: effectiveStatus,
+      status: effectiveStatus as SessionStatus,
       fail_reason: friendlyFailReason,
       fail_code: rawFailReason || null,
       paired_at: session.paired_at,

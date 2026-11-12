@@ -11,6 +11,8 @@ export const FAIL_REASON_MESSAGES: Record<string, string> = {
     '영상이 흔들리거나 흐리게 촬영되었습니다. 카메라를 고정하고 천천히 다시 촬영해 주세요.',
   ANGLE_RANGE_TOO_NARROW:
     '촬영 각도 범위가 부족합니다. 좌측(-60°)에서 우측(+60°)까지 곡선으로 천천히 회전해 주세요.',
+  FACE_TOO_CLOSE:
+    '얼굴이 너무 가깝습니다. 조금 멀리서 찍어 주세요.',
   GPU_OOM:
     '서버 그래픽 처리 용량이 일시적으로 부족합니다. 잠시 후 다시 시도해 주세요.',
   TIMEOUT:
@@ -23,6 +25,8 @@ export const FAIL_REASON_MESSAGES: Record<string, string> = {
     '3D 얼굴 모델 생성에 실패했습니다. 가이드를 확인한 뒤 다시 촬영해 주세요.',
   WORKER_RESTARTED:
     '3D 변환 서버가 재시작되어 작업이 중단되었습니다. 다시 시도해 주세요.',
+  WORKER_LOST:
+    '3D 변환 서버와의 연결이 끊어졌습니다. 잠시 후 다시 시도해 주세요.',
 };
 
 /**

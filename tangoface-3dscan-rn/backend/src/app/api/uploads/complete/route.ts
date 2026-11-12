@@ -4,7 +4,6 @@ import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 import { hashToken, timingSafeMatch } from '@/lib/crypto';
 import { verifyAndInspectVideo } from '@/lib/storage';
 import { assertTransition } from '@/lib/stateMachine';
-import { startProcessing } from '@/lib/runpod';
 import { jsonWithCors, handleOptionsCors } from '@/lib/cors';
 import { CompleteUploadResponse } from '@/types/api';
 
@@ -14,10 +13,13 @@ export async function OPTIONS(request: NextRequest) {
   return handleOptionsCors(request);
 }
 
+const MAX_UPLOADED_QUEUE_SIZE = 5;
+
 /**
  * POST /api/uploads/complete
  * 폰에서 영상 업로드 완료 알림
  * Storage에서 파일 실존 및 크기(200MB 이하) 확인 후 상태를 UPLOADED로 변경
+ * (대기 건수가 5건 이상이면 503 QUEUE_FULL을 반환하고 세션은 PAIRED 상태 유지하여 재시도 허용)
  * 인증: Authorization: Bearer {pair_token}
  */
 export async function POST(request: NextRequest) {
@@ -90,10 +92,27 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 2. 상태 전이 검증 (PAIRED -> UPLOADED)
+    // 2. 대기열(UPLOADED) 5건 초과 여부 확인: 초과 시 503 반환 및 PAIRED 상태 유지
+    const { count: waitingCount, error: countErr } = await supabase
+      .from('sessions')
+      .select('id', { count: 'exact', head: true })
+      .eq('status', 'UPLOADED');
+
+    if (!countErr && (waitingCount ?? 0) >= MAX_UPLOADED_QUEUE_SIZE) {
+      return jsonWithCors(
+        request,
+        {
+          error: 'QUEUE_FULL',
+          message: '현재 처리 대기열이 가득 찼습니다. 잠시 후 다시 시도해 주세요.',
+        },
+        { status: 503 }
+      );
+    }
+
+    // 3. 상태 전이 검증 (PAIRED -> UPLOADED)
     assertTransition(session.status as any, 'UPLOADED');
 
-    // 3. 상태 업데이트
+    // 4. 상태 업데이트
     const { error: updateError } = await supabase
       .from('sessions')
       .update({
@@ -108,18 +127,10 @@ export async function POST(request: NextRequest) {
       return jsonWithCors(request, { error: '세션 상태 갱신에 실패했습니다.' }, { status: 500 });
     }
 
-    // 4. Colab FastAPI 작업 트리거 (Vercel 서버리스 종료 전에 요청이 전달되도록 await 처리)
-    const processingRes = await startProcessing(session.id);
-
     const response: CompleteUploadResponse = {
-      status: processingRes.status === 'SUBMITTED' ? 'PROCESSING' : 'UPLOADED',
-      queue_full: processingRes.queueFull || false,
-      message:
-        processingRes.status === 'SUBMITTED'
-          ? '영상 업로드가 완료되어 Colab 3D 복원 작업을 시작했습니다.'
-          : processingRes.queueFull
-          ? '현재 처리 요청이 혼잡합니다. 잠시 후 자동으로 다시 시도됩니다.'
-          : '영상 파일이 확인되어 UPLOADED 상태로 변경되었습니다.',
+      status: 'UPLOADED',
+      queue_full: false,
+      message: '영상 업로드가 확인되어 대기열에 등록되었습니다.',
     };
 
     return jsonWithCors(request, response, { status: 200 });

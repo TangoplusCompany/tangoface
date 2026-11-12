@@ -28,6 +28,27 @@ export interface CompleteUploadResponse {
   queue_full?: boolean;
 }
 
+export interface WorkerClaimJob {
+  job_id: string;
+  video_url: string;
+  glb_upload_url: string;
+}
+
+export interface WorkerClaimResponse {
+  job: WorkerClaimJob | null;
+  next_poll_seconds: number;
+}
+
+export interface WorkerCompleteRequest {
+  status: 'done' | 'failed';
+  error?: string;
+}
+
+export interface WorkerCompleteResponse {
+  ok: boolean;
+  message?: string;
+}
+
 // 3D 모델 복원 진행률 및 남은 시간 예측 정보
 export interface ProcessingProgressInfo {
   elapsed_seconds: number;        // 현재까지 진행된 시간 (초)

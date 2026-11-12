@@ -98,10 +98,12 @@ class IExpertFragment : Fragment(), OnFacialPartClickListener, OnSequenceClickLi
     typingJob?.cancel()
     bd.tvIEScrollHint.animate().cancel()
 
-    // 4. Activity-scoped ViewModel 잔여 데이터 초기화
-    ivm.clearExpertData()
-    svm.updateFacialPart(FacialPart.DERIVE)
-    svm.updateSequence(Sequence.COMFORT)
+    // 4. Activity-scoped ViewModel 잔여 데이터 초기화 (화면 회전 시에는 유지)
+    if (activity?.isChangingConfigurations != true) {
+      ivm.clearExpertData()
+      svm.updateFacialPart(FacialPart.DERIVE)
+      svm.updateSequence(Sequence.COMFORT)
+    }
   }
 
   override fun onCreateView(
@@ -115,7 +117,9 @@ class IExpertFragment : Fragment(), OnFacialPartClickListener, OnSequenceClickLi
     super.onViewCreated(view, savedInstanceState)
     val fd = FaceDatabase.getDatabase(requireContext())
     fDao = fd.faceDao()
-    ivm.resetState(listOf(DrawLine.NECK, DrawLine.FACE, DrawLine.A_SAGGING_FACE, DrawLine.A_FACIAL_AXIS, DrawLine.A_HORIZON))
+    if (savedInstanceState == null) {
+      ivm.resetState(listOf(DrawLine.NECK, DrawLine.FACE, DrawLine.A_SAGGING_FACE, DrawLine.A_FACIAL_AXIS, DrawLine.A_HORIZON))
+    }
     setUserInfo()
     setResult()
     setRatioBtn()

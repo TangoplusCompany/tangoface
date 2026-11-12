@@ -72,7 +72,7 @@
                     android:id="@+id/tvScanTitle"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="3D 모델링 스캔"
+                    android:text="3D 얼굴 스캔"
                     android:textColor="@color/subColor100"
                     android:textSize="20sp"
                     android:textStyle="bold" />
@@ -84,10 +84,11 @@
         <androidx.constraintlayout.widget.ConstraintLayout
             android:id="@+id/clPairingContainer"
             android:layout_width="0dp"
-            android:layout_height="wrap_content"
+            android:layout_height="0dp"
             android:layout_marginHorizontal="60dp"
+            android:layout_marginVertical="60dp"
             android:background="@drawable/bg_scan_card"
-            android:padding="32dp"
+            android:padding="20dp"
             android:visibility="visible"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
@@ -99,6 +100,7 @@
                 android:id="@+id/tvPairingTitle"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:layout_marginTop="40dp"
                 android:text="스마트폰 카메라로 아래 QR 코드를 스캔해주세요"
                 android:textColor="@color/white"
                 android:textSize="22sp"
@@ -165,12 +167,46 @@
                 android:layout_marginTop="12dp"
                 android:gravity="center"
                 android:lineSpacingExtra="6dp"
-                android:text="스마트폰 화면에 위 6자리 번호를 입력해주세요\n모델링 서버 시동에 최대 5분이 소요됩니다"
+                android:text="스마트폰 화면에 위 6자리 번호를 입력해주세요\n모델링 서버 시동에 최대 5분이 소요됩니다\n모델 생성은 약 1분, 측정에 약 5분 소요예정입니다."
                 android:textColor="@color/subColor500"
                 android:textSize="16sp"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toBottomOf="@id/tvPairingCode" />
+
+            <LinearLayout
+                android:id="@+id/llDirectScanActions"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintEnd_toEndOf="parent">
+
+                <androidx.appcompat.widget.AppCompatButton
+                    android:id="@+id/btnUploadVideoFile"
+                    android:layout_width="wrap_content"
+                    android:layout_height="48dp"
+                    android:layout_marginEnd="12dp"
+                    android:background="@drawable/bg_scan_card"
+                    android:paddingHorizontal="20dp"
+                    android:text="영상 파일 업로드"
+                    android:textColor="@color/subColor100"
+                    android:textSize="15sp"
+                    android:textStyle="bold" />
+
+                <androidx.appcompat.widget.AppCompatButton
+                    android:id="@+id/btnDirectCapture"
+                    android:layout_width="wrap_content"
+                    android:layout_height="48dp"
+                    android:background="@drawable/effect_glass_card_accent"
+                    android:paddingHorizontal="22dp"
+                    android:text="직접 촬영"
+                    android:textColor="@color/subColor100"
+                    android:textSize="15sp"
+                    android:textStyle="bold" />
+
+            </LinearLayout>
 
         </androidx.constraintlayout.widget.ConstraintLayout>
 
@@ -216,26 +252,16 @@
                 tools:progress="45" />
 
             <TextView
-                android:id="@+id/tvProgressPercent"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
-                android:textColor="@color/subColor100"
-                android:textSize="36sp"
-                android:textStyle="bold"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toBottomOf="@id/pbScanProgress"
-                tools:text="45%" />
-
-            <TextView
                 android:id="@+id/tvRemainingTime"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:textColor="@color/white"
-                android:textSize="20sp"
-                app:layout_constraintBottom_toBottomOf="@id/tvProgressPercent"
+                android:layout_marginTop="18dp"
+                android:textColor="@color/accent100"
+                android:textSize="18sp"
+                android:textStyle="bold"
                 app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintTop_toTopOf="@id/tvProgressPercent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@id/pbScanProgress"
                 tools:text="예상 남은 시간: 약 25초" />
 
             <!-- 3초 뒤 측정자 정보 입력 자동 실행 안내 -->
@@ -243,15 +269,33 @@
                 android:id="@+id/tvUserSetupHint"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
+                android:layout_marginTop="12dp"
                 android:gravity="center"
                 android:textColor="@color/accent300"
                 android:textSize="14sp"
                 android:visibility="gone"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toBottomOf="@id/tvProgressPercent"
+                app:layout_constraintTop_toBottomOf="@id/tvRemainingTime"
                 tools:text="3초 뒤 측정자 정보 입력을 시작합니다..."
+                tools:visibility="visible" />
+
+            <!-- 100초 경과 후 나타나는 대기 취소/초기화 버튼 -->
+            <androidx.appcompat.widget.AppCompatButton
+                android:id="@+id/btnCancelBaking"
+                android:layout_width="wrap_content"
+                android:layout_height="48dp"
+                android:layout_marginTop="24dp"
+                android:background="@drawable/bg_scan_card"
+                android:paddingHorizontal="28dp"
+                android:text="대기 취소"
+                android:textColor="@color/subColor100"
+                android:textSize="15sp"
+                android:textStyle="bold"
+                android:visibility="gone"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@id/tvUserSetupHint"
                 tools:visibility="visible" />
 
         </androidx.constraintlayout.widget.ConstraintLayout>
@@ -313,6 +357,8 @@
                 tools:visibility="visible" />
 
         </androidx.constraintlayout.widget.ConstraintLayout>
+
+        <!-- 우측 하단: 태블릿 직접 촬영 & 영상 파일 업로드 버튼 2개 -->
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 
