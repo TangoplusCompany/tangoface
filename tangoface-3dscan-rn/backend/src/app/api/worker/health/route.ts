@@ -1,8 +1,8 @@
 // src/app/api/worker/health/route.ts
 import { NextRequest } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
-import { getActiveColabWorkerUrl } from '@/lib/runpod';
 import { jsonWithCors, handleOptionsCors } from '@/lib/cors';
+import { isWorkerOnline } from '@/lib/workerPull';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -13,72 +13,41 @@ export async function OPTIONS(request: NextRequest) {
 
 /**
  * GET /api/worker/health
- * 등록된 Colab FastAPI 서버(/health)가 실제로 응답하는지 확인
- * 응답 확장: {"ok":true,"busy":true,"queue":1} 수용
+ * Colab 워커의 온라인 상태(last_seen 90초 이내), busy 여부, 대기열(queue) 수 확인
  */
 export async function GET(request: NextRequest) {
   try {
     const supabase = getSupabaseAdmin();
-    const workerUrl = await getActiveColabWorkerUrl(supabase);
 
-    if (!workerUrl) {
-      return jsonWithCors(
-        request,
-        {
-          alive: false,
-          status: 'NOT_REGISTERED',
-          message: 'Colab 서버가 연결되어 있지 않습니다.',
-        },
-        { status: 200 }
-      );
-    }
+    const { data: workerConfig } = await supabase
+      .from('worker_configs')
+      .select('last_seen, busy')
+      .eq('worker_key', 'colab')
+      .maybeSingle();
 
-    try {
-      const res = await fetch(`${workerUrl}/health`, {
-        method: 'GET',
-        cache: 'no-store',
-        signal: AbortSignal.timeout(3500),
-      });
+    const online = isWorkerOnline(workerConfig?.last_seen);
 
-      if (!res.ok) {
-        return jsonWithCors(
-          request,
-          {
-            alive: false,
-            status: 'OFFLINE',
-            message: `Colab 서버가 응답하지 않습니다. (${res.status})`,
-          },
-          { status: 200 }
-        );
-      }
+    // 대기열 건수 (status = 'UPLOADED')
+    const { count: queueCount } = await supabase
+      .from('sessions')
+      .select('id', { count: 'exact', head: true })
+      .eq('status', 'UPLOADED');
 
-      const data = await res.json().catch(() => null);
-      const isOk = data === null || data?.ok !== false;
-      const busy = typeof data?.busy === 'boolean' ? data.busy : undefined;
-      const queue = typeof data?.queue === 'number' ? data.queue : undefined;
+    const busy = online ? (workerConfig?.busy ?? false) : false;
 
-      return jsonWithCors(
-        request,
-        {
-          alive: isOk,
-          status: isOk ? 'ONLINE' : 'OFFLINE',
-          message: isOk ? 'Colab 서버가 켜져 있습니다.' : 'Colab 서버 상태를 확인할 수 없습니다.',
-          ...(busy !== undefined ? { busy } : {}),
-          ...(queue !== undefined ? { queue } : {}),
-        },
-        { status: 200 }
-      );
-    } catch {
-      return jsonWithCors(
-        request,
-        {
-          alive: false,
-          status: 'OFFLINE',
-          message: 'Colab 서버가 꺼져 있거나 연결할 수 없습니다.',
-        },
-        { status: 200 }
-      );
-    }
+    return jsonWithCors(
+      request,
+      {
+        alive: online,
+        status: online ? 'ONLINE' : 'OFFLINE',
+        message: online
+          ? 'Colab 서버가 켜져 있습니다.'
+          : 'Colab 서버가 꺼져 있거나 연결이 끊어졌습니다 (90초 초과).',
+        busy,
+        queue: queueCount ?? 0,
+      },
+      { status: 200 }
+    );
   } catch (err: any) {
     console.error('[Worker Health] 확인 예외:', err?.message || err);
     return jsonWithCors(

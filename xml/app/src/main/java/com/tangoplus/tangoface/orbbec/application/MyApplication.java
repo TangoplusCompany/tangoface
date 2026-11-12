@@ -20,6 +20,7 @@ public class MyApplication extends Application {
 		super.onCreate();
 		Thread.setDefaultUncaughtExceptionHandler(new MyCrashHandler());
 		mInstance = this;
+		GlbBakingLockManager.init(this);
 
 		// 태블릿 여부 초기화
 		isTablet = getResources().getBoolean(R.bool.is_tablet);
@@ -38,5 +39,13 @@ public class MyApplication extends Application {
 
 	public static boolean isTablet() {
 		return isTablet;
+	}
+
+	public static void setGlbBakingLocked(boolean locked) {
+		GlbBakingLockManager.setLocked(locked);
+	}
+
+	public static boolean isGlbBakingLocked() {
+		return GlbBakingLockManager.isLocked();
 	}
 }

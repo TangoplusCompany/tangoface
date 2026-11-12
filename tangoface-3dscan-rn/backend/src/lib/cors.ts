@@ -29,7 +29,7 @@ export function getCorsHeaders(request: Request): Record<string, string> {
     headers['Access-Control-Allow-Origin'] = requestOrigin;
     headers['Access-Control-Allow-Methods'] = 'GET, POST, OPTIONS';
     headers['Access-Control-Allow-Headers'] =
-      'Content-Type, Authorization, X-Session-Secret, X-Runpod-Secret';
+      'Content-Type, Authorization, X-Session-Secret, X-Runpod-Secret, X-Worker-Secret, x-worker-secret';
     headers['Access-Control-Max-Age'] = '86400';
   }
 

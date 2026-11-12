@@ -36,6 +36,7 @@ import com.tangoplus.tangoface.databinding.ActivityMainBinding
 import com.tangoplus.tangoface.domain.util.PermissionUtility.getAllPermissions
 import com.tangoplus.tangoface.domain.util.PreferenceUtility
 import com.tangoplus.tangoface.domain.util.UXUtility
+import com.tangoplus.tangoface.orbbec.application.GlbBakingLockManager
 import com.tangoplus.tangoface.ui.info.InfoContainerFragment
 import com.tangoplus.tangoface.ui.info.MeasureHistoryFragment
 import com.tangoplus.tangoface.ui.main.vm.FragmentViewModel
@@ -135,7 +136,7 @@ class MainActivity : AppCompatActivity() {
 		val fd = FaceDatabase.getDatabase(this)
 		fDao = fd.faceDao()
 
-		if (mvm.tempServerSnAfterMeasure != -1) {
+		if (savedInstanceState == null && mvm.tempServerSnAfterMeasure != -1) {
 			lifecycleScope.launch(Dispatchers.IO) {
 				val result = mvm.convertToFaceResult(this@MainActivity, fDao, mvm.tempServerSnAfterMeasure)
 				Log.v("메저타입", "${result.measureType}")
@@ -226,6 +227,10 @@ class MainActivity : AppCompatActivity() {
 
 	private val onBackPressedCallback = object : OnBackPressedCallback(true) {
 		override fun handleOnBackPressed() {
+			if (GlbBakingLockManager.isLocked()) {
+				GlbBakingLockManager.notifyWaitingToast()
+				return
+			}
 			val fragmentManager = supportFragmentManager
 
 			// 현재 표시 중인 Fragment 확인

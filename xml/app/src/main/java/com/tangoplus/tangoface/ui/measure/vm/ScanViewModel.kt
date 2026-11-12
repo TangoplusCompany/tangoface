@@ -4,6 +4,7 @@ import android.content.ContentValues
 import android.content.Context
 import android.media.MediaScannerConnection
 import android.os.Environment
+import android.os.SystemClock
 import android.provider.MediaStore
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -18,6 +19,7 @@ import com.tangoplus.tangoface.data.db.FaceStatic
 import com.tangoplus.tangoface.domain.util.PreferenceUtility
 import com.tangoplus.tangoface.domain.vo.MeasureType
 import com.tangoplus.tangoface.domain.vo.Sequence
+import com.tangoplus.tangoface.orbbec.application.GlbBakingLockManager
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -65,7 +67,8 @@ data class ScanUiState(
     val userInfo: ScanUserInfo? = null,
     val isUserSetupCompleted: Boolean = false,
     val savedTempServerSn: Int? = null,
-    val errorMessage: String? = null
+    val errorMessage: String? = null,
+    val bakingStartedElapsedMs: Long? = null
 )
 
 /**
@@ -83,6 +86,49 @@ class ScanViewModel(
     // UI 상태 StateFlow
     private val _uiState = MutableStateFlow(ScanUiState())
     val uiState: StateFlow<ScanUiState> = _uiState.asStateFlow()
+
+    private inline fun updateState(crossinline transform: (ScanUiState) -> ScanUiState) {
+        _uiState.update { prev ->
+            val rawNext = transform(prev)
+            val upper = rawNext.status.uppercase()
+            val bakingStart = when (upper) {
+                "UPLOADED", "PROCESSING" -> rawNext.bakingStartedElapsedMs ?: prev.bakingStartedElapsedMs ?: SystemClock.elapsedRealtime()
+                else -> null
+            }
+            val next = if (rawNext.bakingStartedElapsedMs == bakingStart) {
+                rawNext
+            } else {
+                rawNext.copy(bakingStartedElapsedMs = bakingStart)
+            }
+            GlbBakingLockManager.setLocked(shouldLockForState(next))
+            next
+        }
+    }
+
+    private fun shouldLockForState(state: ScanUiState): Boolean {
+        return when (state.status.uppercase()) {
+            "UPLOADED", "PROCESSING" -> true
+            "DONE" -> state.errorMessage == null && state.savedTempServerSn == null
+            else -> false
+        }
+    }
+
+    /**
+     * 태블릿 직접 업로드 완료 직후 폴링 주기(최대 2초) 대기 없이 즉시 UPLOADED(잠금/진행 화면)로 전환
+     */
+    fun markDirectUploadCompleted() {
+        updateState { prev ->
+            val upper = prev.status.uppercase()
+            if (upper == "CREATED" || upper == "PAIRED") {
+                prev.copy(
+                    status = "UPLOADED",
+                    stageMessage = "영상이 업로드되었습니다. 3D 복원을 준비 중입니다."
+                )
+            } else {
+                prev
+            }
+        }
+    }
 
     // 스캔 세션 내역 목록 (뒤로가기 시에도 보존)
     private val _historyList = MutableStateFlow<List<ScanHistoryItem>>(emptyList())
@@ -117,7 +163,7 @@ class ScanViewModel(
     fun startNewScanFlow(delayMillis: Long = 1000L, tabletKey: String = FaceScanApiClient.getTabletKey()) {
         sessionInitJob?.cancel()
         sessionInitJob = viewModelScope.launch {
-            _uiState.update {
+            updateState {
                 ScanUiState(
                     status = "READY_TO_SCAN",
                     stageMessage = "스마트폰 카메라로 QR 코드를 스캔해주세요..."
@@ -142,7 +188,7 @@ class ScanViewModel(
     }
 
     private suspend fun createSessionInternal(tabletKey: String) {
-        _uiState.update {
+        updateState {
             it.copy(
                 status = "CREATING",
                 errorMessage = null
@@ -167,7 +213,7 @@ class ScanViewModel(
                 listOf(historyItem) + current.filter { it.sessionId != response.sessionId }
             }
 
-            _uiState.update {
+            updateState {
                 it.copy(
                     status = "CREATED",
                     sessionId = response.sessionId,
@@ -180,7 +226,7 @@ class ScanViewModel(
             // 백그라운드 폴링 시작
             startBackgroundPolling(response.sessionId, response.sessionSecret)
         }.onFailure { error ->
-            _uiState.update {
+            updateState {
                 it.copy(
                     status = "FAILED",
                     errorMessage = error.message ?: "세션 생성에 실패했습니다."
@@ -253,7 +299,7 @@ class ScanViewModel(
                             }
 
                             if (currentSessionId == sessionId) {
-                                _uiState.update {
+                                updateState {
                                     it.copy(
                                         status = "PROCESSING",
                                         progressPercent = percent,
@@ -304,7 +350,7 @@ class ScanViewModel(
                             }
 
                             if (currentSessionId == sessionId) {
-                                _uiState.update {
+                                updateState {
                                     it.copy(
                                         status = "DONE",
                                         progressPercent = 100,
@@ -340,7 +386,7 @@ class ScanViewModel(
                             }
 
                             if (currentSessionId == sessionId) {
-                                _uiState.update {
+                                updateState {
                                     it.copy(status = statusUpper, stageMessage = stageMsg)
                                 }
                             }
@@ -371,7 +417,7 @@ class ScanViewModel(
             item.copy(stageMessage = retryMsg)
         }
         if (currentSessionId == sessionId) {
-            _uiState.update {
+            updateState {
                 it.copy(stageMessage = retryMsg)
             }
         }
@@ -386,7 +432,7 @@ class ScanViewModel(
         }
 
         if (currentSessionId == sessionId) {
-            _uiState.update {
+            updateState {
                 it.copy(
                     status = "FAILED",
                     errorMessage = failReason
@@ -417,22 +463,24 @@ class ScanViewModel(
         val targetPath = target.localGlbPath
         val targetFile = targetPath?.takeIf { !it.startsWith("content://") }?.let { File(it) }
 
-        _uiState.value = ScanUiState(
-            status = target.status,
-            sessionId = target.sessionId,
-            pairingCode = target.pairingCode,
-            progressPercent = target.progressPercent,
-            remainingSeconds = target.remainingSeconds,
-            stageMessage = target.stageMessage,
-            glbDownloadUrl = target.glbDownloadUrl,
-            localGlbPath = targetFile?.absolutePath,
-            localGlbUri = targetPath?.takeIf { it.startsWith("content://") },
-            localGlbFileName = targetFile?.name,
-            localGlbSizeBytes = targetFile?.takeIf { it.exists() }?.length() ?: 0L,
-            isUserSetupCompleted = target.savedTempServerSn != null,
-            savedTempServerSn = target.savedTempServerSn,
-            errorMessage = target.failReason
-        )
+        updateState {
+            ScanUiState(
+                status = target.status,
+                sessionId = target.sessionId,
+                pairingCode = target.pairingCode,
+                progressPercent = target.progressPercent,
+                remainingSeconds = target.remainingSeconds,
+                stageMessage = target.stageMessage,
+                glbDownloadUrl = target.glbDownloadUrl,
+                localGlbPath = targetFile?.absolutePath,
+                localGlbUri = targetPath?.takeIf { it.startsWith("content://") },
+                localGlbFileName = targetFile?.name,
+                localGlbSizeBytes = targetFile?.takeIf { it.exists() }?.length() ?: 0L,
+                isUserSetupCompleted = target.savedTempServerSn != null,
+                savedTempServerSn = target.savedTempServerSn,
+                errorMessage = target.failReason
+            )
+        }
     }
 
     /**
@@ -453,7 +501,7 @@ class ScanViewModel(
         viewModelScope.launch {
             try {
                 if (currentSessionId == sessionId) {
-                    _uiState.update {
+                    updateState {
                         it.copy(
                             isDownloadingGlb = true,
                             errorMessage = null,
@@ -524,7 +572,7 @@ class ScanViewModel(
                         )
                     }
                     if (currentSessionId == sessionId) {
-                        _uiState.update {
+                        updateState {
                             it.copy(
                                 isDownloadingGlb = false,
                                 localGlbPath = savedPath,
@@ -544,7 +592,7 @@ class ScanViewModel(
                 } else {
                     val errMsg = lastError?.message ?: "GLB 파일 다운로드에 실패했습니다."
                     if (currentSessionId == sessionId) {
-                        _uiState.update {
+                        updateState {
                             it.copy(
                                 isDownloadingGlb = false,
                                 errorMessage = errMsg
@@ -599,7 +647,7 @@ class ScanViewModel(
         if (state.savedTempServerSn != null) return
 
         // 선입력 시에도 VM 상태에 우선 저장
-        _uiState.update {
+        updateState {
             it.copy(
                 userInfo = userInfo,
                 isUserSetupCompleted = true,
@@ -648,7 +696,7 @@ class ScanViewModel(
             }
 
             if (currentSessionId == sessionId) {
-                _uiState.update {
+                updateState {
                     it.copy(
                         userInfo = userInfo,
                         isUserSetupCompleted = true,
@@ -791,7 +839,7 @@ class ScanViewModel(
     fun resetScanState() {
         currentSessionId = null
         currentSessionSecret = null
-        _uiState.value = ScanUiState(status = "IDLE")
+        updateState { ScanUiState(status = "IDLE") }
     }
 
     /**
@@ -809,7 +857,7 @@ class ScanViewModel(
         currentSessionId = null
         currentSessionSecret = null
         _historyList.value = emptyList()
-        _uiState.value = ScanUiState(status = "IDLE")
+        updateState { ScanUiState(status = "IDLE") }
     }
 
     override fun onCleared() {

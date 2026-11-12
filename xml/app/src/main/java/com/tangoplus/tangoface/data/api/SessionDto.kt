@@ -75,12 +75,14 @@ object ScanErrorCodeMapper {
         "FACE_NOT_FOUND" to "영상에서 얼굴을 인식하지 못했습니다. 밝은 곳에서 정면을 바라보고 다시 촬영해 주세요.",
         "TOO_BLURRY" to "영상이 흔들리거나 흐리게 촬영되었습니다. 카메라를 고정하고 천천히 다시 촬영해 주세요.",
         "ANGLE_RANGE_TOO_NARROW" to "촬영 각도 범위가 부족합니다. 좌측(-60°)에서 우측(+60°)까지 곡선으로 천천히 회전해 주세요.",
+        "FACE_TOO_CLOSE" to "얼굴이 너무 가깝습니다. 조금 멀리서 찍어 주세요.",
         "GPU_OOM" to "서버 그래픽 처리 용량이 일시적으로 부족합니다. 잠시 후 다시 시도해 주세요.",
         "TIMEOUT" to "3D 모델 생성 시간이 제한(6분)을 초과했습니다. 잠시 후 다시 시도해 주세요.",
         "VIDEO_DOWNLOAD_FAILED" to "서버가 업로드된 영상을 불러오지 못했습니다. 다시 시도해 주세요.",
         "UPLOAD_FAILED" to "생성된 3D 모델 저장에 실패했습니다. 잠시 후 다시 시도해 주세요.",
         "RECONSTRUCTION_FAILED" to "3D 얼굴 모델 생성에 실패했습니다. 가이드를 확인한 뒤 다시 촬영해 주세요.",
-        "WORKER_RESTARTED" to "3D 변환 서버가 재시작되어 작업이 중단되었습니다. 다시 시도해 주세요."
+        "WORKER_RESTARTED" to "3D 변환 서버가 재시작되어 작업이 중단되었습니다. 다시 시도해 주세요.",
+        "WORKER_LOST" to "3D 변환 서버와의 연결이 끊어졌습니다. 다시 시도해 주세요."
     )
 
     fun toMessage(failReason: String?): String {
@@ -143,3 +145,64 @@ data class ScanHistoryItem(
     val isFailed: Boolean get() = status == "FAILED"
     val isProcessing: Boolean get() = status in listOf("PAIRED", "UPLOADED", "PROCESSING")
 }
+
+/**
+ * 5. 페어링 요청/응답 DTO (POST api/sessions/pair)
+ */
+data class PairSessionRequest(
+    @SerializedName("code")
+    val code: String
+)
+
+data class PairSessionResponse(
+    @SerializedName("session_id")
+    val sessionId: String,
+
+    @SerializedName("pair_token")
+    val pairToken: String
+)
+
+/**
+ * 6. 업로드 Presign URL 응답 DTO (POST api/uploads/presign)
+ */
+data class PresignUploadResponse(
+    @SerializedName("upload_path")
+    val uploadPath: String? = null,
+
+    @SerializedName(value = "signed_url", alternate = ["upload_url"])
+    val signedUrl: String
+)
+
+/**
+ * 7. 업로드 완료 보고 응답 DTO (POST api/uploads/complete)
+ */
+data class CompleteUploadResponse(
+    @SerializedName("status")
+    val status: String,
+
+    @SerializedName("queue_full")
+    val queueFull: Boolean = false,
+
+    @SerializedName("message")
+    val message: String? = null
+)
+
+/**
+ * 8. Colab 워커 헬스 체크 응답 DTO (GET api/worker/health)
+ */
+data class WorkerHealthResponse(
+    @SerializedName("alive")
+    val alive: Boolean = false,
+
+    @SerializedName("status")
+    val status: String = "UNKNOWN",
+
+    @SerializedName("message")
+    val message: String = "",
+
+    @SerializedName("busy")
+    val busy: Boolean? = null,
+
+    @SerializedName("queue")
+    val queue: Int? = null
+)

@@ -45,45 +45,53 @@ class InfoContainerFragment : Fragment() {
 
   override fun onDestroy() {
     super.onDestroy()
-    mvm.currentResult.value = null
+    if (activity?.isChangingConfigurations != true) {
+      mvm.currentResult.value = null
+    }
   }
   override fun onDestroyView() {
     super.onDestroyView()
-    svm.updateFacialPart(FacialPart.DERIVE)
-    svm.updateSequence(Sequence.COMFORT)
+    if (activity?.isChangingConfigurations != true) {
+      svm.updateFacialPart(FacialPart.DERIVE)
+      svm.updateSequence(Sequence.COMFORT)
 
-    if (ivm.isAngleModeActive.value) ivm.toggleAngleMode()
-    if (ivm.getMoireOn()) ivm.switchedMoireOn()
+      if (ivm.isAngleModeActive.value) ivm.toggleAngleMode()
+      if (ivm.getMoireOn()) ivm.switchedMoireOn()
 
-    if (!ivm.getLineOn()) ivm.switchedLineOn()
-    if (!ivm.getGridLineOn()) ivm.switchedGridLineOn()
+      if (!ivm.getLineOn()) ivm.switchedLineOn()
+      if (!ivm.getGridLineOn()) ivm.switchedGridLineOn()
 
-    ivm.setSeq(Sequence.COMFORT)
-    ivm.releaseUnitIdx()
-    ivm.clearScanResult()
+      ivm.setSeq(Sequence.COMFORT)
+      ivm.releaseUnitIdx()
+      ivm.clearScanResult()
+    }
   }
 
   override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
     super.onViewCreated(view, savedInstanceState)
     val measureTypeNum = arguments?.getInt(ARG_M_TYPE) ?: 0
-    if (measureTypeNum == MeasureType.SCAN.idx) {
+    if (measureTypeNum == MeasureType.SCAN.idx && ivm.scanResultInfo.value == null) {
       ivm.setScanResultFromFaceResult(mvm.currentResult.value)
     }
 
-    val frg = when (measureTypeNum) {
-      0 -> INormalFragment()
-      1 -> IExpertFragment()
-      3 -> IImageFragment()
-      4 -> IModelScanFragment()
-      else -> INormalFragment()
-    }
+    if (savedInstanceState == null && childFragmentManager.findFragmentById(R.id.flIC) == null) {
+      val frg = when (measureTypeNum) {
+        0 -> INormalFragment()
+        1 -> IExpertFragment()
+        3 -> IImageFragment()
+        4 -> IModelScanFragment()
+        else -> INormalFragment()
+      }
 
-    requireActivity().supportFragmentManager.beginTransaction().apply {
-      replace(R.id.flIC, frg)
-      commit()
+      childFragmentManager.beginTransaction().apply {
+        replace(R.id.flIC, frg)
+        commit()
+      }
     }
-    val measureType = MeasureType.fromIdx(mvm.currentResult.value?.measureType)
-    if (measureType != null) svm.setAllSeqs(measureType)
+    if (savedInstanceState == null) {
+      val measureType = MeasureType.fromIdx(mvm.currentResult.value?.measureType)
+      if (measureType != null) svm.setAllSeqs(measureType)
+    }
   }
 
 }

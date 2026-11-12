@@ -19,19 +19,42 @@ function getWebVideoDuration(file: File): Promise<number> {
   return new Promise((resolve, reject) => {
     const video = document.createElement('video');
     video.preload = 'metadata';
+    video.muted = true;
+    video.playsInline = true;
     const objectUrl = URL.createObjectURL(file);
+    let done = false;
+
+    const cleanup = () => {
+      clearTimeout(timeoutId);
+      video.onloadedmetadata = null;
+      video.onerror = null;
+      URL.revokeObjectURL(objectUrl);
+    };
+
+    const timeoutId = setTimeout(() => {
+      if (done) return;
+      done = true;
+      cleanup();
+      resolve(0);
+    }, 6000);
 
     video.onloadedmetadata = () => {
-      URL.revokeObjectURL(objectUrl);
-      resolve(video.duration);
+      if (done) return;
+      done = true;
+      const duration = Number.isFinite(video.duration) ? video.duration : 0;
+      cleanup();
+      resolve(duration);
     };
 
     video.onerror = () => {
-      URL.revokeObjectURL(objectUrl);
+      if (done) return;
+      done = true;
+      cleanup();
       reject(new Error('비디오 메타데이터를 불러올 수 없습니다.'));
     };
 
     video.src = objectUrl;
+    video.load();
   });
 }
 
@@ -46,27 +69,66 @@ export async function pickVideoWithDurationLimit(): Promise<SelectedVideoInfo | 
       input.type = 'file';
       // Chrome, Safari, Firefox 등 모든 브라우저에서 동영상만 선택되도록 mime types 명시
       input.accept = 'video/mp4,video/quicktime,video/webm,video/*';
+      input.style.display = 'none';
+      document.body.appendChild(input);
+
+      let settled = false;
+      let filePicked = false;
+      let focusTimer: ReturnType<typeof setTimeout> | null = null;
+
+      const finish = (result: SelectedVideoInfo | null) => {
+        if (settled) return;
+        settled = true;
+        if (focusTimer) {
+          clearTimeout(focusTimer);
+          focusTimer = null;
+        }
+        window.removeEventListener('focus', onWindowFocus);
+        input.onchange = null;
+        input.oncancel = null;
+        input.remove();
+        resolve(result);
+      };
+
+      const onWindowFocus = () => {
+        // iOS Safari 구버전 등에서 oncancel이 발생하지 않을 때 피커 닫힘 감지 fallback
+        if (focusTimer) clearTimeout(focusTimer);
+        focusTimer = setTimeout(() => {
+          if (!filePicked && !settled) {
+            finish(null);
+          }
+        }, 500);
+      };
+
+      input.oncancel = () => {
+        finish(null);
+      };
 
       input.onchange = async (e: Event) => {
+        filePicked = true;
+        if (focusTimer) {
+          clearTimeout(focusTimer);
+          focusTimer = null;
+        }
         const target = e.target as HTMLInputElement;
         const file = target.files?.[0];
 
         if (!file) {
-          resolve(null);
+          finish(null);
           return;
         }
 
-        // 동영상 MIME 타입 이중 체크
-        if (!file.type.startsWith('video/')) {
+        // 동영상 MIME 타입 이중 체크 (일부 브라우저는 확장자만 있고 type이 비어 있을 수 있음)
+        if (file.type && !file.type.startsWith('video/')) {
           alert('동영상 파일(.mp4, .mov, .webm 등)만 선택할 수 있습니다.');
-          resolve(null);
+          finish(null);
           return;
         }
 
         const sizeMB = Math.round((file.size / (1024 * 1024)) * 10) / 10;
         if (sizeMB > MAX_SIZE_MB) {
           alert(`파일 용량이 초과되었습니다 (${sizeMB}MB).\n최대 ${MAX_SIZE_MB}MB 이내의 영상만 지원됩니다.`);
-          resolve(null);
+          finish(null);
           return;
         }
 
@@ -78,12 +140,12 @@ export async function pickVideoWithDurationLimit(): Promise<SelectedVideoInfo | 
             alert(
               `영상 길이가 30초를 초과했습니다.\n(선택된 영상: ${durationSec}초)\n30초 이내의 영상 파일만 첨부해주세요.`
             );
-            resolve(null);
+            finish(null);
             return;
           }
 
           const uri = URL.createObjectURL(file);
-          resolve({
+          finish({
             uri,
             name: file.name,
             sizeMB,
@@ -92,10 +154,11 @@ export async function pickVideoWithDurationLimit(): Promise<SelectedVideoInfo | 
           });
         } catch (err) {
           alert('비디오 파일을 읽는 도중 오류가 발생했습니다.');
-          resolve(null);
+          finish(null);
         }
       };
 
+      window.addEventListener('focus', onWindowFocus);
       input.click();
     });
   }

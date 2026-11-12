@@ -2,6 +2,7 @@ package com.tangoplus.tangoface.data.api
 
 import okhttp3.ResponseBody
 import retrofit2.Response
+import retrofit2.http.Body
 import retrofit2.http.GET
 import retrofit2.http.Header
 import retrofit2.http.POST
@@ -40,4 +41,26 @@ interface FaceScanApiService {
     suspend fun downloadGlbFile(
         @Url downloadUrl: String
     ): Response<ResponseBody>
+
+    // 5. 태블릿 직접 촬영 시 6자리 PIN으로 pair_token 발급
+    @POST("api/sessions/pair")
+    suspend fun pairSession(
+        @Body request: PairSessionRequest
+    ): Response<PairSessionResponse>
+
+    // 6. Supabase Storage Signed Upload URL 요청
+    @POST("api/uploads/presign")
+    suspend fun presignUpload(
+        @Header("Authorization") bearerToken: String
+    ): Response<PresignUploadResponse>
+
+    // 7. 영상 업로드 완료 검증 및 Colab 3D 복원 시작 요청
+    @POST("api/uploads/complete")
+    suspend fun completeUpload(
+        @Header("Authorization") bearerToken: String
+    ): Response<CompleteUploadResponse>
+
+    // 8. Colab 워커 상태 조회
+    @GET("api/worker/health")
+    suspend fun getWorkerHealth(): Response<WorkerHealthResponse>
 }

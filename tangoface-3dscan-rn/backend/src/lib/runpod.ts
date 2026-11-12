@@ -67,6 +67,27 @@ async function safeUpdateSession(
   }
 }
 
+const BLOCKED_WORKER_HOSTS = new Set([
+  'api.trycloudflare.com',
+  'www.trycloudflare.com',
+  'trycloudflare.com',
+  'api.cloudflare.com',
+  'dash.cloudflare.com',
+]);
+
+/**
+ * 실제 Colab FastAPI 터널 URL인지 검증 (cloudflared 제어/API 도메인 오등록 차단)
+ */
+export function isValidColabWorkerUrl(rawUrl: string): boolean {
+  try {
+    const parsed = new URL(rawUrl.trim());
+    if (parsed.protocol !== 'https:') return false;
+    return !BLOCKED_WORKER_HOSTS.has(parsed.hostname.toLowerCase());
+  } catch {
+    return false;
+  }
+}
+
 /**
  * DB(worker_configs) 또는 환경변수에서 최신 활성 Colab FastAPI URL 조회
  */
@@ -81,14 +102,18 @@ export async function getActiveColabWorkerUrl(
       .maybeSingle();
 
     if (!error && data?.worker_url) {
-      return data.worker_url.replace(/\/+$/, '');
+      const candidate = data.worker_url.trim().replace(/\/+$/, '');
+      if (isValidColabWorkerUrl(candidate)) {
+        return candidate;
+      }
+      console.warn(`[Colab Worker] 잘못된 worker_url 무시됨: ${candidate}`);
     }
   } catch (err) {
     console.warn('[Colab Worker] worker_configs 조회 예외 (환경변수 폴백 확인):', err);
   }
 
   const envUrl = (process.env.COLAB_WORKER_URL || '').trim().replace(/\/+$/, '');
-  return envUrl || null;
+  return envUrl && isValidColabWorkerUrl(envUrl) ? envUrl : null;
 }
 
 /**

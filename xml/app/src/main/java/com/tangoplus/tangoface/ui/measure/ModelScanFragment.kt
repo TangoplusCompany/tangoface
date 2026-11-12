@@ -1,10 +1,16 @@
 package com.tangoplus.tangoface.ui.measure
 
+import android.Manifest
+import android.content.pm.PackageManager
 import android.os.Bundle
+import android.os.SystemClock
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
+import androidx.core.content.ContextCompat
 import androidx.core.view.isVisible
 import androidx.fragment.app.DialogFragment
 import androidx.fragment.app.Fragment
@@ -15,6 +21,7 @@ import androidx.lifecycle.repeatOnLifecycle
 import com.tangoplus.tangoface.data.db.FaceDatabase
 import com.tangoplus.tangoface.databinding.FragmentModelScanBinding
 import com.tangoplus.tangoface.domain.util.FileUtility
+import com.tangoplus.tangoface.orbbec.application.GlbBakingLockManager
 import com.tangoplus.tangoface.ui.main.MainActivity
 import com.tangoplus.tangoface.ui.main.vm.MainViewModel
 import com.tangoplus.tangoface.ui.measure.vm.InputViewModel
@@ -51,9 +58,30 @@ class ModelScanFragment : Fragment() {
     private var hasShownUserSetup = false
     private var hasStartedUserSetupCountdown = false
     private var userSetupDelayJob: Job? = null
+    private var bakingTimeoutJob: Job? = null
 
     companion object {
         private const val TAG_USER_SETUP = "ModelScanUserSetupDialog"
+        private const val TAG_DIRECT_CAMERA = "DirectScanCameraDialog"
+        private const val BAKING_CANCEL_DELAY_MS = 100_000L
+    }
+
+    private val cameraPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        if (granted) {
+            openDirectCameraDialog()
+        } else {
+            Toast.makeText(requireContext(), "직접 촬영을 위해 카메라 권한이 필요합니다.", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private val videoFilePickerLauncher = registerForActivityResult(
+        ActivityResultContracts.GetContent()
+    ) { uri ->
+        if (uri != null) {
+            openDirectCameraDialog(initialVideoUri = uri.toString())
+        }
     }
 
     override fun onCreateView(
@@ -82,6 +110,34 @@ class ModelScanFragment : Fragment() {
     }
 
     private fun initViews() {
+        // 우측 하단 영상 파일 업로드 버튼
+        bd.btnUploadVideoFile.setOnClickListener {
+            val state = svm.uiState.value
+            if (state.status.uppercase() != "CREATED" || state.pairingCode.isBlank()) {
+                Toast.makeText(requireContext(), "세션 PIN 발급이 완료된 후 이용할 수 있습니다.", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
+            videoFilePickerLauncher.launch("video/*")
+        }
+
+        // 우측 하단 직접 촬영 버튼
+        bd.btnDirectCapture.setOnClickListener {
+            val state = svm.uiState.value
+            if (state.status.uppercase() != "CREATED" || state.pairingCode.isBlank()) {
+                Toast.makeText(requireContext(), "세션 PIN 발급이 완료된 후 이용할 수 있습니다.", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
+            val hasCam = ContextCompat.checkSelfPermission(
+                requireContext(),
+                Manifest.permission.CAMERA
+            ) == PackageManager.PERMISSION_GRANTED
+            if (hasCam) {
+                openDirectCameraDialog()
+            } else {
+                cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
+            }
+        }
+
         // 저장된 3D GLB 모델 결과 보기 (IModelScanFragment로 이동)
         bd.btnViewScanResult.setOnClickListener {
             val savedSn = svm.uiState.value.savedTempServerSn ?: return@setOnClickListener
@@ -94,6 +150,25 @@ class ModelScanFragment : Fragment() {
                 mainVm.loadUserDataFromDB(requireContext())
                 (requireActivity() as? MainActivity)?.navigateToMeasureHistoryInformation(result.measureType)
             }
+        }
+
+        // 100초 경과 후 나타나는 대기 취소/초기화 버튼
+        bd.btnCancelBaking.setOnClickListener {
+            cancelBakingTimeout()
+            cancelUserSetupCountdown()
+            errorDialog?.dismiss()
+            errorDialog = null
+            (parentFragmentManager.findFragmentByTag(TAG_USER_SETUP) as? DialogFragment)?.dismissAllowingStateLoss()
+
+            hasShownUserSetup = false
+            hasStartedUserSetupCountdown = false
+            resetInputState()
+            GlbBakingLockManager.setAllowedTouchView(null)
+            GlbBakingLockManager.setLocked(false)
+
+            val tabletKey = com.tangoplus.tangoface.data.api.FaceScanApiClient.getTabletKey(requireContext())
+            svm.onFragmentEnter(tabletKey)
+            Toast.makeText(requireContext(), "3D 모델 생성 대기를 취소했습니다.", Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -117,6 +192,15 @@ class ModelScanFragment : Fragment() {
             svm.saveUserInfoAndPersistToDb(requireContext(), userInfo)
             ivm.isFinishInput.value = false
         }
+    }
+
+    private fun openDirectCameraDialog(initialVideoUri: String? = null) {
+        if (!isAdded) return
+        if (parentFragmentManager.findFragmentByTag(TAG_DIRECT_CAMERA) != null) return
+        val code = svm.uiState.value.pairingCode
+        if (code.isBlank()) return
+        DirectScanCameraDialogFragment.newInstance(code, initialVideoUri)
+            .show(parentFragmentManager, TAG_DIRECT_CAMERA)
     }
 
     private fun showUserSetupDialog() {
@@ -167,6 +251,43 @@ class ModelScanFragment : Fragment() {
         _binding?.tvUserSetupHint?.isVisible = false
     }
 
+    private fun syncBakingTimeoutButton(state: ScanUiState) {
+        val upper = state.status.uppercase()
+        if (upper != "UPLOADED" && upper != "PROCESSING") {
+            cancelBakingTimeout()
+            return
+        }
+        val startMs = state.bakingStartedElapsedMs ?: SystemClock.elapsedRealtime()
+        val elapsedMs = (SystemClock.elapsedRealtime() - startMs).coerceAtLeast(0L)
+        val remainingMs = (BAKING_CANCEL_DELAY_MS - elapsedMs).coerceAtLeast(0L)
+
+        if (remainingMs == 0L) {
+            showCancelBakingButton()
+            return
+        }
+        if (bakingTimeoutJob?.isActive == true) return
+
+        bd.btnCancelBaking.isVisible = false
+        GlbBakingLockManager.setAllowedTouchView(null)
+        bakingTimeoutJob = viewLifecycleOwner.lifecycleScope.launch {
+            delay(remainingMs)
+            showCancelBakingButton()
+        }
+    }
+
+    private fun showCancelBakingButton() {
+        val binding = _binding ?: return
+        binding.btnCancelBaking.isVisible = true
+        GlbBakingLockManager.setAllowedTouchView(binding.btnCancelBaking)
+    }
+
+    private fun cancelBakingTimeout() {
+        bakingTimeoutJob?.cancel()
+        bakingTimeoutJob = null
+        _binding?.btnCancelBaking?.isVisible = false
+        GlbBakingLockManager.setAllowedTouchView(null)
+    }
+
     /**
      * Lifecycle-aware (repeatOnLifecycle) 기반 실시간 UI 상태 수집
      */
@@ -184,7 +305,18 @@ class ModelScanFragment : Fragment() {
      * 세션 상태 및 3D 복원 진행률에 따른 화면 렌더링
      */
     private fun renderUiState(state: ScanUiState) {
-        when (state.status.uppercase()) {
+        val upperStatus = state.status.uppercase()
+        val showDirectActions = upperStatus in listOf("IDLE", "READY_TO_SCAN", "CREATING", "CREATED", "FAILED")
+        val canDirectCapture = upperStatus == "CREATED" && state.pairingCode.isNotBlank()
+        bd.llDirectScanActions.isVisible = showDirectActions
+        bd.btnDirectCapture.isEnabled = canDirectCapture
+        bd.btnUploadVideoFile.isEnabled = canDirectCapture
+        bd.btnDirectCapture.alpha = if (canDirectCapture) 1f else 0.5f
+        bd.btnUploadVideoFile.alpha = if (canDirectCapture) 1f else 0.5f
+
+        syncBakingTimeoutButton(state)
+
+        when (upperStatus) {
             "IDLE" -> {
                 bd.clPairingContainer.isVisible = true
                 bd.clProgressContainer.isVisible = false
@@ -225,7 +357,7 @@ class ModelScanFragment : Fragment() {
                 bd.pbPinLoading.isVisible = false
                 bd.tvPairingCode.isVisible = true
                 bd.tvPairingCode.text = state.pairingCode
-                bd.tvPairingSub.text = "스마트폰 화면에 위 6자리 번호를 입력해주세요"
+                bd.tvPairingSub.text = "스마트폰 화면에 위 6자리 번호를 입력해주세요\n모델링 서버 시동에 최대 5분이 소요됩니다\n모델 생성은 약 1분, 측정에 약 5분 소요예정입니다."
             }
 
             "PAIRED" -> {
@@ -247,7 +379,6 @@ class ModelScanFragment : Fragment() {
 
                 bd.tvProgressStage.text = state.stageMessage.ifEmpty { "영상 업로드 완료! 3D 모델 생성을 준비 중입니다..." }
                 bd.pbScanProgress.progress = 0
-                bd.tvProgressPercent.text = "0%"
                 bd.tvRemainingTime.text = "준비 중..."
             }
 
@@ -258,7 +389,6 @@ class ModelScanFragment : Fragment() {
                 bd.clDoneContainer.isVisible = false
 
                 bd.pbScanProgress.progress = state.progressPercent
-                bd.tvProgressPercent.text = "${state.progressPercent}%"
                 bd.tvRemainingTime.text = if (state.remainingSeconds > 0) {
                     "예상 남은 시간: 약 ${state.remainingSeconds}초"
                 } else {
@@ -355,15 +485,18 @@ class ModelScanFragment : Fragment() {
     }
 
     override fun onDestroyView() {
+        cancelBakingTimeout()
         cancelUserSetupCountdown()
         errorDialog?.dismiss()
         errorDialog = null
         (parentFragmentManager.findFragmentByTag(TAG_USER_SETUP) as? DialogFragment)?.dismissAllowingStateLoss()
+        (parentFragmentManager.findFragmentByTag(TAG_DIRECT_CAMERA) as? DialogFragment)?.dismissAllowingStateLoss()
 
         if (activity?.isChangingConfigurations != true) {
             svm.resetAll()
             resetInputState()
         }
+        GlbBakingLockManager.setAllowedTouchView(null)
         hasShownUserSetup = false
         hasStartedUserSetupCountdown = false
         _binding = null

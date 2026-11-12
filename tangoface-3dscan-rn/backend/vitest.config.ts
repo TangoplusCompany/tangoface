@@ -14,6 +14,7 @@ export default defineConfig({
       'tests/rateLimiter.test.ts',
       'tests/webhook.test.ts',
       'tests/workerLogic.test.ts',
+      'tests/workerPull.test.ts',
     ],
   },
 });

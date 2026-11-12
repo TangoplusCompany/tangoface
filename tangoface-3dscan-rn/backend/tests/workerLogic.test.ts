@@ -2,6 +2,7 @@
 import { describe, it, expect } from 'vitest';
 import { mapFailReasonToMessage, FAIL_REASON_MESSAGES } from '../src/lib/errorMapper';
 import { calculateProcessingProgressFromElapsed } from '../src/lib/progressEstimator';
+import { isValidColabWorkerUrl } from '../src/lib/runpod';
 
 describe('Colab Worker Error Mapping & Progress Estimation', () => {
   it('모든 Colab 에러 코드가 사용자 친화적 한국어 안내 문구로 매핑되어야 한다', () => {
@@ -9,12 +10,14 @@ describe('Colab Worker Error Mapping & Progress Estimation', () => {
       'FACE_NOT_FOUND',
       'TOO_BLURRY',
       'ANGLE_RANGE_TOO_NARROW',
+      'FACE_TOO_CLOSE',
       'GPU_OOM',
       'TIMEOUT',
       'VIDEO_DOWNLOAD_FAILED',
       'UPLOAD_FAILED',
       'RECONSTRUCTION_FAILED',
       'WORKER_RESTARTED',
+      'WORKER_LOST',
     ];
 
     for (const code of requiredCodes) {
@@ -38,5 +41,13 @@ describe('Colab Worker Error Mapping & Progress Estimation', () => {
 
     const overtime = calculateProcessingProgressFromElapsed(200);
     expect(overtime.progress_percent).toBeLessThanOrEqual(99);
+  });
+
+  it('api.trycloudflare.com 같은 Cloudflare 제어 도메인은 거부하고 실제 터널 도메인만 허용해야 한다', () => {
+    expect(isValidColabWorkerUrl('https://api.trycloudflare.com')).toBe(false);
+    expect(isValidColabWorkerUrl('https://trycloudflare.com')).toBe(false);
+    expect(isValidColabWorkerUrl('https://api.cloudflare.com')).toBe(false);
+    expect(isValidColabWorkerUrl('http://some-tunnel.trycloudflare.com')).toBe(false);
+    expect(isValidColabWorkerUrl('https://some-tunnel-abc.trycloudflare.com')).toBe(true);
   });
 });

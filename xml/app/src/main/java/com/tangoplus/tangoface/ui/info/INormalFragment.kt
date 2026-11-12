@@ -80,11 +80,13 @@ class INormalFragment : Fragment(), OnFacialPartClickListener {
 		bd.tvINScrollHint.animate().cancel()
 		bd.sflIN.stopShimmer()
 
-		// 3. Shared ViewModel 상태 초기화
-		if (ivm.isAngleModeActive.value) {
-			ivm.toggleAngleMode()
+		// 3. Shared ViewModel 상태 초기화 (화면 회전 시에는 유지)
+		if (activity?.isChangingConfigurations != true) {
+			if (ivm.isAngleModeActive.value) {
+				ivm.toggleAngleMode()
+			}
+			svm.updateFacialPart(FacialPart.DERIVE)
 		}
-		svm.updateFacialPart(FacialPart.DERIVE)
 	}
 
 	override fun onCreateView(
@@ -95,13 +97,11 @@ class INormalFragment : Fragment(), OnFacialPartClickListener {
 		return bd.root
 	}
 
-	override fun onStart() {
-		super.onStart()
-		ivm.resetState(listOf(DrawLine.NECK, DrawLine.FACE, DrawLine.A_SAGGING_FACE, DrawLine.A_FACIAL_AXIS, DrawLine.A_HORIZON))
-	}
-
 	override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
 		super.onViewCreated(view, savedInstanceState)
+		if (savedInstanceState == null) {
+			ivm.resetState(listOf(DrawLine.NECK, DrawLine.FACE, DrawLine.A_SAGGING_FACE, DrawLine.A_FACIAL_AXIS, DrawLine.A_HORIZON))
+		}
 
 		val fd = FaceDatabase.getDatabase(requireContext())
 		fDao = fd.faceDao()
