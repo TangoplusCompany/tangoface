@@ -48,10 +48,14 @@ class MeasureHistoryFragment : Fragment(), OnUserClickListener {
 	override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
 		super.onViewCreated(view, savedInstanceState)
 
+		// 1. 어댑터 및 검색 리스너를 동기적으로 먼저 초기화 (화면 회전 시 뷰 복원으로 인한 afterTextChanged 크래시 방지)
+		initAdapter()
+		setSearchText()
+
 		mvm.allDataLoaded.observe(viewLifecycleOwner) { isLoaded ->
 			if (isLoaded == true) {
 				mvm.clearLoadDataFlag()
-				initAdapter()
+				filterAndApplyCurrentList()
 			}
 		}
 
@@ -60,13 +64,11 @@ class MeasureHistoryFragment : Fragment(), OnUserClickListener {
 			val fd = FaceDatabase.getDatabase(requireContext())
 			fDao = fd.faceDao()
 			initUserUI()
-			initAdapter()
 
 			bd.btnMHImage.setOnSingleClickListener {
 				(requireActivity() as MainActivity).navigateToSubFragment(MImageFragment())
 			}
 		}
-		setSearchText()
 	}
 
 	private fun initUserUI() {
@@ -122,7 +124,6 @@ class MeasureHistoryFragment : Fragment(), OnUserClickListener {
 		userAdapter = UserRVAdapter(requireContext(), mvm).apply {
 			onUserClickListener = this@MeasureHistoryFragment
 		}
-		bd.llMHEmpty.visibility = if (mvm.currentUserItems.isNotEmpty()) View.GONE else View.VISIBLE
 		val lm = GridLayoutManager(requireContext(), currentSpanCount).apply {
 			spanSizeLookup = object : GridLayoutManager.SpanSizeLookup() {
 				override fun getSpanSize(p0: Int): Int {
@@ -139,10 +140,13 @@ class MeasureHistoryFragment : Fragment(), OnUserClickListener {
 			layoutManager = lm
 			adapter = userAdapter
 		}
+
+		filterAndApplyCurrentList()
 	}
 
 	// 2. 데이터 세팅 및 업데이트
 	private fun updateAdapter(userItems: List<UserItem>) {
+		if (!::userAdapter.isInitialized) return
 		// UserItem -> HistoryMappingItem (날짜별 그룹화) 변환
 		val mappingList = userItems.toHistoryMapping()
 
@@ -150,23 +154,27 @@ class MeasureHistoryFragment : Fragment(), OnUserClickListener {
 		bd.llMHEmpty.visibility = if (userItems.isEmpty()) View.VISIBLE else View.GONE
 	}
 
-	// 3. 검색 리스너
+	// 3. 현재 검색어 기준 필터링 및 리스트 갱신
+	private fun filterAndApplyCurrentList() {
+		val afterText = bd.etMHSearch.text?.toString()?.trim().orEmpty()
+		val filteredList = if (afterText.isNotEmpty()) {
+			mvm.currentUserItems.filter {
+				it.name?.contains(afterText, ignoreCase = true) == true ||
+					it.mobile?.contains(afterText) == true
+			}
+		} else {
+			mvm.currentUserItems
+		}
+		updateAdapter(filteredList)
+	}
+
+	// 4. 검색 리스너
 	private fun setSearchText() {
 		bd.etMHSearch.addTextChangedListener(object : TextWatcher {
 			override fun beforeTextChanged(p0: CharSequence?, p1: Int, p2: Int, p3: Int) {}
 			override fun onTextChanged(p0: CharSequence?, p1: Int, p2: Int, p3: Int) {}
 			override fun afterTextChanged(p0: Editable?) {
-				val afterText = p0.toString().trim()
-				val filteredList = if (afterText.isNotEmpty()) {
-					mvm.currentUserItems.filter {
-						it.name?.contains(afterText, ignoreCase = true) == true ||
-							it.mobile?.contains(afterText) == true
-					}
-				} else {
-					mvm.currentUserItems
-				}
-
-				updateAdapter(filteredList)
+				filterAndApplyCurrentList()
 			}
 		})
 	}

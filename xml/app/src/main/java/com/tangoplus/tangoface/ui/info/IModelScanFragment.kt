@@ -1,6 +1,7 @@
 package com.tangoplus.tangoface.ui.info
 
 import android.annotation.SuppressLint
+import android.content.res.ColorStateList
 import android.graphics.Color
 import android.net.Uri
 import android.os.Bundle
@@ -47,6 +48,11 @@ class IModelScanFragment : Fragment() {
     private var activeGlbUri: Uri? = null
     private var lastLoadedKey: String? = null
     private var isClayMode = false
+    private var isFreeRotate = false
+    private var brightnessStep = 0
+
+    private val brightnessValues = floatArrayOf(1.08f, 1.35f, 1.65f, 0.80f)
+    private val brightnessLabels = arrayOf("💡 밝기: 보통", "💡 밝기: 밝게", "💡 밝기: 최대", "💡 밝기: 은은하게")
 
     companion object {
         private const val VIRTUAL_ORIGIN = "https://appassets.androidplatform.net"
@@ -66,7 +72,7 @@ class IModelScanFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
 
         setupWebView()
-        setupToggleButton()
+        setupControlButtons()
 
         // MainViewModel에 현재 결과가 있고 InformationViewModel이 아직 비어있다면 동기화
         if (ivm.scanResultInfo.value == null && mvm.currentResult.value != null) {
@@ -76,29 +82,78 @@ class IModelScanFragment : Fragment() {
         observeScanResult()
     }
 
-    private fun setupToggleButton() {
-        updateToggleButtonUi()
+    private fun setupControlButtons() {
+        updateControlsUi()
+
+        // 1. 굴곡 보기 (단색 입체 음영 / 원래 색상)
         bd.btnToggleClayMode.setOnClickListener {
             isClayMode = !isClayMode
-            updateToggleButtonUi()
+            updateControlsUi()
             bd.wvIModelScanViewer.evaluateJavascript(
                 "window.setMeshMode && window.setMeshMode($isClayMode);",
                 null
             )
         }
+
+        // 2. 조명 밝기 토글 순환
+        bd.btnToggleBrightness.setOnClickListener {
+            brightnessStep = (brightnessStep + 1) % brightnessValues.size
+            updateControlsUi()
+            val mult = brightnessValues[brightnessStep]
+            bd.wvIModelScanViewer.evaluateJavascript(
+                "window.setBrightness && window.setBrightness($mult);",
+                null
+            )
+        }
+
+        // 3. 360° 자유 회전 토글
+        bd.btnToggleFreeRotate.setOnClickListener {
+            isFreeRotate = !isFreeRotate
+            updateControlsUi()
+            bd.wvIModelScanViewer.evaluateJavascript(
+                "window.setFreeRotate && window.setFreeRotate($isFreeRotate);",
+                null
+            )
+        }
+
+        // 4. 정면 보기 리셋
+        bd.btnResetView.setOnClickListener {
+            bd.wvIModelScanViewer.evaluateJavascript(
+                "window.resetView && window.resetView();",
+                null
+            )
+        }
     }
 
-    private fun updateToggleButtonUi() {
+    private fun updateControlsUi() {
         val ctx = context ?: return
+        val defaultBgTint = ColorStateList.valueOf(Color.parseColor("#CC1C191A"))
+        val activeBgTint = ColorStateList.valueOf(ContextCompat.getColor(ctx, R.color.accent))
+
+        // 굴곡 보기 토글
         if (isClayMode) {
-            bd.btnToggleClayMode.text = "원본 색상"
-            bd.btnToggleClayMode.setBackgroundResource(R.drawable.bg_glass_card)
-            bd.btnToggleClayMode.setTextColor(ContextCompat.getColor(ctx, R.color.accent300))
+            bd.btnToggleClayMode.text = " 색상 보기"
+            bd.btnToggleClayMode.backgroundTintList = activeBgTint
         } else {
-            bd.btnToggleClayMode.text = "입체 모형"
-            bd.btnToggleClayMode.setBackgroundResource(R.drawable.bg_scan_card)
-            bd.btnToggleClayMode.setTextColor(ContextCompat.getColor(ctx, R.color.subColor100))
+            bd.btnToggleClayMode.text = " 굴곡 보기"
+            bd.btnToggleClayMode.backgroundTintList = defaultBgTint
         }
+
+        // 밝기 순환 토글
+        bd.btnToggleBrightness.text = brightnessLabels[brightnessStep]
+        bd.btnToggleBrightness.backgroundTintList = if (brightnessStep != 0) activeBgTint else defaultBgTint
+
+        // 360° 회전 토글
+        if (isFreeRotate) {
+            bd.btnToggleFreeRotate.text = " 각도 제한"
+            bd.btnToggleFreeRotate.backgroundTintList = activeBgTint
+        } else {
+            bd.btnToggleFreeRotate.text = " 360° 회전"
+            bd.btnToggleFreeRotate.backgroundTintList = defaultBgTint
+        }
+
+        // 정면 리셋
+        bd.btnResetView.backgroundTintList = defaultBgTint
     }
 
     private fun observeScanResult() {
@@ -219,8 +274,10 @@ class IModelScanFragment : Fragment() {
 
     private fun loadGlbIntoViewer() {
         isClayMode = false
-        updateToggleButtonUi()
-        bd.btnToggleClayMode.isVisible = false
+        isFreeRotate = false
+        brightnessStep = 0
+        updateControlsUi()
+        bd.llModelScanControls.isVisible = false
         bd.tvIModelScanStatus.isVisible = true
         bd.tvIModelScanStatus.text = "3D 모델을 불러오는 중..."
 
@@ -253,7 +310,8 @@ class IModelScanFragment : Fragment() {
                 // ================== 조정 가능한 값 ==================
                 const AMBIENT   = 0.40;   // 주변광 (올리면 전체가 밝고 음영이 약해짐)
                 const HEADLIGHT = 0.60;   // 카메라 방향 조명 (올리면 입체감/대비 증가)
-                const BRIGHTNESS = 1.08;   // 최종 밝기 배율 (피부톤을 살짝 올리려면 1.08 ~ 1.15)
+                let currentBrightness = 1.08;   // 최종 밝기 배율 (기본 1.08)
+                let isClayMode = false;
                 const BG_COLOR  = 0x161214;
                 const AZIMUTH_LIMIT_DEG = 80;   // 좌우 회전 한계
                 const POLAR_MIN_DEG = 40;       // 위에서 내려다보는 한계 (작을수록 더 위)
@@ -279,10 +337,10 @@ class IModelScanFragment : Fragment() {
                 scene.add(camera);
 
                 // three r155+ 는 조명 단위가 π 배 필요
-                const ambientLight = new THREE.AmbientLight(0xffffff, AMBIENT * BRIGHTNESS * Math.PI);
+                const ambientLight = new THREE.AmbientLight(0xffffff, AMBIENT * currentBrightness * Math.PI);
                 scene.add(ambientLight);
 
-                const headlight = new THREE.DirectionalLight(0xffffff, HEADLIGHT * BRIGHTNESS * Math.PI);
+                const headlight = new THREE.DirectionalLight(0xffffff, HEADLIGHT * currentBrightness * Math.PI);
                 headlight.position.set(0, 0, 1);
                 headlight.target.position.set(0, 0, -1);
                 camera.add(headlight);
@@ -301,20 +359,54 @@ class IModelScanFragment : Fragment() {
                 controls.dampingFactor = 0.08;
                 controls.rotateSpeed = 0.8;
 
+                function applyLightIntensities() {
+                  if (isClayMode) {
+                    ambientLight.intensity = 0.25 * currentBrightness * Math.PI;
+                    headlight.intensity = 0.45 * currentBrightness * Math.PI;
+                    reliefLight.intensity = 0.50 * currentBrightness * Math.PI;
+                  } else {
+                    ambientLight.intensity = AMBIENT * currentBrightness * Math.PI;
+                    headlight.intensity = HEADLIGHT * currentBrightness * Math.PI;
+                    reliefLight.intensity = 0;
+                  }
+                }
+
                 const loadedMeshes = [];
                 window.setMeshMode = (isClay) => {
+                  isClayMode = isClay;
                   loadedMeshes.forEach((o) => {
                     o.material = isClay ? o.userData.clayMat : o.userData.colorMat;
                   });
-                  if (isClay) {
-                    ambientLight.intensity = 0.25 * Math.PI;
-                    headlight.intensity = 0.45 * Math.PI;
-                    reliefLight.intensity = 0.50 * Math.PI;
-                  } else {
-                    ambientLight.intensity = AMBIENT * BRIGHTNESS * Math.PI;
-                    headlight.intensity = HEADLIGHT * BRIGHTNESS * Math.PI;
-                    reliefLight.intensity = 0;
+                  applyLightIntensities();
+                };
+
+                window.setBrightness = (mult) => {
+                  currentBrightness = mult;
+                  applyLightIntensities();
+                };
+
+                let savedInitDist = 0;
+                window.resetView = () => {
+                  if (savedInitDist > 0) {
+                    camera.position.set(0, 0, savedInitDist);
+                    controls.target.set(0, 0, 0);
+                    controls.update();
                   }
+                };
+
+                window.setFreeRotate = (enable) => {
+                  if (enable) {
+                    controls.minAzimuthAngle = -Infinity;
+                    controls.maxAzimuthAngle = Infinity;
+                    controls.minPolarAngle = 0;
+                    controls.maxPolarAngle = Math.PI;
+                  } else {
+                    controls.minAzimuthAngle = -THREE.MathUtils.degToRad(AZIMUTH_LIMIT_DEG);
+                    controls.maxAzimuthAngle = THREE.MathUtils.degToRad(AZIMUTH_LIMIT_DEG);
+                    controls.minPolarAngle = THREE.MathUtils.degToRad(POLAR_MIN_DEG);
+                    controls.maxPolarAngle = THREE.MathUtils.degToRad(POLAR_MAX_DEG);
+                  }
+                  controls.update();
                 };
 
                 new GLTFLoader().load(
@@ -352,6 +444,7 @@ class IModelScanFragment : Fragment() {
                     const maxDim = Math.max(size.x, size.y, size.z);
                     const dist = (maxDim / 2) / Math.tan(THREE.MathUtils.degToRad(FOV / 2)) * 1.15;
                     const initDist = dist / INIT_ZOOM;
+                    savedInitDist = initDist;
                     camera.position.set(0, 0, initDist);
                     camera.near = dist / 100;
                     camera.far = dist * 10;
@@ -405,7 +498,7 @@ class IModelScanFragment : Fragment() {
             activity?.runOnUiThread {
                 _binding?.let { b ->
                     b.tvIModelScanStatus.isVisible = false
-                    b.btnToggleClayMode.isVisible = true
+                    b.llModelScanControls.isVisible = true
                 }
             }
         }
