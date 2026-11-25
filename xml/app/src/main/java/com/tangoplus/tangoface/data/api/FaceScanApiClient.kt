@@ -12,13 +12,6 @@ import java.util.concurrent.TimeUnit
 object FaceScanApiClient {
     // 프로덕션 기본 URL (Retrofit baseUrl은 항상 '/'로 끝나야 함)
     const val BASE_URL = "https://tangoface-backend.vercel.app/"
-
-    // 안드로이드 에뮬레이터 로컬 테스트 URL
-    const val LOCAL_EMULATOR_URL = "http://10.0.2.2:3000/"
-
-    /**
-     * strings.xml에 정의된 x_tablet_key 조회 (하드코딩 방지)
-     */
     fun getTabletKey(context: android.content.Context? = com.tangoplus.tangoface.orbbec.application.MyApplication.getInstance()): String {
         return try {
             context?.getString(com.tangoplus.tangoface.R.string.x_tablet_key) ?: ""
