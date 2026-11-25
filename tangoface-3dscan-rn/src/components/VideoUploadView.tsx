@@ -172,40 +172,7 @@ export const VideoUploadView: React.FC<VideoUploadViewProps> = ({
       {!selectedVideo ? (
         // 파일 선택 전 UI
         <View style={styles.emptyCard}>
-          <Text style={styles.mainTitle}>3D 얼굴 영상 촬영 및 등록</Text>
-          <Text style={styles.subTitle}>
-            얼굴 정면과 좌우 측면(약 120°)이 선명하게 담긴 영상을 준비해주세요.
-          </Text>
-
-          {/* 가이드 보기 배너 버튼 */}
-          {onOpenGuide && (
-            <TouchableOpacity
-              style={styles.guideBannerButton}
-              onPress={onOpenGuide}
-              activeOpacity={0.8}
-            >
-              <Text style={styles.guideBannerIcon}>📖</Text>
-              <View style={styles.guideBannerTextBox}>
-                <Text style={styles.guideBannerTitle}>촬영 가이드 & 예시 영상 보기</Text>
-                <Text style={styles.guideBannerSub}>성공적인 3D 복원을 위한 필수 팁</Text>
-              </View>
-              <Text style={styles.guideBannerArrow}>›</Text>
-            </TouchableOpacity>
-          )}
-
-          {/* 핵심 팁 요약 카드 */}
-          <View style={styles.tipCard}>
-            <Text style={styles.tipTitle}>💡 촬영 핵심 체크</Text>
-            <Text style={styles.tipItem}>
-              • 고개는 정면 고정, 카메라를 좌측 60° ~ 우측 60° 곡선으로 천천히 이동
-            </Text>
-            <Text style={styles.tipItem}>
-              • 권장 촬영 시간: <Text style={styles.tipHighlight}>10초 ~ 25초</Text> (최대 30초)
-            </Text>
-            <Text style={styles.tipItem}>
-              • 손떨림을 줄이고 얼굴과 턱선이 화면 안에 머물도록 유지
-            </Text>
-          </View>
+          <Text style={styles.mainTitle}>영상 파일 등록</Text>
 
           {/* 파일 제약조건 안내 태그 */}
           <View style={styles.badgeRow}>
@@ -229,10 +196,7 @@ export const VideoUploadView: React.FC<VideoUploadViewProps> = ({
                 <ActivityIndicator color="#ffffff" />
               ) : (
                 <View style={styles.selectButtonContent}>
-                  <Text style={styles.selectButtonText}>📹 3D 얼굴 영상 촬영 또는 선택</Text>
-                  <Text style={styles.selectButtonSubText}>
-                    터치 시 카메라로 직접 촬영하거나 갤러리 영상 선택
-                  </Text>
+                  <Text style={styles.selectButtonText}>촬영 혹은 선택하기</Text>
                 </View>
               )}
             </TouchableOpacity>
