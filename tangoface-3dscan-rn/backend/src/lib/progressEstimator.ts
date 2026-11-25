@@ -3,17 +3,17 @@ import { ProcessingProgressInfo } from '@/types/api';
 
 /**
  * 3D 얼굴 복원 처리의 기본 예상 소요 시간 (초 단위)
- * 영상 길이 15~30초 기준 일반적인 GPU 인퍼런스 시간
+ * 정밀 2패스 복원 (최대 56프레임, TSDF 융합, 홀필링 등) 기준 약 4분 45초 (285초)
  */
-export const DEFAULT_ESTIMATED_DURATION_SECONDS = 45;
+export const DEFAULT_ESTIMATED_DURATION_SECONDS = 285;
 
 /**
  * 단계별 안내 문구 매핑 (경과 비율 기준)
  */
 const PROCESSING_STAGES = [
-  { minRatio: 0.0, maxRatio: 0.3, label: '1단계: 이미지 처리 중...' },
-  { minRatio: 0.3, maxRatio: 0.7, label: '2단계: 3차원 계산 중...' },
-  { minRatio: 0.7, maxRatio: 0.95, label: '3단계: 3D 얼굴 생성 중...' },
+  { minRatio: 0.0, maxRatio: 0.3, label: '1단계: 이미지 및 얼굴 분석 중...' },
+  { minRatio: 0.3, maxRatio: 0.75, label: '2단계: 3차원 인공지능 계산 중...' },
+  { minRatio: 0.75, maxRatio: 0.95, label: '3단계: 3D 얼굴 및 피부 생성 중...' },
   { minRatio: 0.95, maxRatio: 1.0, label: '마무리 확인 중...' },
 ];
 
@@ -33,7 +33,7 @@ export function calculateProcessingProgressFromElapsed(
     progressPercent = Math.round(ratio * 100);
   } else {
     const overtime = elapsedSeconds - estimatedTotalSeconds * 0.95;
-    const asymptoticBonus = (1 - Math.exp(-overtime / 15)) * 4;
+    const asymptoticBonus = (1 - Math.exp(-overtime / 30)) * 4;
     progressPercent = Math.min(99, Math.round(95 + asymptoticBonus));
   }
 

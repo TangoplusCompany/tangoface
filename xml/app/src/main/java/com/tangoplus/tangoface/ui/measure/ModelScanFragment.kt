@@ -63,7 +63,8 @@ class ModelScanFragment : Fragment() {
     companion object {
         private const val TAG_USER_SETUP = "ModelScanUserSetupDialog"
         private const val TAG_DIRECT_CAMERA = "DirectScanCameraDialog"
-        private const val BAKING_CANCEL_DELAY_MS = 100_000L
+        // 3D 정밀 복원(약 4분 45초 소요) 감안하여 6분(360초) 이상 지연 시 비로소 대기 취소 버튼 노출
+        private const val BAKING_CANCEL_DELAY_MS = 360_000L
     }
 
     private val cameraPermissionLauncher = registerForActivityResult(
@@ -390,9 +391,15 @@ class ModelScanFragment : Fragment() {
 
                 bd.pbScanProgress.progress = state.progressPercent
                 bd.tvRemainingTime.text = if (state.remainingSeconds > 0) {
-                    "예상 남은 시간: 약 ${state.remainingSeconds}초"
+                    val minutes = state.remainingSeconds / 60
+                    val seconds = state.remainingSeconds % 60
+                    if (minutes > 0) {
+                        "예상 남은 시간: 약 ${minutes}분 ${seconds}초"
+                    } else {
+                        "예상 남은 시간: 약 ${seconds}초"
+                    }
                 } else {
-                    "잠시만 기다려주세요..."
+                    "마무리 단계입니다. 잠시만 기다려주세요..."
                 }
                 bd.tvProgressStage.text = state.stageMessage.ifEmpty { "3D 얼굴 생성 진행 중..." }
 

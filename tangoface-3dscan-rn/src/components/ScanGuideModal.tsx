@@ -241,9 +241,7 @@ export const ScanGuideModal: React.FC<ScanGuideModalProps> = ({
       visible={visible}
       transparent
       animationType="fade"
-      onRequestClose={() => {
-        if (showConfirmButton) onClose();
-      }}
+      onRequestClose={onClose}
     >
       <View style={styles.overlay}>
         <View style={styles.modalCard}>
@@ -252,6 +250,14 @@ export const ScanGuideModal: React.FC<ScanGuideModalProps> = ({
             <Text style={styles.mainTitle}>
               높은 품질의 3D 얼굴 스캔 결과를{'\n'}확인하고 싶다면?
             </Text>
+            <TouchableOpacity
+              style={styles.closeHeaderButton}
+              onPress={onClose}
+              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.closeHeaderButtonText}>✕</Text>
+            </TouchableOpacity>
           </View>
 
           {/* 가로 스와이프 / 버튼 넘김 카드 영역 */}
@@ -420,6 +426,26 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     marginBottom: 12,
     alignItems: 'center',
+    position: 'relative',
+    justifyContent: 'center',
+  },
+  closeHeaderButton: {
+    position: 'absolute',
+    top: 0,
+    right: 16,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 10,
+  },
+  closeHeaderButtonText: {
+    color: '#DCD9D9',
+    fontSize: 16,
+    fontWeight: '700',
+    lineHeight: 18,
   },
   mainTitle: {
     fontSize: 18,

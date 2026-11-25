@@ -17,9 +17,9 @@ import {
 import { SessionStatus } from '@/types/session';
 
 export const WORKER_HEARTBEAT_TIMEOUT_SECONDS = 90; // 90초 초과 시 오프라인
-export const PROCESSING_TIMEOUT_SECONDS = 6 * 60; // 6분
+export const PROCESSING_TIMEOUT_SECONDS = 10 * 60; // 10분 (정밀 복원 4분 45초 소요에 맞춘 안전 여유)
 export const UPLOADED_TIMEOUT_SECONDS = 30 * 60; // 30분
-export const DEFAULT_WORKER_AVG_SECONDS = 60;
+export const DEFAULT_WORKER_AVG_SECONDS = 285; // 4분 45초 (285초)
 
 // IP 단위 레이트 리밋 (1분 60회)
 const workerIpRequests = new Map<string, number[]>();
@@ -421,7 +421,8 @@ export async function calculateSessionProgress(
       : new Date(session.uploaded_at || session.created_at).getTime();
 
     const elapsedSeconds = Math.max(0, Math.floor((now - startedMs) / 1000));
-    progress = calculateProcessingProgressFromElapsed(elapsedSeconds);
+    const workerAvgSec = parseInt(process.env.WORKER_AVG_SECONDS || '285', 10) || DEFAULT_WORKER_AVG_SECONDS;
+    progress = calculateProcessingProgressFromElapsed(elapsedSeconds, workerAvgSec);
   } else if (currentStatus === 'DONE') {
     progress = {
       elapsed_seconds: 0,

@@ -19,16 +19,18 @@ import {
 } from '../config/api';
 import { ServerStatusBadge } from './ServerStatusBadge';
 
-interface VideoUploadViewProps {
+export interface VideoUploadViewProps {
   pairToken: string;
   onUploadSuccess: (queueFull?: boolean) => void;
   onResetSession?: () => void;
+  onOpenGuide?: () => void;
 }
 
 export const VideoUploadView: React.FC<VideoUploadViewProps> = ({
   pairToken,
   onUploadSuccess,
   onResetSession,
+  onOpenGuide,
 }) => {
   const [selectedVideo, setSelectedVideo] = useState<SelectedVideoInfo | null>(
     null
@@ -170,29 +172,68 @@ export const VideoUploadView: React.FC<VideoUploadViewProps> = ({
       {!selectedVideo ? (
         // 파일 선택 전 UI
         <View style={styles.emptyCard}>
-          <Text style={styles.mainTitle}>3D 스캔 동영상 파일 첨부</Text>
+          <Text style={styles.mainTitle}>3D 얼굴 영상 촬영 및 등록</Text>
+          <Text style={styles.subTitle}>
+            얼굴 정면과 좌우 측면(약 120°)이 선명하게 담긴 영상을 준비해주세요.
+          </Text>
+
+          {/* 가이드 보기 배너 버튼 */}
+          {onOpenGuide && (
+            <TouchableOpacity
+              style={styles.guideBannerButton}
+              onPress={onOpenGuide}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.guideBannerIcon}>📖</Text>
+              <View style={styles.guideBannerTextBox}>
+                <Text style={styles.guideBannerTitle}>촬영 가이드 & 예시 영상 보기</Text>
+                <Text style={styles.guideBannerSub}>성공적인 3D 복원을 위한 필수 팁</Text>
+              </View>
+              <Text style={styles.guideBannerArrow}>›</Text>
+            </TouchableOpacity>
+          )}
+
+          {/* 핵심 팁 요약 카드 */}
+          <View style={styles.tipCard}>
+            <Text style={styles.tipTitle}>💡 촬영 핵심 체크</Text>
+            <Text style={styles.tipItem}>
+              • 고개는 정면 고정, 카메라를 좌측 60° ~ 우측 60° 곡선으로 천천히 이동
+            </Text>
+            <Text style={styles.tipItem}>
+              • 권장 촬영 시간: <Text style={styles.tipHighlight}>10초 ~ 25초</Text> (최대 30초)
+            </Text>
+            <Text style={styles.tipItem}>
+              • 손떨림을 줄이고 얼굴과 턱선이 화면 안에 머물도록 유지
+            </Text>
+          </View>
 
           {/* 파일 제약조건 안내 태그 */}
           <View style={styles.badgeRow}>
             <View style={styles.conditionBadge}>
-              <Text style={styles.badgeText}>최대 30초 이내</Text>
+              <Text style={styles.badgeText}>권장 10~25초 (최대 30초)</Text>
             </View>
             <View style={styles.conditionBadge}>
               <Text style={styles.badgeText}>최대 50MB 이내</Text>
             </View>
           </View>
 
+          {/* 메인 통합 버튼 (카메라 촬영 / 갤러리 선택) */}
           <View style={styles.selectButtonWrapper}>
             <TouchableOpacity
               style={styles.selectButton}
               onPress={Platform.OS === 'web' ? undefined : handlePickVideo}
               disabled={isLoading}
-              activeOpacity={0.8}
+              activeOpacity={0.85}
             >
               {isLoading ? (
                 <ActivityIndicator color="#ffffff" />
               ) : (
-                <Text style={styles.selectButtonText}>비디오 파일 선택하기</Text>
+                <View style={styles.selectButtonContent}>
+                  <Text style={styles.selectButtonText}>📹 3D 얼굴 영상 촬영 또는 선택</Text>
+                  <Text style={styles.selectButtonSubText}>
+                    터치 시 카메라로 직접 촬영하거나 갤러리 영상 선택
+                  </Text>
+                </View>
               )}
             </TouchableOpacity>
             {Platform.OS === 'web' && !isLoading && (
@@ -215,11 +256,21 @@ export const VideoUploadView: React.FC<VideoUploadViewProps> = ({
               />
             )}
           </View>
+
+          {onResetSession && (
+            <TouchableOpacity
+              style={styles.resetSessionLink}
+              onPress={onResetSession}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.resetSessionLinkText}>다른 PIN 번호로 다시 연결하기</Text>
+            </TouchableOpacity>
+          )}
         </View>
       ) : (
         // 파일 선택 완료 후 미리보기 & 정보 UI
         <View style={styles.previewCard}>
-          <Text style={styles.previewTitle}>첨부된 영상 확인</Text>
+          <Text style={styles.previewTitle}>선택된 영상 확인</Text>
 
           {/* 웹 비디오 미리보기 */}
           <View style={styles.videoPlayerContainer}>
@@ -286,7 +337,6 @@ export const VideoUploadView: React.FC<VideoUploadViewProps> = ({
             </View>
           )}
 
-          
           {isUploading && (
             <View style={styles.uploadingBox}>
               <Text style={styles.uploadingText}>{uploadStatusText}</Text>
@@ -316,7 +366,7 @@ export const VideoUploadView: React.FC<VideoUploadViewProps> = ({
               {isUploading ? (
                 <ActivityIndicator color="#ffffff" />
               ) : (
-                <Text style={styles.actionPrimaryText}>영상 전송</Text>
+                <Text style={styles.actionPrimaryText}>3D 스캔 영상 전송</Text>
               )}
             </TouchableOpacity>
 
@@ -325,7 +375,7 @@ export const VideoUploadView: React.FC<VideoUploadViewProps> = ({
                 style={styles.actionSecondaryButton}
                 onPress={handleReset}
               >
-                <Text style={styles.actionSecondaryText}>다른 영상 선택</Text>
+                <Text style={styles.actionSecondaryText}>다른 영상 다시 선택</Text>
               </TouchableOpacity>
             )}
           </View>
@@ -338,69 +388,163 @@ export const VideoUploadView: React.FC<VideoUploadViewProps> = ({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 20,
+    padding: 16,
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: '#161214',
   },
   emptyCard: {
     width: '100%',
-    maxWidth: 360,
-    backgroundColor: 'rgba(28, 25, 26, 0.85)',
+    maxWidth: 380,
+    backgroundColor: 'rgba(28, 25, 26, 0.95)',
     borderRadius: 20,
-    padding: 24,
+    padding: 22,
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
   },
   mainTitle: {
     fontSize: 20,
     fontWeight: '800',
     color: '#ffffff',
-    marginBottom: 16,
+    marginBottom: 6,
     textAlign: 'center',
+  },
+  subTitle: {
+    fontSize: 13,
+    color: '#9E9C9C',
+    textAlign: 'center',
+    lineHeight: 18,
+    marginBottom: 16,
+  },
+  guideBannerButton: {
+    width: '100%',
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 0, 85, 0.12)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 0, 85, 0.35)',
+    borderRadius: 14,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    marginBottom: 16,
+  },
+  guideBannerIcon: {
+    fontSize: 22,
+    marginRight: 10,
+  },
+  guideBannerTextBox: {
+    flex: 1,
+  },
+  guideBannerTitle: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '700',
+    marginBottom: 2,
+  },
+  guideBannerSub: {
+    color: '#FF8794',
+    fontSize: 11,
+    fontWeight: '500',
+  },
+  guideBannerArrow: {
+    color: '#FF8794',
+    fontSize: 20,
+    fontWeight: '700',
+    marginLeft: 6,
+  },
+  tipCard: {
+    width: '100%',
+    backgroundColor: '#161214',
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 16,
+    borderLeftWidth: 3,
+    borderLeftColor: '#FF0055',
+  },
+  tipTitle: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '700',
+    marginBottom: 6,
+  },
+  tipItem: {
+    color: '#CFC6C9',
+    fontSize: 11.5,
+    lineHeight: 16,
+    marginBottom: 3,
+  },
+  tipHighlight: {
+    color: '#00FFCC',
+    fontWeight: '700',
   },
   badgeRow: {
     flexDirection: 'row',
     gap: 8,
-    marginBottom: 24,
+    marginBottom: 18,
   },
   conditionBadge: {
     backgroundColor: '#161214',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
     borderRadius: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.06)',
   },
   badgeText: {
-    fontSize: 12,
+    fontSize: 11,
     color: '#FF8794',
     fontWeight: '600',
   },
   selectButtonWrapper: {
     position: 'relative',
     width: '100%',
-    height: 48,
+    height: 60,
     overflow: 'hidden',
-    borderRadius: 12,
+    borderRadius: 14,
   },
   selectButton: {
     width: '100%',
-    height: 48,
+    height: 60,
     backgroundColor: '#FF0055',
-    borderRadius: 12,
+    borderRadius: 14,
     justifyContent: 'center',
     alignItems: 'center',
+    paddingHorizontal: 12,
+  },
+  selectButtonContent: {
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   selectButtonText: {
     color: '#ffffff',
     fontSize: 15,
-    fontWeight: '700',
+    fontWeight: '800',
+    marginBottom: 2,
+  },
+  selectButtonSubText: {
+    color: 'rgba(255, 255, 255, 0.85)',
+    fontSize: 11,
+    fontWeight: '500',
+  },
+  resetSessionLink: {
+    marginTop: 14,
+    paddingVertical: 6,
+  },
+  resetSessionLinkText: {
+    color: '#9E9C9C',
+    fontSize: 12,
+    textDecorationLine: 'underline',
   },
   previewCard: {
     width: '100%',
     maxWidth: 380,
-    backgroundColor: 'rgba(28, 25, 26, 0.9)',
+    backgroundColor: 'rgba(28, 25, 26, 0.95)',
     borderRadius: 20,
     padding: 20,
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
   },
   previewTitle: {
     fontSize: 18,

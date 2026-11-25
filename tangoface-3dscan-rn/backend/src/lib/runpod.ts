@@ -30,7 +30,7 @@ const COLAB_DONE_STATUSES = new Set(['done', 'completed', 'succeeded', 'success'
 const COLAB_FAILED_STATUSES = new Set(['failed', 'error']);
 const COLAB_PROCESSING_STATUSES = new Set(['processing', 'running']);
 
-const PROCESSING_TIMEOUT_SECONDS = 6 * 60; // 6분 (360초)
+const PROCESSING_TIMEOUT_SECONDS = 10 * 60; // 10분 (600초)
 const MAX_CONSECUTIVE_NOT_FOUND = 3;
 
 // DB 마이그레이션(20261111000000) 적용 전 환경에서도 동작하도록 보조 인메모리 캐시 유지

@@ -167,7 +167,7 @@
                 android:layout_marginTop="12dp"
                 android:gravity="center"
                 android:lineSpacingExtra="6dp"
-                android:text="스마트폰 화면에 위 6자리 번호를 입력해주세요\n모델링 서버 시동에 최대 5분이 소요됩니다\n모델 생성은 약 1분, 측정에 약 5분 소요예정입니다."
+                android:text="스마트폰 화면에 위 6자리 번호를 입력해주세요\n정밀 3D 모델 생성에는 약 4분 45초가 소요됩니다\n생성 중에도 대기 없이 사용자 정보를 먼저 입력하실 수 있습니다."
                 android:textColor="@color/subColor500"
                 android:textSize="16sp"
                 app:layout_constraintEnd_toEndOf="parent"

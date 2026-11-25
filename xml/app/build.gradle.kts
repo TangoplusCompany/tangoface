@@ -44,7 +44,7 @@ android {
         versionName = if (project.hasProperty("JENKINS_BUILD_VERSION_NAME")) {
             project.property("JENKINS_BUILD_VERSION_NAME") as String
         } else {
-            "2.0.4"
+            "2.0.5"
         }
         externalNativeBuild {
             cmake {
