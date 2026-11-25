@@ -10,7 +10,7 @@ export const FAIL_REASON_MESSAGES: Record<string, string> = {
   TOO_BLURRY:
     '영상이 흔들리거나 흐리게 촬영되었습니다. 카메라를 고정하고 천천히 다시 촬영해 주세요.',
   ANGLE_RANGE_TOO_NARROW:
-    '촬영 각도 범위가 부족합니다. 좌측(-60°)에서 우측(+60°)까지 곡선으로 천천히 회전해 주세요.',
+    '촬영 각도 범위가 부족합니다. 상단(좌→우) 및 하단(우→좌) 뒤집어진 ㄷ자 모양으로 천천히 왕복해 주세요.',
   FACE_TOO_CLOSE:
     '얼굴이 너무 가깝습니다. 조금 멀리서 찍어 주세요.',
   GPU_OOM:

@@ -130,14 +130,12 @@ export const VideoUploadView: React.FC<VideoUploadViewProps> = ({
     setUploadProgress(0);
 
     try {
-      // 1. Signed URL 요청
       setUploadStatusText('1/3 업로드 URL 발급 중...');
       const presignRes = await getPresignedUploadUrl(pairToken);
       if (!presignRes.success || !presignRes.upload_url) {
         throw new Error(presignRes.error || '서명된 업로드 URL을 받지 못했습니다.');
       }
 
-      // 2. Supabase Storage로 직접 PUT 전송
       setUploadStatusText('2/3 영상 전송 중...');
       const uploadRes = await uploadVideoDirectly(
         presignRes.upload_url,
@@ -150,14 +148,12 @@ export const VideoUploadView: React.FC<VideoUploadViewProps> = ({
         throw new Error(uploadRes.error || '영상 파일 전송에 실패했습니다.');
       }
 
-      // 3. 서버에 완료 보고 및 검증
       setUploadStatusText('3/3 파일 검증 및 상태 확정 중...');
       const completeRes = await completeUpload(pairToken);
       if (!completeRes.success) {
         throw new Error(completeRes.error || '업로드 검증에 실패했습니다.');
       }
 
-      // 성공 완료 알림
       onUploadSuccess(completeRes.queueFull);
     } catch (err: any) {
       setErrorMessage(err.message || '업로드 처리 중 오류가 발생했습니다.');

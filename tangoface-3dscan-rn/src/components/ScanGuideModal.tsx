@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   ScrollView,
   Platform,
+  Image,
   NativeSyntheticEvent,
   NativeScrollEvent,
 } from 'react-native';
@@ -16,57 +17,61 @@ interface ScanGuideModalProps {
   onClose: () => void;
 }
 
-const guideVideoAsset = require('../../assets/3dModelScanGuide.mp4');
-const guideVideoUri: string | undefined =
-  typeof guideVideoAsset === 'string'
-    ? guideVideoAsset
-    : guideVideoAsset?.uri ?? guideVideoAsset?.default;
+const guideGifAsset = require('../../assets/3dModelScanGuide.gif');
+const guideGifUri: string | undefined =
+  typeof guideGifAsset === 'string'
+    ? guideGifAsset
+    : guideGifAsset?.uri ?? guideGifAsset?.default;
 
 /**
- * 1번 일러스트: 카메라는 최대한 흔들리지 않게 곡선으로 천천히 움직여주세요
- * - 중앙 2.5D 동그란 얼굴 (심플한 눈코입 선)
- * - 좌측에 작은 직사각형 카메라
- * - 우측으로 약 120도 이동하는 완전한 원호 형태의 점선 화살표
+ * 1번 일러스트: 뒤집어진 'ㄷ'자 모양 2패스 왕복 촬영 가이드
+ * - 상단: 좌측 -> 우측 (1차: 눈높이 패스)
+ * - 우측: 아래로 하강 전환
+ * - 하단: 우측 -> 좌측 (2차: 턱선/목 패스)
+ * 전체적으로 '뒤집어진 ㄷ자(⊐)' 모양의 왕복 궤적
  */
 const CameraCurveGuideIcon = () => {
   if (Platform.OS === 'web') {
     return (
       // @ts-ignore
-      <svg width="220" height="122" viewBox="0 0 220 122" fill="none">
-        {/* 1. 중앙 2.5D 구형 얼굴 (중심 110, 42) */}
+      <svg width="240" height="136" viewBox="0 0 240 136" fill="none">
+        {/* 1. 중앙 2.5D 구형 얼굴 (중심 120, 54) */}
+        {/* 머리 외곽 */}
         {/* @ts-ignore */}
-        <ellipse cx="110" cy="42" rx="22" ry="23" stroke="#FFFFFF" strokeWidth="2.5" fill="rgba(255, 255, 255, 0.04)" />
-        {/* 2.5D 입체감을 주는 미세 경선/위도 곡선 */}
+        <ellipse cx="120" cy="54" rx="23" ry="25" stroke="#FFFFFF" strokeWidth="2.5" fill="rgba(255, 255, 255, 0.04)" />
+        {/* 2.5D 입체감 경선/위도선 */}
         {/* @ts-ignore */}
-        <path d="M 110 19 Q 120 42 110 65" stroke="rgba(255, 255, 255, 0.2)" strokeWidth="1" strokeDasharray="2 2" />
+        <path d="M 120 29 Q 131 54 120 79" stroke="rgba(255, 255, 255, 0.18)" strokeWidth="1" strokeDasharray="2 2" />
         {/* @ts-ignore */}
-        <path d="M 88 42 Q 110 48 132 42" stroke="rgba(255, 255, 255, 0.2)" strokeWidth="1" strokeDasharray="2 2" />
+        <path d="M 97 54 Q 120 61 143 54" stroke="rgba(255, 255, 255, 0.18)" strokeWidth="1" strokeDasharray="2 2" />
 
-        {/* 심플한 눈, 코, 입 선 */}
+        {/* 눈, 코, 입 선 */}
         {/* @ts-ignore */}
-        <circle cx="102" cy="38" r="2" fill="#FFFFFF" />
+        <circle cx="112" cy="50" r="2" fill="#FFFFFF" />
         {/* @ts-ignore */}
-        <circle cx="118" cy="38" r="2" fill="#FFFFFF" />
+        <circle cx="128" cy="50" r="2" fill="#FFFFFF" />
         {/* @ts-ignore */}
-        <path d="M 110 40 L 108 45 L 112 45" stroke="#FF8794" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+        <path d="M 120 52 L 118 57 L 122 57" stroke="#FF8794" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
         {/* @ts-ignore */}
-        <path d="M 104 50 Q 110 54 116 50" stroke="#FFFFFF" strokeWidth="1.5" strokeLinecap="round" />
+        <path d="M 114 62 Q 120 66 126 62" stroke="#FFFFFF" strokeWidth="1.5" strokeLinecap="round" />
 
-        {/* 2. 반지름 R=60 진원(Circle) 테두리 120도 원호 점선 (좌 -60° -> 우 +60°) */}
-        {/* 중심 (110, 42), 반지름 60 => (58, 72) 에서 (162, 72) 까지 120° 완벽한 원호 */}
+        {/* 턱 & 목선 */}
+        {/* @ts-ignore */}
+        <path d="M 112 79 L 112 88 L 128 88 L 128 79" stroke="rgba(255, 255, 255, 0.3)" strokeWidth="1.5" strokeLinecap="round" />
+
+        {/* 2. 뒤집어진 'ㄷ'자 왕복 궤적 (1차 상단: 좌 -> 우) */}
         {/* @ts-ignore */}
         <path
-          d="M 58 72 A 60 60 0 0 0 162 72"
+          d="M 52 38 Q 120 50 188 38"
           stroke="#FF0055"
           strokeWidth="2.5"
-          strokeDasharray="5 4"
+          strokeDasharray="5 3"
           strokeLinecap="round"
         />
-
-        {/* 원호 우측 끝 화살표 촉 (접선 방향) */}
+        {/* 상단 우측 화살표 (오른쪽 방향) */}
         {/* @ts-ignore */}
         <path
-          d="M 154 73 L 162 72 L 163 80"
+          d="M 180 32 L 188 38 L 180 44"
           stroke="#FF0055"
           strokeWidth="2.5"
           strokeLinecap="round"
@@ -74,28 +79,104 @@ const CameraCurveGuideIcon = () => {
           fill="none"
         />
 
-        {/* 3. 좌측 시작 지점의 작은 직사각형 카메라 (얼굴 중심을 향해 30도 회전) */}
+        {/* 3. 우측 회전 & 하강 연결 궤적 (상단 -> 하단) */}
         {/* @ts-ignore */}
-        <g transform="translate(42, 54) rotate(30)">
-          {/* 카메라 본체 직사각형 */}
+        <path
+          d="M 188 38 Q 204 65 188 92"
+          stroke="#FF8794"
+          strokeWidth="2.5"
+          strokeDasharray="4 3"
+          strokeLinecap="round"
+        />
+        {/* 우측 하강 화살표 (아래 방향) */}
+        {/* @ts-ignore */}
+        <path
+          d="M 194 65 L 189 72 L 184 65"
+          stroke="#FF8794"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          fill="none"
+        />
+
+        {/* 4. 뒤집어진 'ㄷ'자 왕복 궤적 (2차 하단: 우 -> 좌) */}
+        {/* @ts-ignore */}
+        <path
+          d="M 188 92 Q 120 104 52 92"
+          stroke="#00FFCC"
+          strokeWidth="2.5"
+          strokeDasharray="5 3"
+          strokeLinecap="round"
+        />
+        {/* 하단 좌측 화살표 (왼쪽 방향) */}
+        {/* @ts-ignore */}
+        <path
+          d="M 60 86 L 52 92 L 60 98"
+          stroke="#00FFCC"
+          strokeWidth="2.5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          fill="none"
+        />
+
+        {/* 5. 시작 스마트폰 아이콘 (좌측 상단, 36, 26) */}
+        {/* @ts-ignore */}
+        <g transform="translate(36, 26) rotate(20)">
           {/* @ts-ignore */}
-          <rect x="0" y="0" width="16" height="24" rx="3" stroke="#FF0055" strokeWidth="2" fill="#1C191A" />
-          {/* 렌즈 포인트 */}
+          <rect x="0" y="0" width="14" height="22" rx="3" stroke="#FF0055" strokeWidth="1.8" fill="#1C191A" />
           {/* @ts-ignore */}
-          <circle cx="8" cy="6" r="3" stroke="#00FFCC" strokeWidth="1.5" fill="#161214" />
-          {/* 셔터 라인 */}
+          <circle cx="7" cy="5" r="2.2" stroke="#FF0055" strokeWidth="1.2" fill="#161214" />
+        </g>
+        {/* @ts-ignore */}
+        <text x="26" y="38" fill="#FF8794" fontSize="9" fontWeight="800" textAnchor="end" fontFamily="sans-serif">
+          시작
+        </text>
+
+        {/* 6. 완료 지점 (좌측 하단, 36, 80) */}
+        {/* @ts-ignore */}
+        <g transform="translate(36, 80) rotate(-20)">
           {/* @ts-ignore */}
-          <line x1="3" y1="15" x2="13" y2="15" stroke="#FF516F" strokeWidth="1.5" opacity="0.6" />
+          <rect x="0" y="0" width="14" height="22" rx="3" stroke="#00FFCC" strokeWidth="1.8" fill="#1C191A" />
+          {/* @ts-ignore */}
+          <circle cx="7" cy="5" r="2.2" stroke="#00FFCC" strokeWidth="1.2" fill="#161214" />
+        </g>
+        {/* @ts-ignore */}
+        <text x="26" y="94" fill="#00FFCC" fontSize="9" fontWeight="800" textAnchor="end" fontFamily="sans-serif">
+          완료
+        </text>
+
+        {/* 7. 상단 안내 라벨 (1차 상단 좌→우) */}
+        {/* @ts-ignore */}
+        <g transform="translate(74, 8)">
+          {/* @ts-ignore */}
+          <rect x="0" y="0" width="92" height="17" rx="8.5" fill="#1C191A" stroke="#FF0055" strokeWidth="1" />
+          {/* @ts-ignore */}
+          <text x="46" y="12" fill="#FF8794" fontSize="9" fontWeight="700" textAnchor="middle" fontFamily="sans-serif">
+            1차: 상단 (좌 → 우)
+          </text>
         </g>
 
-        {/* 4. 원호 하단 120° 라벨 배지 */}
+        {/* 8. 하단 안내 라벨 (2차 하단 우→좌) */}
         {/* @ts-ignore */}
-        <g transform="translate(94, 94)">
+        <g transform="translate(74, 114)">
           {/* @ts-ignore */}
-          <rect x="0" y="0" width="32" height="16" rx="8" fill="#161214" stroke="#FF0055" strokeWidth="1" />
+          <rect x="0" y="0" width="92" height="17" rx="8.5" fill="#1C191A" stroke="#00FFCC" strokeWidth="1" />
           {/* @ts-ignore */}
-          <text x="16" y="11" fill="#FF8794" fontSize="9.5" fontWeight="700" textAnchor="middle" fontFamily="sans-serif">
-            100°
+          <text x="46" y="12" fill="#00FFCC" fontSize="9" fontWeight="700" textAnchor="middle" fontFamily="sans-serif">
+            2차: 하단 (우 → 좌)
+          </text>
+        </g>
+
+        {/* 9. 우측 중앙 '뒤집어진 ㄷ자' 배지 */}
+        {/* @ts-ignore */}
+        <g transform="translate(198, 56)">
+          {/* @ts-ignore */}
+          <text x="0" y="0" fill="#E0DADB" fontSize="8" fontWeight="700" fontFamily="sans-serif">
+            뒤집어진 ㄷ자
+          </text>
+          {/* @ts-ignore */}
+          <text x="0" y="10" fill="#FF8794" fontSize="7.5" fontWeight="600" fontFamily="sans-serif">
+            (왕복 회전)
           </text>
         </g>
       </svg>
@@ -173,19 +254,18 @@ export const ScanGuideModal: React.FC<ScanGuideModalProps> = ({
   visible,
   onClose,
 }) => {
-  const hasVideoStep = Platform.OS === 'web' && Boolean(guideVideoUri);
-  const totalSteps = hasVideoStep ? 4 : 3;
+  const hasMediaStep = Boolean(guideGifUri);
+  const totalSteps = hasMediaStep ? 4 : 3;
 
   const [currentStep, setCurrentStep] = useState(0);
   const [hasReachedEnd, setHasReachedEnd] = useState(false);
   const [cardWidth, setCardWidth] = useState(0);
 
   const scrollViewRef = useRef<React.ComponentRef<typeof ScrollView> | null>(null);
-  const videoRef = useRef<HTMLVideoElement | null>(null);
 
   const isLastStep = currentStep >= totalSteps - 1;
 
-  // 모달이 열릴 때마다 첫 카드(영상)로 초기화
+  // 모달이 열릴 때마다 첫 카드(GIF 가이드)로 초기화
   useEffect(() => {
     if (visible) {
       setCurrentStep(0);
@@ -193,22 +273,8 @@ export const ScanGuideModal: React.FC<ScanGuideModalProps> = ({
       if (typeof scrollViewRef.current?.scrollTo === 'function') {
         scrollViewRef.current.scrollTo({ x: 0, animated: false });
       }
-    } else if (Platform.OS === 'web' && videoRef.current) {
-      videoRef.current.pause();
     }
   }, [visible]);
-
-  // 영상 카드(0번)가 보일 때만 자동 재생, 벗어나면 일시정지
-  useEffect(() => {
-    if (Platform.OS !== 'web' || !videoRef.current) return;
-    if (visible && hasVideoStep && currentStep === 0) {
-      videoRef.current.currentTime = 0;
-      videoRef.current.muted = true;
-      videoRef.current.play().catch(() => {});
-    } else {
-      videoRef.current.pause();
-    }
-  }, [visible, hasVideoStep, currentStep]);
 
   const goToStep = (nextStep: number) => {
     const clamped = Math.max(0, Math.min(totalSteps - 1, nextStep));
@@ -281,47 +347,53 @@ export const ScanGuideModal: React.FC<ScanGuideModalProps> = ({
               style={styles.carouselScroll}
               contentContainerStyle={styles.carouselContent}
             >
-              {/* 0번 카드: 가이드 영상 자동 재생 */}
-              {hasVideoStep ? (
+              {/* 0번 카드: 가이드 GIF 애니메이션 */}
+              {hasMediaStep ? (
                 <View style={[styles.slidePage, cardWidth > 0 && { width: cardWidth }]}>
                   <View style={styles.videoCard}>
                     <View style={styles.videoWrapper}>
-                      {/* @ts-ignore - React Native Web HTML5 video */}
-                      <video
-                        ref={videoRef}
-                        src={guideVideoUri}
-                        autoPlay
-                        loop
-                        muted
-                        playsInline
-                        controls
-                        preload="auto"
-                        style={{
-                          width: '100%',
-                          height: '100%',
-                          backgroundColor: '#000000',
-                          objectFit: 'contain',
-                          display: 'block',
-                        }}
-                      />
+                      {Platform.OS === 'web' ? (
+                        // @ts-ignore - React Native Web HTML5 img tag for animated GIF
+                        <img
+                          src={guideGifUri}
+                          alt="3D 얼굴 스캔 가이드 예시"
+                          style={{
+                            width: '100%',
+                            height: '100%',
+                            backgroundColor: '#000000',
+                            objectFit: 'contain',
+                            display: 'block',
+                          }}
+                        />
+                      ) : (
+                        <Image
+                          source={guideGifAsset}
+                          style={{
+                            width: '100%',
+                            height: '100%',
+                            resizeMode: 'contain',
+                          }}
+                        />
+                      )}
                     </View>
                     <View style={styles.videoCaptionContainer}>
                       <Text style={styles.videoCaptionText}>
-                        촬영 예시 영상을 참고해 주세요
+                        촬영 예시 가이드를 참고해 주세요
                       </Text>
                     </View>
                   </View>
                 </View>
               ) : null}
 
-              {/* 1번 카드: 카메라 곡선 이동 */}
+              {/* 1번 카드: 뒤집어진 'ㄷ'자 왕복 곡선 이동 */}
               <View style={[styles.slidePage, cardWidth > 0 && { width: cardWidth }]}>
                 <View style={styles.guideItemCard}>
                   <View style={styles.iconContainerWide}>
                     <CameraCurveGuideIcon />
                   </View>
                   <Text style={styles.guideItemText}>
-                    1. 카메라는 최대한 흔들리지 않게{'\n'}곡선으로 천천히 움직여주세요
+                    1. 상단 좌→우 촬영 후, 하단으로 내려와 우→좌로{'\n'}
+                    뒤집어진 'ㄷ'자 모양으로 천천히 왕복해주세요
                   </Text>
                 </View>
               </View>
@@ -544,7 +616,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   iconContainerWide: {
-    height: 124,
+    height: 140,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 8,
